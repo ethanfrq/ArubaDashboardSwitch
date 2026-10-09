@@ -89,7 +89,7 @@ input:disabled { opacity: .55; }
 .check { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; cursor: pointer; }
 .check input { width: 16px; height: 16px; accent-color: var(--accent); }
 .row { display: flex; gap: 8px; align-items: center; }
-.row > input, .row > select { flex: 1; min-width: 0; }
+.row > input, .row > select, .row > .dd { flex: 1; min-width: 0; }
 
 /* ---------- login */
 .login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
@@ -216,6 +216,33 @@ dialog.wide { width: min(580px, calc(100% - 32px)); }
 .seg button { border: 0; background: none; padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--text-2); }
 .seg button.on { background: var(--surface-2); color: var(--text); font-weight: 500; }
 select.compact { width: auto; padding: 4px 8px; font-size: 12px; border-radius: 8px; }
+/* ---------- menus déroulants */
+.dd { position: relative; display: inline-block; min-width: 0; vertical-align: middle; }
+.field > .dd { display: block; }
+.dd > select { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.dd-btn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  font: inherit; text-align: left; cursor: pointer; transition: border-color .12s, box-shadow .12s;
+}
+.dd-btn:hover { border-color: var(--text-3); }
+.dd-btn:focus-visible, .dd.open .dd-btn { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgb(255 131 0 / .18); }
+.dd-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-btn .chev { width: 15px; height: 15px; flex-shrink: 0; color: var(--text-3); transition: transform .15s; }
+.dd.open .dd-btn .chev { transform: rotate(180deg); color: var(--accent-ink); }
+.dd.compact .dd-btn { padding: 5px 9px; font-size: 12.5px; border-radius: 8px; background: var(--surface); }
+.dd-menu {
+  position: fixed; z-index: 80; max-height: min(320px, 60vh); overflow: auto; padding: 5px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 14px 36px rgb(0 0 0 / .22), 0 2px 6px rgb(0 0 0 / .08); outline: none; animation: ddin .12s ease-out;
+}
+@keyframes ddin { from { opacity: 0; transform: translateY(-4px); } }
+.dd-opt { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 7px; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.dd-opt.active { background: var(--surface-2); }
+.dd-opt[aria-selected="true"] { color: var(--accent-ink); font-weight: 600; }
+.dd-opt .ck { width: 14px; height: 14px; flex-shrink: 0; visibility: hidden; color: var(--accent); }
+.dd-opt[aria-selected="true"] .ck { visibility: visible; }
+@media (prefers-reduced-motion: reduce) { .dd-menu { animation: none; } .dd-btn .chev { transition: none; } }
 
 /* ---------- tableaux */
 .table-wrap { overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
@@ -644,6 +671,113 @@ function onStatus(c) {
   }
 }
 
+// ================================================================ menus déroulants personnalisés
+// Remplace l'affichage des <select> natifs (impossibles à styler) tout en les gardant pour la valeur et les événements.
+const DD_CHEV = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+const DD_CHECK = '<svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+let ddOpen = null, ddSeq = 0, ddType = '', ddTypeT = 0;
+function ddSync(wrap) {
+  const sel = wrap.querySelector('select'), o = sel.selectedOptions[0];
+  wrap.querySelector('.dd-label').textContent = o ? o.textContent : '-';
+}
+function ddSyncAll() { document.querySelectorAll('.dd').forEach(ddSync); }
+function enhanceSelects(root = document) {
+  root.querySelectorAll('select:not([data-dd])').forEach((sel) => {
+    sel.dataset.dd = '1';
+    const wrap = document.createElement('span');
+    wrap.className = 'dd' + (sel.classList.contains('compact') ? ' compact' : '');
+    sel.parentNode.insertBefore(wrap, sel);
+    wrap.appendChild(sel);
+    sel.tabIndex = -1; sel.setAttribute('aria-hidden', 'true');
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'dd-btn'; btn.id = `dd-${++ddSeq}`;
+    btn.setAttribute('aria-haspopup', 'listbox'); btn.setAttribute('aria-expanded', 'false');
+    const lbl = sel.id && document.querySelector(`label[for="${sel.id}"]`);
+    if (lbl) lbl.htmlFor = btn.id;
+    btn.setAttribute('aria-label', sel.getAttribute('aria-label') || lbl?.textContent || 'Choisir');
+    btn.innerHTML = `<span class="dd-label"></span>${DD_CHEV}`;
+    wrap.appendChild(btn);
+    ddSync(wrap);
+    sel.addEventListener('change', () => ddSync(wrap));
+    new MutationObserver(() => ddSync(wrap)).observe(sel, { childList: true, subtree: true, attributes: true });
+    btn.addEventListener('click', () => (ddOpen === wrap ? ddClose() : ddOpenMenu(wrap)));
+    btn.addEventListener('keydown', (e) => { if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); ddOpenMenu(wrap); } });
+  });
+}
+function ddActive(menu, i) {
+  const opts = [...menu.children];
+  i = Math.max(0, Math.min(opts.length - 1, i));
+  opts.forEach((o, k) => o.classList.toggle('active', k === i));
+  menu.dataset.active = i;
+  menu.setAttribute('aria-activedescendant', opts[i]?.id || '');
+  const o = opts[i];
+  if (o) { if (o.offsetTop < menu.scrollTop) menu.scrollTop = o.offsetTop - 4; else if (o.offsetTop + o.offsetHeight > menu.scrollTop + menu.clientHeight) menu.scrollTop = o.offsetTop + o.offsetHeight - menu.clientHeight + 4; }
+}
+function ddOpenMenu(wrap) {
+  ddClose();
+  const sel = wrap.querySelector('select'), btn = wrap.querySelector('.dd-btn');
+  const menu = document.createElement('div');
+  menu.className = 'dd-menu'; menu.setAttribute('role', 'listbox'); menu.tabIndex = -1;
+  [...sel.options].forEach((o, i) => {
+    const d = document.createElement('div');
+    d.className = 'dd-opt'; d.id = `${btn.id}-o${i}`; d.dataset.i = i;
+    d.setAttribute('role', 'option'); d.setAttribute('aria-selected', String(o.selected));
+    d.innerHTML = `${DD_CHECK}<span></span>`; d.lastChild.textContent = o.textContent;
+    menu.appendChild(d);
+  });
+  wrap.appendChild(menu);
+  wrap.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); ddOpen = wrap;
+  ddPlace(wrap);
+  menu.addEventListener('click', (e) => { const o = e.target.closest('.dd-opt'); if (o) ddPick(wrap, Number(o.dataset.i)); });
+  menu.addEventListener('mousemove', (e) => { const o = e.target.closest('.dd-opt'); if (o && Number(menu.dataset.active) !== Number(o.dataset.i)) ddActive(menu, Number(o.dataset.i)); });
+  menu.addEventListener('keydown', (e) => {
+    const n = menu.children.length, a = Number(menu.dataset.active) || 0;
+    if (e.key === 'ArrowDown') { e.preventDefault(); ddActive(menu, a + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); ddActive(menu, a - 1); }
+    else if (e.key === 'Home' || e.key === 'PageUp') { e.preventDefault(); ddActive(menu, 0); }
+    else if (e.key === 'End' || e.key === 'PageDown') { e.preventDefault(); ddActive(menu, n - 1); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ddPick(wrap, a); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); ddClose(); btn.focus(); }
+    else if (e.key === 'Tab') ddClose();
+    else if (e.key.length === 1) { // saisie au clavier : va à l'option qui commence par les lettres tapées
+      clearTimeout(ddTypeT); ddType += e.key.toLowerCase(); ddTypeT = setTimeout(() => (ddType = ''), 700);
+      const k = [...menu.children].findIndex((o) => o.textContent.trim().toLowerCase().startsWith(ddType));
+      if (k >= 0) ddActive(menu, k);
+    }
+  });
+  ddActive(menu, Math.max(0, sel.selectedIndex));
+  menu.focus({ preventScroll: true });
+}
+// Position « fixed » : le menu n'est pas coupé par une fenêtre ou un panneau qui défile, et suit le bouton.
+function ddPlace(wrap) {
+  const btn = wrap.querySelector('.dd-btn'), menu = wrap.querySelector('.dd-menu');
+  if (!menu) return;
+  const r = btn.getBoundingClientRect();
+  if (r.bottom < 0 || r.top > innerHeight) return ddClose();
+  menu.style.minWidth = `${r.width}px`;
+  const h = menu.offsetHeight, w = Math.max(menu.offsetWidth, r.width);
+  menu.style.left = `${Math.max(8, Math.min(r.left, innerWidth - w - 8))}px`;
+  menu.style.top = `${r.bottom + 6 + h > innerHeight - 8 && r.top - 6 - h > 8 ? r.top - 6 - h : r.bottom + 6}px`;
+}
+function ddPick(wrap, i) {
+  const sel = wrap.querySelector('select');
+  ddClose();
+  if (sel.selectedIndex !== i) { sel.selectedIndex = i; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  ddSync(wrap);
+  wrap.querySelector('.dd-btn').focus();
+}
+function ddClose() {
+  if (!ddOpen) return;
+  ddOpen.querySelector('.dd-menu')?.remove();
+  ddOpen.classList.remove('open');
+  ddOpen.querySelector('.dd-btn').setAttribute('aria-expanded', 'false');
+  ddOpen = null;
+}
+document.addEventListener('pointerdown', (e) => { if (ddOpen && !ddOpen.contains(e.target)) ddClose(); }, true);
+document.addEventListener('scroll', (e) => { if (ddOpen && !ddOpen.querySelector('.dd-menu')?.contains(e.target)) ddPlace(ddOpen); }, true);
+addEventListener('resize', ddClose);
+enhanceSelects();
+
 // ================================================================ relevés du switch (sans modifier l'agent)
 // Le dashboard envoie lui-même des commandes en lecture seule et analyse les réponses.
 const DIAG_CMD = ['show interface link-status', 'show spanning-tree', 'checkpoint diff startup-config running-config',
@@ -792,7 +926,7 @@ function render() {
   $('#hostname').textContent = S.hostname || 'Switch';
   $('#subtitle').textContent = [DIAG?.ip?.replace(/\/\d+$/, '') || S.mgmt_ip, S.model, S.location && `Emplacement ${S.location}`, S.version && `AOS-CX ${S.version}`, S.uptime && `allumé depuis ${S.uptime.replace(/weeks?/, 'sem.').replace(/days?/, 'j').replace(/hours?/, 'h').replace(/minutes?/, 'min')}`].filter(Boolean).join(' · ');
   updateDiag(); updateBcast();
-  renderKpis(); renderFaceplate(); renderPorts(); renderChart(); renderPanel(); renderVlans(); renderTerm(); renderAlerts(); fillPortSelect(); renderSwitch(); renderLogs();
+  renderKpis(); renderFaceplate(); renderPorts(); renderChart(); renderPanel(); renderVlans(); renderTerm(); renderAlerts(); fillPortSelect(); renderSwitch(); renderLogs(); ddSyncAll();
 }
 
 function renderAgent() {
@@ -901,7 +1035,7 @@ function togglePort(p) { if (selected === p) closePanel(); else selectPort(p); }
 function selectPort(p) { selected = p; $('#portPanel').hidden = false; $('#ppBody').innerHTML = ''; renderFaceplate(); renderPorts(); renderPanel(true); }
 function closePanel() { if (!selected) return; selected = null; $('#portPanel').hidden = true; renderFaceplate(); renderPorts(); }
 $('#ppClose').addEventListener('click', closePanel);
-addEventListener('keydown', (e) => { if (e.key === 'Escape' && selected && !document.querySelector('dialog[open]')) closePanel(); });
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && selected && !ddOpen && !document.querySelector('dialog[open]')) closePanel(); });
 document.addEventListener('pointerdown', (e) => {
   if (!selected || $('#portPanel').contains(e.target) || e.target.closest('[data-port],dialog,.toasts')) return;
   closePanel();
@@ -1190,11 +1324,12 @@ function renderPanel(force) {
       <button class="btn" data-act="cable" ${p.type !== '1GbT' ? 'disabled title="Test impossible sur un port SFP"' : ''}>Tester le câble</button>
     </div>
     <p class="note">Les changements s’appliquent tout de suite. Pense à « Sauvegarder la config » pour qu’ils survivent à un redémarrage.</p>`);
+  enhanceSelects($('#ppActions'));
 }
 // Ne touche au DOM que si le contenu a changé (évite de perdre un clic pendant le rafraîchissement).
 function setHTML(el, html) { if (el && el._html !== html) { el.innerHTML = html; el._html = html; } }
 $('#ppBody').addEventListener('click', (e) => {
-  if (e.target.id === 'ppHist') { $('#chartPort').value = selected; if (chartRange === '1h') setRange('24h'); else loadChart(); $('#chart').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+  if (e.target.id === 'ppHist') { $('#chartPort').value = selected; ddSyncAll(); if (chartRange === '1h') setRange('24h'); else loadChart(); $('#chart').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
   const b = e.target.closest('[data-act]'); if (!b) return;
   const p = S.ports.find((x) => x.port === selected), n = portNum(p.port), base = `configure terminal\ninterface ${p.port}\n`, opt = { ports: [p.port] };
   const warn = isUplink(p) ? '⚠ Ce port relie un autre switch : tout ce qui passe par lui sera coupé. ' : '';
