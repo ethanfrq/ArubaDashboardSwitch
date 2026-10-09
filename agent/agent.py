@@ -658,6 +658,8 @@ class Agent:
                     threading.Thread(target=self.scan, daemon=True).start()
                 state["ips"] = self.ips
                 state["cables"] = self.cables
+                if CFG.get("transport") != "console":
+                    state["mgmt_ip"] = CFG.get("switch_host")
                 state["agent"] = {"version": 2, "host": socket.gethostname(),
                                   "scan": CFG.get("scan_subnet"), "sync": HOT_SYNC if self.hot() else IDLE_SYNC}
                 samples, events = self.col.take()

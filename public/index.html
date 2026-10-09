@@ -112,8 +112,37 @@ header.top .spacer { flex: 1; }
 .card h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .card h2 .count { color: var(--text-3); font-weight: 500; }
 .card h2 .right { margin-left: auto; font-weight: 400; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.span-12 { grid-column: span 12; } .span-7 { grid-column: span 7; } .span-5 { grid-column: span 5; } .span-6 { grid-column: span 6; }
-@media (max-width: 1000px) { .span-7, .span-5, .span-6 { grid-column: span 12; } }
+.grid { align-items: start; }
+.span-12 { grid-column: span 12; } .span-8 { grid-column: span 8; } .span-4 { grid-column: span 4; }
+@media (max-width: 1000px) { .span-8, .span-4 { grid-column: span 12; } }
+#sec-alertes .alert-list { max-height: 268px; }
+input.search { width: min(320px, 60vw); padding: 6px 10px; font-size: 13px; }
+table.ports th[data-sort] { cursor: pointer; user-select: none; }
+table.ports th[data-sort]:hover { color: var(--text); }
+table.ports th .arrow { font-size: 10px; margin-left: 3px; }
+table.ports td.dev { white-space: normal; min-width: 170px; }
+table.ports .sub { display: block; font-size: 12px; color: var(--text-3); }
+table.ports tr.free-toggle td { text-align: center; color: var(--text-2); cursor: pointer; font-size: 12.5px; padding: 9px; }
+table.ports tr.free-toggle:hover td { background: var(--surface-2); }
+table.ports tr.is-free td { color: var(--text-3); }
+.btn.icon { position: relative; }
+.bell-count { position: absolute; top: -6px; right: -6px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--bad); color: #fff; font: 600 10px/17px system-ui, sans-serif; }
+.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { 0% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: 0 0 0 3px transparent; } }
+dialog.wide { width: min(580px, calc(100% - 32px)); }
+.vlan-list { display: grid; }
+.vlan-item { padding: 10px 0; border-bottom: 1px solid var(--border); display: grid; gap: 7px; }
+.vlan-item:last-child { border-bottom: 0; }
+.vlan-top { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.vlan-top .vid { font: 600 12px var(--mono); background: var(--surface-2); padding: 2px 7px; border-radius: 6px; }
+.vlan-top .grow { flex: 1; }
+.vlan-top .btn.icon { width: 26px; height: 24px; }
+.vlan-top .btn.icon svg { width: 14px; height: 14px; }
+.vlan-ports { display: flex; align-items: center; gap: 10px; }
+.mini { display: grid; grid-template-rows: repeat(2, 9px); grid-auto-flow: column; grid-auto-columns: 9px; gap: 2px; flex-shrink: 0; }
+.mini i { border-radius: 2px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border); }
+.mini i.on { background: var(--accent); box-shadow: none; }
+.mini i.gap { margin-left: 4px; }
 .note { font-size: 12px; color: var(--text-3); }
 
 /* ---------- KPIs */
@@ -299,6 +328,13 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
     <div><h1 id="hostname">Chargement…</h1><div class="sub" id="subtitle"><span class="spinner"></span></div></div>
     <span class="spacer"></span>
     <span class="pill" id="agentPill"><span class="dot"></span><span>…</span></span>
+    <button class="btn icon" id="bellBtn" type="button" title="Alertes récentes" aria-label="Alertes récentes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="bell-count" id="bellCount" hidden></span>
+    </button>
+    <button class="btn icon" id="settingsBtn" type="button" title="Réglages des alertes" aria-label="Réglages des alertes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
     <button class="btn icon" id="themeBtn" type="button">
       <svg class="theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       <svg class="theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -316,13 +352,13 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
   </section>
 
   <div class="grid">
-    <section class="card span-12">
+    <section class="card span-12" id="sec-facade">
       <h2>Façade <span class="count" id="fpCount"></span><span class="right"><span class="note">Clique sur un port pour le gérer · reclique pour le désélectionner</span><button class="btn small" id="scanCables" title="Teste les câbles de tous les ports sans lien">Scanner les ports libres</button></span></h2>
       <div class="faceplate-wrap"><div class="faceplate" id="faceplate"></div></div>
       <div class="legend" id="fpLegend"></div>
     </section>
 
-    <section class="card span-12">
+    <section class="card span-8" id="sec-debit">
       <h2>Débit <span class="count" id="chartTitle">total</span>
         <span class="right">
           <select class="compact" id="chartPort" aria-label="Port affiché"><option value="">Tous les ports</option></select>
@@ -333,64 +369,29 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
       <div class="chart" id="chart"></div>
     </section>
 
-    <section class="card span-7">
-      <h2>Ports <span class="count" id="portCount"></span>
-        <span class="right"><span class="seg" id="portFilter"><button data-f="all" class="on">Tous</button><button data-f="up">Branchés</button><button data-f="down">Libres</button></span></span>
+    <section class="card span-4" id="sec-alertes">
+      <h2>Alertes récentes <span class="count" id="alertCount"></span><span class="right"><button class="btn small" id="alertSettingsBtn">Réglages</button></span></h2>
+      <div class="alert-list" id="alertList"></div>
+      <p class="note" style="margin:10px 0 0" id="alertChannels"></p>
+    </section>
+
+    <section class="card span-12" id="sec-ports">
+      <h2>Ports et appareils <span class="count" id="portCount"></span>
+        <span class="right"><input type="search" id="portSearch" class="search" placeholder="Rechercher un nom, une IP, une MAC, un port…" aria-label="Rechercher dans les ports et appareils"></span>
       </h2>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Port</th><th>État</th><th>Vitesse</th><th>VLAN</th><th>Description</th><th class="r">Entrant</th><th class="r">Sortant</th><th class="r">Total reçu</th><th class="r">Erreurs</th></tr></thead>
+      <div class="table-wrap"><table class="ports">
+        <thead><tr id="portHead"></tr></thead>
         <tbody id="portRows"></tbody>
       </table></div>
+      <p class="note" style="margin:10px 0 0" id="ipNote"></p>
     </section>
 
-    <section class="card span-5">
-      <h2>Appareils connectés <span class="count" id="devCount"></span></h2>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Port</th><th>Nom</th><th>IP</th><th>MAC</th></tr></thead>
-        <tbody id="devRows"></tbody>
-      </table></div>
-      <p class="note" style="margin:12px 0 0" id="ipNote"></p>
+    <section class="card span-4" id="sec-vlan">
+      <h2>VLAN <span class="count" id="vlanCount"></span><span class="right"><button class="btn small" id="vlanAssignOpen">Affecter des ports</button><button class="btn small" id="vlanNew">+ Nouveau</button></span></h2>
+      <div class="vlan-list" id="vlanList"></div>
     </section>
 
-    <section class="card span-6">
-      <h2>VLANs <span class="count" id="vlanCount"></span><span class="right"><button class="btn small" id="vlanNew">+ Nouveau VLAN</button></span></h2>
-      <div class="table-wrap"><table>
-        <thead><tr><th>ID</th><th>Nom</th><th>État</th><th>Ports</th><th class="r">Actions</th></tr></thead>
-        <tbody id="vlanRows"></tbody>
-      </table></div>
-      <div class="section">
-        <h3>Affecter des ports à un VLAN</h3>
-        <div class="row">
-          <input id="vlanPorts" type="text" placeholder="Ports, ex. 3-8, 12" aria-label="Ports">
-          <select id="vlanTarget" aria-label="VLAN"></select>
-          <button class="btn" id="vlanAssign">Affecter</button>
-        </div>
-        <p class="note" style="margin:0">Les ports passent en mode « access » sur le VLAN choisi. Attention aux ports marqués ⇅ : ils relient d’autres switches et les changer peut couper le réseau.</p>
-      </div>
-    </section>
-
-    <section class="card span-6">
-      <h2>Alertes <span class="count" id="alertCount"></span><span class="right"><button class="btn small" id="alertTest">Envoyer un test</button></span></h2>
-      <form id="alertForm">
-        <div class="field"><label for="alEmail">E-mail(s)</label><input id="alEmail" type="text" placeholder="admin@exemple.fr, autre@exemple.fr"><span class="note" id="alEmailNote"></span></div>
-        <div class="field"><label for="alHook">Webhook (Teams, Discord, Slack, ntfy pour le téléphone…)</label><input id="alHook" type="url" placeholder="https://…"></div>
-        <div class="field"><span class="label">Prévenir quand…</span>
-          <label class="check"><input type="checkbox" id="alPortDown"> un port surveillé tombe (et quand il revient)</label>
-          <label class="check"><input type="checkbox" id="alTemp"> la température dépasse <input type="number" id="alTempMax" min="40" max="95" style="width:70px;padding:3px 6px"> °C</label>
-          <label class="check"><input type="checkbox" id="alAgent"> l’agent ne répond plus (5 min)</label>
-          <label class="check"><input type="checkbox" id="alSlow"> un port passe à 10 ou 100 Mb/s</label>
-          <label class="check"><input type="checkbox" id="alIdle"> un port surveillé n’a plus de trafic depuis 10 min</label>
-        </div>
-        <div class="field"><span class="label">Ports surveillés <button type="button" class="btn small" id="alAuto" style="margin-left:6px">Auto</button></span>
-          <div class="portpick" id="alPorts"></div>
-          <span class="note" id="alPortsNote"></span>
-        </div>
-        <button class="btn primary" id="alSave">Enregistrer les alertes</button>
-      </form>
-      <div class="section"><h3>Dernières alertes</h3><div class="alert-list" id="alertList"></div></div>
-    </section>
-
-    <section class="card span-12">
+    <section class="card span-8" id="sec-console">
       <h2>Console de gestion <span class="count" id="termMode">les commandes passent par l’agent</span></h2>
       <div class="chips" id="chips"></div>
       <div class="term">
@@ -414,6 +415,34 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
   <div id="cfText" class="note"></div>
   <pre id="cfCmd"></pre>
   <div class="actions"><button class="btn" id="cfNo">Annuler</button><button class="btn primary" id="cfYes">Envoyer au switch</button></div>
+</dialog>
+
+<dialog id="alertDialog" class="wide" aria-labelledby="alTitle">
+  <h3 id="alTitle">Réglages des alertes</h3>
+  <form id="alertForm">
+    <div class="field"><label for="alEmail">E-mail(s)</label><input id="alEmail" type="text" placeholder="admin@exemple.fr, autre@exemple.fr"><span class="note" id="alEmailNote"></span></div>
+    <div class="field"><label for="alHook">Webhook (Teams, Discord, Slack, ntfy pour le téléphone…)</label><input id="alHook" type="url" placeholder="https://…"></div>
+    <div class="field"><span class="label">Prévenir quand…</span>
+      <label class="check"><input type="checkbox" id="alPortDown"> un port surveillé tombe (et quand il revient)</label>
+      <label class="check"><input type="checkbox" id="alTemp"> la température dépasse <input type="number" id="alTempMax" min="40" max="95" style="width:70px;padding:3px 6px"> °C</label>
+      <label class="check"><input type="checkbox" id="alAgent"> l’agent ne répond plus (5 min)</label>
+      <label class="check"><input type="checkbox" id="alSlow"> un port passe à 10 ou 100 Mb/s</label>
+      <label class="check"><input type="checkbox" id="alIdle"> un port surveillé n’a plus de trafic depuis 10 min</label>
+    </div>
+    <div class="field"><span class="label">Ports surveillés <button type="button" class="btn small" id="alAuto" style="margin-left:6px">Auto</button></span>
+      <div class="portpick" id="alPorts"></div>
+      <span class="note" id="alPortsNote"></span>
+    </div>
+    <div class="actions"><button type="button" class="btn" id="alertTest">Envoyer un test</button><span style="flex:1"></span><button type="button" class="btn" id="alClose">Fermer</button><button class="btn primary" id="alSave">Enregistrer</button></div>
+  </form>
+</dialog>
+
+<dialog id="vlanAssignDialog" aria-labelledby="vaTitle">
+  <h3 id="vaTitle">Affecter des ports à un VLAN</h3>
+  <div class="field"><label for="vlanPorts">Ports</label><input id="vlanPorts" type="text" placeholder="3-8, 12"></div>
+  <div class="field"><label for="vlanTarget">VLAN</label><select id="vlanTarget"></select></div>
+  <p class="note" style="margin:0">Les ports passent en mode « access » sur ce VLAN. Évite les ports marqués ⇅ : ils relient d’autres switches.</p>
+  <div class="actions"><button class="btn" id="vaNo">Annuler</button><button class="btn primary" id="vlanAssign">Continuer</button></div>
 </dialog>
 
 <dialog id="vlanDialog">
@@ -578,7 +607,7 @@ function render() {
   if (!S) { $('#hostname').textContent = 'En attente de l’agent'; $('#subtitle').textContent = 'Aucune donnée reçue pour l’instant.'; renderTerm(); renderAlerts(); return; }
   $('#hostname').textContent = S.hostname || 'Switch';
   $('#subtitle').textContent = [S.model, S.location && `Emplacement ${S.location}`, S.version && `AOS-CX ${S.version}`, S.uptime && `allumé depuis ${S.uptime.replace(/weeks?/, 'sem.').replace(/days?/, 'j').replace(/hours?/, 'h').replace(/minutes?/, 'min')}`].filter(Boolean).join(' · ');
-  renderKpis(); renderFaceplate(); renderPorts(); renderDevices(); renderChart(); renderPanel(); renderVlans(); renderTerm(); renderAlerts(); fillPortSelect();
+  renderKpis(); renderFaceplate(); renderPorts(); renderChart(); renderPanel(); renderVlans(); renderTerm(); renderAlerts(); fillPortSelect();
 }
 
 function renderAgent() {
@@ -691,54 +720,106 @@ document.addEventListener('pointerdown', (e) => {
   closePanel();
 });
 
-// ---------------------------------------------------------------- ports
-function renderPorts() {
-  const ports = (S.ports || []).filter((p) => filter === 'all' || (filter === 'up' ? p.up : !p.up));
-  $('#portCount').textContent = `${ports.length}`;
-  setHTML($('#portRows'), ports.map((p) => {
-    const st = pState(p);
-    const errs = (p.rx_errors || 0) + (p.tx_errors || 0) + (p.rx_drops || 0) + (p.tx_drops || 0);
-    return `<tr class="click${selected === p.port ? ' sel' : ''}" data-port="${esc(p.port)}">
-      <td class="mono">${esc(p.port)}</td>
-      <td><span class="status ${st}">${pLabel[st]}</span>${st === 'idle' ? ` <span class="muted">${fmtDur(quietFor(p))}</span>` : ''}</td>
-      <td class="num">${p.speed ? `<span class="${isSlow(p) ? 'speed-slow' : ''}">${esc(p.speed)} Mb/s</span>` : (p.reason === 'No XCVR installed' ? '<span class="muted">pas de module</span>' : '<span class="muted">—</span>')}</td>
-      <td class="num">${esc(p.vlan)}${p.mode === 'trunk' ? ' <span class="badge">trunk</span>' : ''}</td>
-      <td>${p.desc ? esc(p.desc) : '<span class="muted">—</span>'}</td>
-      <td class="r num">${p.up ? fmtBps(p.rx_bps) : '<span class="muted">—</span>'}</td>
-      <td class="r num">${p.up ? fmtBps(p.tx_bps) : '<span class="muted">—</span>'}</td>
-      <td class="r num">${fmtBytes(p.rx_bytes)}</td>
-      <td class="r num">${errs ? `<span style="color:var(--warn)" title="erreurs ${(p.rx_errors || 0) + (p.tx_errors || 0)} · CRC ${p.crc || 0} · pertes ${(p.rx_drops || 0) + (p.tx_drops || 0)}">${nf0.format(errs)}</span>` : '<span class="muted">0</span>'}</td>
-    </tr>`;
+// ---------------------------------------------------------------- ports et appareils
+let portSort = { key: 'port', dir: 1 }, showFree = false, portQuery = '';
+const PORT_COLS = [
+  ['port', 'Port'], ['state', 'État'], ['speed', 'Vitesse'], ['vlan', 'VLAN'], ['device', 'Appareil'], ['ip', 'IP'], ['mac', 'MAC'],
+  ['rx', 'Entrant', 'r'], ['tx', 'Sortant', 'r'], ['total', 'Total reçu', 'r'], ['errs', 'Erreurs', 'r'],
+];
+const STATE_ORDER = { up: 0, idle: 1, off: 2, down: 3 };
+const ipNum = (ip) => (ip ? ip.split('.').reduce((a, x) => a * 256 + Number(x), 0) : Infinity);
+const isMacLike = (x) => /^[0-9a-f]{2}([:-][0-9a-f]{2}){5}$/i.test(x || '');
+
+// Ce qui est branché sur un port : switch voisin (LLDP), sinon le ou les appareils (MAC, IP, nom).
+function portInfo(p) {
+  const ips = S.ips || {};
+  const macs = (S.macs || []).filter((m) => m.port === p.port).map((m) => m.mac);
+  const lldp = (S.lldp || []).filter((l) => l.port === p.port);
+  const sw = lldp.find((l) => l.name);
+  const named = lldp.find((l) => !l.name && !isMacLike(l.chassis));
+  const withIp = macs.filter((m) => ips[m]);
+  let name = '', sub = '';
+  if (sw) { name = `Switch ${sw.name}`; sub = `son port ${sw.port_id}${macs.length > 1 ? ` · ${macs.length} appareils derrière` : ''}`; }
+  else if (named) name = named.chassis;
+  else if (withIp.length && ips[withIp[0]].name) name = ips[withIp[0]].name;
+  else if (macs.length) name = macs.length > 1 ? `${macs.length} appareils` : 'Appareil sans nom';
+  const cab = pState(p) === 'down' ? cableOf(p.port) : null;
+  if (!name && cab && cab.kind !== 'empty') name = { open: `Câble ${cab.len} m, rien au bout`, good: `Câble ${cab.len} m, appareil éteint`, fault: `Câble en défaut (~${cab.len} m)` }[cab.kind];
+  const ip = withIp.length ? ips[withIp[0]].ip : '';
+  return { name, sub: [sub, p.desc].filter(Boolean).join(' · '), ip, ipMore: Math.max(0, withIp.length - 1), mac: macs[0] || '', macMore: Math.max(0, macs.length - 1),
+    text: [p.port, portNum(p.port), name, sub, p.desc, ...macs, ...withIp.map((m) => ips[m].ip), ...withIp.map((m) => ips[m].name || '')].join(' ').toLowerCase() };
+}
+function sortVal(p, info, key) {
+  switch (key) {
+    case 'port': return portNum(p.port);
+    case 'state': return STATE_ORDER[pState(p)];
+    case 'speed': return -(Number(p.speed) || 0);
+    case 'vlan': return Number(p.vlan) || 0;
+    case 'device': return info.name ? info.name.toLowerCase() : '￿';
+    case 'ip': return ipNum(info.ip);
+    case 'mac': return info.mac || '￿';
+    case 'rx': return -(p.rx_bps || 0);
+    case 'tx': return -(p.tx_bps || 0);
+    case 'total': return -(p.rx_bytes || 0);
+    case 'errs': return -((p.rx_errors || 0) + (p.tx_errors || 0) + (p.rx_drops || 0) + (p.tx_drops || 0));
+  }
+  return 0;
+}
+function renderPortHead() {
+  setHTML($('#portHead'), PORT_COLS.map(([k, label, cls]) => {
+    const on = portSort.key === k;
+    return `<th data-sort="${k}" class="${cls || ''}" aria-sort="${on ? (portSort.dir > 0 ? 'ascending' : 'descending') : 'none'}" title="Trier par ${label.toLowerCase()}">${label}${on ? `<span class="arrow">${portSort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`;
   }).join(''));
 }
-onPick($('#portRows'));
-$('#portFilter').addEventListener('click', (e) => {
-  const b = e.target.closest('button'); if (!b) return;
-  filter = b.dataset.f; [...$('#portFilter').children].forEach((x) => x.classList.toggle('on', x === b)); renderPorts();
+$('#portHead').addEventListener('click', (e) => {
+  const th = e.target.closest('[data-sort]'); if (!th) return;
+  portSort = portSort.key === th.dataset.sort ? { key: th.dataset.sort, dir: -portSort.dir } : { key: th.dataset.sort, dir: 1 };
+  renderPorts();
 });
+$('#portSearch').addEventListener('input', (e) => { portQuery = e.target.value.trim().toLowerCase(); renderPorts(); });
 
-// ---------------------------------------------------------------- appareils
-function deviceName(m) {
-  const lldpByMac = (S.lldp || []).find((l) => l.port_id?.toLowerCase() === m.mac);
-  const onPort = (S.lldp || []).filter((l) => l.port === m.port);
-  const sw = onPort.find((x) => x.name);
-  if (sw) return `Switch ${esc(sw.name)} <span class="muted">(son port ${esc(sw.port_id)}${sw.port_desc ? ' · ' + esc(sw.port_desc) : ''})</span>`;
-  const l = lldpByMac || (onPort.length === 1 && !/^[0-9a-f:]+$/i.test(onPort[0].chassis) ? onPort[0] : null);
-  if (l) return esc(l.chassis);
-  const ip = (S.ips || {})[m.mac];
-  return ip?.name ? esc(ip.name) : '<span class="muted">—</span>';
+function portRow(p, info) {
+  const st = pState(p), errs = (p.rx_errors || 0) + (p.tx_errors || 0) + (p.rx_drops || 0) + (p.tx_drops || 0);
+  const dash = '<span class="muted">—</span>';
+  return `<tr class="click${selected === p.port ? ' sel' : ''}${st === 'down' && !info.mac ? ' is-free' : ''}" data-port="${esc(p.port)}">
+    <td class="mono">${portNum(p.port)}</td>
+    <td><span class="status ${st}">${pLabel[st]}</span>${st === 'idle' ? ` <span class="muted">${fmtDur(quietFor(p))}</span>` : ''}</td>
+    <td class="num">${p.speed ? `<span class="${isSlow(p) ? 'speed-slow' : ''}">${esc(p.speed)} Mb/s</span>` : (p.reason === 'No XCVR installed' ? '<span class="muted">pas de module</span>' : dash)}</td>
+    <td class="num">${esc(p.vlan)}${p.mode === 'trunk' ? ' <span class="badge">trunk</span>' : ''}</td>
+    <td class="dev">${info.name ? esc(info.name) : dash}${isUplink(p) ? ' <span class="badge">⇅ switch</span>' : ''}${info.sub ? `<span class="sub">${esc(info.sub)}</span>` : ''}</td>
+    <td class="mono">${info.ip ? esc(info.ip) + (info.ipMore ? ` <span class="muted">+${info.ipMore}</span>` : '') : dash}</td>
+    <td class="mono">${info.mac ? esc(info.mac) + (info.macMore ? ` <span class="muted">+${info.macMore}</span>` : '') : dash}</td>
+    <td class="r num">${p.up ? fmtBps(p.rx_bps) : dash}</td>
+    <td class="r num">${p.up ? fmtBps(p.tx_bps) : dash}</td>
+    <td class="r num">${fmtBytes(p.rx_bytes)}</td>
+    <td class="r num">${errs ? `<span style="color:var(--warn)" title="erreurs ${(p.rx_errors || 0) + (p.tx_errors || 0)} · CRC ${p.crc || 0} · pertes ${(p.rx_drops || 0) + (p.tx_drops || 0)}">${nf0.format(errs)}</span>` : '<span class="muted">0</span>'}</td>
+  </tr>`;
 }
-function renderDevices() {
-  const ips = S.ips || {};
-  const rows = (S.macs || []).slice().sort((a, b) => portNum(a.port) - portNum(b.port)).map((m) =>
-    `<tr class="click" data-port="${esc(m.port)}"><td class="mono">${esc(m.port)}</td><td>${deviceName(m)}</td><td class="mono">${ips[m.mac] ? esc(ips[m.mac].ip) : '<span class="muted">—</span>'}</td><td class="mono">${esc(m.mac)}</td></tr>`);
-  $('#devCount').textContent = `${(S.macs || []).length}`;
-  $('#devRows').innerHTML = rows.join('') || '<tr><td colspan="4" class="empty">Aucun appareil détecté.</td></tr>';
+function renderPorts() {
+  renderPortHead();
+  const rows = (S.ports || []).map((p) => ({ p, info: portInfo(p) }));
+  const hit = rows.filter((r) => !portQuery || r.info.text.includes(portQuery));
+  hit.sort((x, y) => { const a = sortVal(x.p, x.info, portSort.key), b = sortVal(y.p, y.info, portSort.key);
+    return (a < b ? -1 : a > b ? 1 : portNum(x.p.port) - portNum(y.p.port)) * (a === b ? 1 : portSort.dir); });
+  // ports libres (sans lien ni appareil) repliés, sauf pendant une recherche
+  const isFree = (r) => pState(r.p) === 'down' && !r.info.mac;
+  const main = portQuery || showFree ? hit : hit.filter((r) => !isFree(r));
+  const free = hit.filter(isFree), cabled = free.filter((r) => { const c = cableOf(r.p.port); return c && c.kind !== 'empty'; }).length;
+  let html = main.map((r) => portRow(r.p, r.info)).join('');
+  if (!portQuery && free.length) html += `<tr class="free-toggle" data-free><td colspan="${PORT_COLS.length}">${showFree ? '▲ Replier les ports libres' : `▼ ${free.length} port${free.length > 1 ? 's' : ''} libre${free.length > 1 ? 's' : ''}${cabled ? ` (dont ${cabled} avec un câble branché)` : ''} — afficher`}</td></tr>`;
+  if (!html) html = `<tr><td colspan="${PORT_COLS.length}" class="empty">Aucun résultat pour « ${esc(portQuery)} ».</td></tr>`;
+  setHTML($('#portRows'), html);
+  const used = rows.filter((r) => !isFree(r)).length;
+  $('#portCount').textContent = portQuery ? `${hit.length} résultat${hit.length > 1 ? 's' : ''}` : `${used} utilisés · ${rows.length - used} libres`;
+  // appareils vus sur le réseau mais pas branchés directement sur ce switch
+  const onSwitch = new Set((S.macs || []).map((m) => m.mac));
+  const elsewhere = Object.entries(S.ips || {}).filter(([mac, v]) => !onSwitch.has(mac) && v.ip !== S.mgmt_ip).map(([, v]) => v.ip).sort((a, b) => ipNum(a) - ipNum(b));
   $('#ipNote').textContent = S.agent?.scan
-    ? `IP trouvées par l’agent sur ${S.agent.scan} (mise à jour toutes les 5 min). Les noms viennent du LLDP ou du DNS.`
-    : 'Les IP s’afficheront quand l’agent tournera sur un PC du même réseau avec l’option scan_subnet (le switch, lui, ne voit que les adresses MAC).';
+    ? `IP trouvées par l’agent sur ${S.agent.scan} (toutes les 5 min).${elsewhere.length ? ` Vus sur le réseau mais pas branchés directement ici : ${elsewhere.join(', ')}.` : ''}`
+    : 'Les IP s’afficheront quand l’agent tournera sur un PC du même réseau (le switch, lui, ne voit que les adresses MAC).';
 }
-onPick($('#devRows'));
+onPick($('#portRows'));
+$('#portRows').addEventListener('click', (e) => { if (e.target.closest('[data-free]')) { showFree = !showFree; renderPorts(); } });
 
 // ---------------------------------------------------------------- VLANs
 function parsePorts(txt) {
@@ -761,21 +842,27 @@ function ranges(nums) {
 function vlanAssignCmd(nums, vid) {
   return ['configure terminal', ...ranges(nums).flatMap((r) => [`interface ${r}`, `vlan access ${vid}`, 'exit']), 'end'].join('\n');
 }
+const ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>';
 function renderVlans() {
   const v = S.vlans || [];
   $('#vlanCount').textContent = `${v.length}`;
-  $('#vlanRows').innerHTML = v.map((x) => {
+  setHTML($('#vlanList'), v.map((x) => {
     const ports = (S.ports || []).filter((p) => p.vlan === String(x.id) && p.mode === 'access').map((p) => portNum(p.port));
-    return `<tr><td class="mono">${x.id}</td><td>${esc(x.name)}</td>
-      <td><span class="status ${x.up ? 'up' : 'down'}">${x.up ? 'Actif' : 'Inactif'}</span></td>
-      <td class="mono">${ports.length ? esc(ranges(ports).map((r) => r.replace(/1\/1\//g, '')).join(', ')) : '<span class="muted">aucun</span>'}</td>
-      <td class="r">${x.id === 1 ? '<span class="note">par défaut</span>' : `<button class="btn small" data-vren="${x.id}">Renommer</button> <button class="btn small danger" data-vdel="${x.id}">Supprimer</button>`}</td></tr>`;
-  }).join('');
+    const set = new Set(ports);
+    let mini = '';
+    for (let n = 1; n <= 28; n++) mini += `<i class="${set.has(n) ? 'on' : ''}${n === 25 ? ' gap' : ''}" title="Port ${n}${set.has(n) ? ` · VLAN ${x.id}` : ''}"></i>`;
+    return `<div class="vlan-item">
+      <div class="vlan-top"><span class="vid">${x.id}</span><b>${esc(x.name)}</b><span class="status ${x.up ? 'up' : 'down'}">${x.up ? 'Actif' : 'Inactif'}</span><span class="grow"></span>
+        ${x.id === 1 ? '<span class="note">par défaut</span>' : `<button class="btn icon" data-vren="${x.id}" title="Renommer" aria-label="Renommer le VLAN ${x.id}">${ICON_EDIT}</button><button class="btn icon danger" data-vdel="${x.id}" title="Supprimer" aria-label="Supprimer le VLAN ${x.id}">${ICON_TRASH}</button>`}</div>
+      <div class="vlan-ports"><span class="mini" aria-hidden="true">${mini}</span><span class="note">${ports.length ? `${ports.length} port${ports.length > 1 ? 's' : ''} · ${esc(ranges(ports).map((r) => r.replace(/1\/1\//g, '')).join(', '))}` : 'aucun port'}</span></div>
+    </div>`;
+  }).join(''));
   const sel = $('#vlanTarget'), cur = sel.value;
-  sel.innerHTML = v.map((x) => `<option value="${x.id}">VLAN ${x.id} · ${esc(x.name)}</option>`).join('');
-  if (cur && v.some((x) => String(x.id) === cur)) sel.value = cur;
+  const opts = v.map((x) => `<option value="${x.id}">VLAN ${x.id} · ${esc(x.name)}</option>`).join('');
+  if (sel.dataset.sig !== opts) { sel.innerHTML = opts; sel.dataset.sig = opts; if (cur && v.some((x) => String(x.id) === cur)) sel.value = cur; }
 }
-$('#vlanRows').addEventListener('click', (e) => {
+$('#vlanList').addEventListener('click', (e) => {
   const ren = e.target.closest('[data-vren]'), del = e.target.closest('[data-vdel]');
   if (ren) openVlanDialog(Number(ren.dataset.vren));
   if (del) {
@@ -785,6 +872,8 @@ $('#vlanRows').addEventListener('click', (e) => {
     confirmCmd(`Supprimer le VLAN ${id} ?`, ports.length ? `Les ports ${ports.join(', ')} seront d’abord remis dans le VLAN 1.` : 'Aucun port n’utilise ce VLAN.', cmd, `Suppression VLAN ${id}`, { ports: ports.map((n) => `1/1/${n}`) });
   }
 });
+$('#vlanAssignOpen').addEventListener('click', () => { $('#vlanAssignDialog').showModal(); $('#vlanPorts').focus(); });
+$('#vaNo').addEventListener('click', () => $('#vlanAssignDialog').close());
 let vlanEdit = null;
 function openVlanDialog(id) {
   vlanEdit = id || null;
@@ -807,6 +896,7 @@ $('#vlanAssign').addEventListener('click', () => {
   let nums; try { nums = parsePorts($('#vlanPorts').value); } catch (e) { return toast(e.message, { type: 'error' }); }
   if (!nums.length) return toast('Indique au moins un port, ex. 3-8, 12', { type: 'warn' });
   const vid = Number($('#vlanTarget').value);
+  $('#vlanAssignDialog').close();
   const uplinks = nums.filter((n) => { const p = S.ports.find((x) => portNum(x.port) === n); return p && isUplink(p); });
   confirmCmd(`Mettre ${nums.length} port(s) dans le VLAN ${vid} ?`,
     uplinks.length ? `⚠ Les ports ${uplinks.join(', ')} relient d’autres switches : les changer peut couper le réseau.` : 'Les appareils branchés changeront de réseau (ils devront parfois renouveler leur IP).',
@@ -1007,7 +1097,7 @@ function renderTerm(force) {
 // ================================================================ alertes
 let SETTINGS = null, EMAIL_OK = false, watchSel = null;
 async function loadSettings() {
-  try { const d = await api('/api/settings'); SETTINGS = d.settings; EMAIL_OK = d.emailAvailable; fillSettings(); } catch {}
+  try { const d = await api('/api/settings'); SETTINGS = d.settings; EMAIL_OK = d.emailAvailable; fillSettings(); renderAlerts(); } catch {}
 }
 function autoWatch() { return (S?.ports || []).filter((p) => isUplink(p) || p.desc).map((p) => p.port); }
 function fillSettings() {
@@ -1042,7 +1132,7 @@ $('#alertForm').addEventListener('submit', (e) => {
         watchPorts: watchSel ? [...watchSel] : null,
         notify: { portDown: $('#alPortDown').checked, temp: $('#alTemp').checked, agentOffline: $('#alAgent').checked, slowLink: $('#alSlow').checked, idleLink: $('#alIdle').checked },
       });
-      SETTINGS = d.settings; fillSettings();
+      SETTINGS = d.settings; fillSettings(); renderAlerts(); $('#alertDialog').close();
       toast('Alertes enregistrées', { type: 'success', sub: 'L’agent les applique à sa prochaine mise à jour.' });
     } catch (err) { if (err.message !== '401') toast('Impossible d’enregistrer', { type: 'error', sub: err.message }); }
   });
@@ -1051,13 +1141,29 @@ $('#alertTest').addEventListener('click', (e) => busy(e.currentTarget, async () 
   try { const r = await api('/api/alerts/test', {}); toast('Notification de test envoyée', { type: 'success', sub: `Via : ${r.sent.join(' + ')}` }); setTimeout(poll, 800); }
   catch (err) { if (err.message !== '401') toast('Le test a échoué', { type: 'error', sub: err.message, timeout: 9000 }); }
 }));
+function openAlertSettings() { loadSettings(); $('#alertDialog').showModal(); }
+$('#settingsBtn').addEventListener('click', openAlertSettings);
+$('#alertSettingsBtn').addEventListener('click', openAlertSettings);
+$('#alClose').addEventListener('click', () => $('#alertDialog').close());
+$('#bellBtn').addEventListener('click', () => {
+  const sec = $('#sec-alertes'); sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  sec.classList.remove('flash'); void sec.offsetWidth; sec.classList.add('flash');
+  try { localStorage.setItem('alertsSeen', String(Date.now() / 1000)); } catch (e) {}
+  renderAlerts();
+});
 function renderAlerts() {
+  let seen = 0; try { seen = Number(localStorage.getItem('alertsSeen')) || 0; } catch (e) {}
+  const fresh = ALERTS.filter((a) => a.t > seen && a.t > NOW - 86400 && ['critical', 'warning'].includes(a.level)).length;
+  $('#bellCount').hidden = !fresh; $('#bellCount').textContent = fresh > 9 ? '9+' : String(fresh);
+  $('#bellBtn').title = fresh ? `${fresh} nouvelle(s) alerte(s)` : 'Alertes récentes';
   $('#alertCount').textContent = ALERTS.length ? `${ALERTS.length}` : '';
-  $('#alertList').innerHTML = ALERTS.length ? ALERTS.map((a) => `<div class="alert-item"><span class="lvl ${esc(a.level)}"></span>
-    <div>${esc(a.text)}<div class="ch">${arr(a.sent).length ? `envoyé par ${arr(a.sent).join(' + ')}` : 'aucun canal configuré'}${arr(a.errors).length ? ` · ⚠ ${esc(arr(a.errors).join(' · '))}` : ''}</div></div>
+  setHTML($('#alertList'), ALERTS.length ? ALERTS.slice(0, 12).map((a) => `<div class="alert-item"><span class="lvl ${esc(a.level)}"></span>
+    <div>${esc(a.text)}<div class="ch">${arr(a.sent).length ? `envoyé par ${arr(a.sent).join(' + ')}` : 'non envoyé'}${arr(a.errors).length ? ` · ⚠ ${esc(arr(a.errors).join(' · '))}` : ''}</div></div>
     <span class="when">${new Date(a.t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div>`).join('')
-    : '<div class="empty" style="padding:16px 0">Aucune alerte pour l’instant.</div>';
-  if (SETTINGS && !watchSel) renderWatch();
+    : '<div class="empty" style="padding:16px 0">Aucune alerte pour l’instant.</div>');
+  const ch = SETTINGS ? [SETTINGS.email && 'e-mail', SETTINGS.webhook && 'webhook'].filter(Boolean) : null;
+  $('#alertChannels').innerHTML = !ch ? '' : ch.length ? `Envoi par ${ch.join(' et ')}.` : '<span style="color:var(--warn)">Aucun canal configuré : les alertes ne sont envoyées nulle part.</span> Ouvre les réglages pour ajouter un e-mail ou un webhook.';
+  if (SETTINGS && !watchSel && $('#alertDialog').open) renderWatch();
 }
 
 // ================================================================ graphique
