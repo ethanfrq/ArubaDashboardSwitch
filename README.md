@@ -1,82 +1,137 @@
 # Aruba Dashboard Switch
 
-Dashboard web pour superviser et piloter un switch **Aruba CX** (AOS-CX, testé sur un **6000 24G 4SFP** en 10.15),
-hébergé sur **Vercel**, sans ouvrir aucun port sur le réseau local.
+**Superviser et piloter un switch Aruba CX depuis n’importe où, dans le navigateur, sans ouvrir un seul port sur le réseau.**
 
-- **Façade en direct** : état de chaque port, vitesse négociée, débit, ports lents (10/100 Mb/s), liens vers d’autres switches,
-  et détection des ports « câble branché mais aucun paquet ».
-- **Débits et historique** : dernière heure en direct, puis 24 h, 7 jours et 30 jours, au total ou pour un port précis.
-- **Appareils connectés** : adresses MAC, noms LLDP / DNS, et **adresses IP** trouvées par l’agent.
-- **Gestion** : activer, désactiver ou redémarrer un port, changer sa description, **VLANs** (créer, renommer, supprimer,
-  affecter des ports), **test de câble** (longueur et défaut par paire), sauvegarde de la configuration.
-- **Console** : n’importe quelle commande CLI, avec les questions oui/non du switch affichées sous forme de boutons.
-- **Alertes** par e-mail (Resend) et/ou webhook (Teams, Slack, Discord, ntfy…) : port surveillé qui tombe, température,
-  agent arrêté, lien lent, lien sans trafic.
-- **Confort** : indicateur de chargement sur chaque action, notifications de réussite ou d’erreur, thème clair/sombre automatique.
+Un tableau de bord web moderne pour les switches **HPE Aruba Networking CX** (AOS-CX) : façade en direct, débits et historique,
+appareils connectés avec leur IP, VLANs, test de câble, console de commandes et alertes.
+Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé sur un PC du réseau.
+
+[![Déployer sur Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch&env=DASHBOARD_PASSWORD,SESSION_SECRET,AGENT_TOKEN&envDescription=Mot%20de%20passe%20du%20dashboard%2C%20cl%C3%A9%20de%20session%20et%20jeton%20de%20l%27agent&project-name=aruba-dashboard)
+
+> Créé par **Ethan** ([@ethanfrq](https://github.com/ethanfrq)).
+
+---
+
+## Fonctionnalités
+
+### Supervision
+- **Façade en direct** : chaque port avec son état, sa vitesse négociée et son débit. Les ports lents (10/100 Mb/s),
+  les liens vers d’autres switches et les ports « branchés mais sans trafic » sont signalés.
+- **Câbles détectés sans lien** : un scan des ports libres indique s’il y a un câble, sa longueur et s’il est en défaut.
+- **Débits et historique** : la dernière heure en direct, puis 24 h, 7 jours et 30 jours, au total ou port par port.
+- **Ports et appareils** : un tableau unique (nom, IP, MAC, débit, erreurs) avec recherche et tri.
+- **Santé du switch** : CPU, mémoire, températures, temps de fonctionnement.
+
+### Gestion
+- Activer, désactiver ou redémarrer un port, changer sa description.
+- **VLANs** : créer, renommer, supprimer, affecter des ports.
+- **Test de câble** (TDR) : longueur et état de chaque paire, avec un verdict en clair.
+- **Console** : n’importe quelle commande CLI ; les questions oui/non du switch s’affichent sous forme de boutons.
+- Sauvegarde de la configuration en un clic.
+
+### Alertes
+- Par **e-mail** (Resend) et/ou **webhook** (Teams, Slack, Discord, ntfy pour le téléphone…).
+- Port surveillé qui tombe ou revient, température trop haute, agent arrêté, lien lent, lien sans trafic.
+
+### Confort
+- Mode clair / sombre, indicateurs de chargement et notifications sur chaque action.
+- Confirmation obligatoire, avec les lignes exactes envoyées au switch, avant toute modification.
+
+---
 
 ## Comment ça marche
 
 ```
-┌──────────┐   SSH    ┌───────────────────────┐  HTTPS (sortant)  ┌──────────────────────────┐
-│  Switch  │ ◄──────► │ Agent Python          │ ────────────────► │ Vercel                   │ ◄── navigateur
-│ Aruba CX │          │ (PC du réseau local)  │ ◄──────────────── │ page + fonctions API     │
-└──────────┘          └───────────────────────┘   commandes       └────────────┬─────────────┘
-                                                                  Upstash Redis · QStash · Resend
+┌──────────┐   SSH    ┌───────────────────────┐   HTTPS (sortant)   ┌──────────────────────┐
+│  Switch  │ ◄──────► │  Agent Python         │ ──────────────────► │  Vercel              │ ◄── navigateur
+│ Aruba CX │          │  (PC du réseau local) │ ◄────────────────── │  page + API          │
+└──────────┘          └───────────────────────┘     commandes       └──────────┬───────────┘
+                                                                     Upstash Redis · QStash · Resend
 ```
 
-Le switch a une adresse privée : Vercel ne peut pas le joindre. Un **agent** installé sur un PC du réseau lit le switch en SSH,
-envoie l’état au dashboard et exécute les commandes demandées. C’est toujours l’agent qui contacte Vercel, jamais l’inverse.
+Le switch a une adresse privée, Vercel ne peut donc pas le joindre. Un **agent** installé sur un PC du réseau
+lit le switch en SSH, envoie l’état au dashboard et exécute les commandes demandées.
+**C’est toujours l’agent qui contacte Vercel, jamais l’inverse** : aucun port à ouvrir, aucun VPN.
 
-Pour rester dans les offres gratuites, l’agent envoie l’état toutes les **60 s** quand personne ne regarde, toutes les **10 s**
-quand le dashboard est ouvert, et relève alors les commandes toutes les **1,5 s**.
+Pour rester dans les offres gratuites, l’agent envoie l’état toutes les **60 s** quand personne ne regarde,
+toutes les **10 s** quand le dashboard est ouvert, et relève alors les commandes toutes les **1,5 s**.
 
-| Dossier | Contenu |
-|---|---|
-| `public/index.html` | l’interface (une seule page, sans framework ni dépendance) |
-| `api/` | fonctions Vercel (Node 24) : connexion, état, commandes, historique, réglages, alertes, agent, vérification planifiée |
-| `lib/` | Redis, authentification, envoi des notifications |
-| `agent/` | l’agent Python et son installation en service Windows |
-| `scripts/` | création de la planification QStash |
+---
 
 ## Installation
 
-### 1. Vercel
-1. Importer ce dépôt dans Vercel (framework : *Other*, dossier de sortie `public`, déjà réglé dans `vercel.json`).
-2. Ajouter depuis le Marketplace Vercel : **Upstash for Redis** et **Upstash QStash** (et **Resend** pour les e-mails).
-3. Définir les variables d’environnement (Production) :
+### Ce qu’il faut
+- Un switch **Aruba CX** avec une IP de gestion et le SSH activé (`ssh server vrf default`).
+- Un **PC allumé en permanence** sur le même réseau que le switch, avec accès à internet
+  (Windows recommandé, macOS et Linux fonctionnent aussi).
+- Un compte **Vercel** (offre gratuite suffisante).
 
-| Variable | Rôle |
-|---|---|
-| `DASHBOARD_PASSWORD` | mot de passe de la page |
-| `SESSION_SECRET` | clé de signature des sessions (`openssl rand -base64 32`) |
-| `AGENT_TOKEN` | jeton partagé avec l’agent (`openssl rand -hex 32`) |
-| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | ajoutées par l’intégration Upstash Redis |
-| `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` | ajoutées par l’intégration QStash |
-| `RESEND_API_KEY` | ajoutée par l’intégration Resend (facultatif) |
-| `ALERT_FROM` | expéditeur des e-mails, ex. `Switch <alertes@mon-domaine.fr>` (facultatif) |
-| `DASHBOARD_URL` | URL du dashboard citée dans les alertes (facultatif) |
+### 1. Déployer le dashboard
+1. Clique sur **Déployer sur Vercel** ci-dessus et renseigne les trois variables demandées :
 
-4. Déployer, puis créer la vérification « agent hors ligne » :
+   | Variable | Rôle | Exemple pour la générer |
+   |---|---|---|
+   | `DASHBOARD_PASSWORD` | mot de passe de la page | un mot de passe solide et unique |
+   | `SESSION_SECRET` | clé de signature des sessions | `openssl rand -base64 32` |
+   | `AGENT_TOKEN` | jeton partagé avec l’agent | `openssl rand -hex 32` |
+
+2. Dans le projet Vercel, onglet **Storage / Integrations**, ajoute **Upstash for Redis** et **Upstash QStash**
+   (et **Resend** si tu veux les alertes par e-mail), puis redéploie.
+3. Active la vérification « agent hors ligne » (toutes les 5 minutes) :
    ```bash
    vercel env pull .env.local
-   DASHBOARD_URL=https://mon-projet.vercel.app node --env-file=.env.local scripts/setup-qstash.mjs
+   DASHBOARD_URL=https://ton-projet.vercel.app node --env-file=.env.local scripts/setup-qstash.mjs
    ```
 
-### 2. Switch
-Le switch doit avoir une IP joignable depuis le PC de l’agent, avec SSH activé (`ssh server vrf default`).
+Variables facultatives : `ALERT_FROM` (expéditeur des e-mails, ex. `Switch <alertes@mon-domaine.fr>`)
+et `DASHBOARD_URL` (lien inclus dans les alertes).
 
-### 3. Agent
-Voir [`agent/INSTALLATION-WINDOWS.md`](agent/INSTALLATION-WINDOWS.md) : Python 3 + `pip install paramiko`,
-`agent_config.json` créé à partir de `agent_config.example.json`, puis `installer-service.bat` en administrateur.
-L’agent fonctionne aussi sous macOS et Linux (`python3 agent.py`).
+### 2. Installer l’agent
+Tout est expliqué pas à pas dans [`agent/INSTALLATION-WINDOWS.md`](agent/INSTALLATION-WINDOWS.md). En résumé :
+1. Python 3 puis `pip install paramiko`.
+2. Copier le dossier `agent` sur le PC et créer `agent_config.json` à partir de `agent_config.example.json`
+   (IP du switch, URL du dashboard, `AGENT_TOKEN`, réseau à scanner pour trouver les IP).
+3. Test : `demarrer-agent.bat`, puis installation en service avec `installer-service.bat` (en administrateur).
+   L’agent démarre alors avec Windows, sans fenêtre, et redémarre tout seul en cas d’erreur.
+
+### 3. C’est prêt
+Ouvre l’URL de ton projet Vercel, connecte-toi, puis règle les alertes avec l’icône ⚙.
+
+---
 
 ## Sécurité
-- Le dashboard est protégé par mot de passe, avec une session signée (cookie `HttpOnly`, `Secure`, `SameSite=Strict`)
-  et un blocage de 15 min après 8 essais ratés.
-- L’agent s’authentifie avec `AGENT_TOKEN`, et la vérification planifiée avec la signature QStash.
-- Le mot de passe SSH du switch reste sur le PC de l’agent, chiffré par Windows (DPAPI). Il n’est jamais envoyé à Vercel.
-- Toute commande de configuration passe par une fenêtre de confirmation qui affiche les lignes exactes envoyées au switch.
-- **Aucun secret n’est versionné** : les fichiers `.env*`, `agent_config.json` et `agent_secret.bin` sont exclus par `.gitignore`.
+- Page protégée par mot de passe ; session signée (cookie `HttpOnly`, `Secure`, `SameSite=Strict`) ;
+  blocage de 15 minutes après 8 essais ratés.
+- L’agent s’authentifie avec `AGENT_TOKEN` ; la vérification planifiée avec la signature QStash.
+- Le mot de passe SSH du switch **ne quitte jamais le PC de l’agent** : il y est chiffré par Windows (DPAPI).
+- Aucun secret n’est versionné (`.env*`, `agent_config.json` et `agent_secret.bin` sont exclus).
 
-> Ce dashboard donne un accès administrateur au switch depuis internet : choisis un mot de passe solide et unique,
-> différent de celui du switch.
+> Le dashboard donne un accès administrateur au switch depuis internet : choisis un mot de passe solide,
+> différent de celui du switch, et ne partage pas l’URL inutilement.
+
+## Compatibilité et limites
+- Testé sur un **Aruba CX 6000 24G 4SFP** (AOS-CX 10.15). La façade est pensée pour les modèles 24 ports + 4 SFP.
+- Offre Vercel gratuite : 12 fonctions maximum par déploiement (le projet les utilise toutes).
+- Un agent par switch.
+
+## Structure du projet
+| Dossier | Contenu |
+|---|---|
+| `public/index.html` | l’interface (une seule page, sans framework ni dépendance) |
+| `api/` | fonctions Vercel (Node 24) |
+| `lib/` | Redis, authentification, notifications |
+| `agent/` | l’agent Python et son installation en service Windows |
+| `scripts/` | création de la vérification planifiée QStash |
+
+---
+
+## Auteur
+Conçu et développé par **Ethan** — [@ethanfrq](https://github.com/ethanfrq).
+
+Une idée, un bug, une question ? Ouvre une [issue](https://github.com/ethanfrq/ArubaDashboardSwitch/issues).
+
+## Licence
+© 2026 Ethan ([@ethanfrq](https://github.com/ethanfrq)). Tous droits réservés — voir [`LICENSE`](LICENSE).
+
+*Aruba, HPE Aruba Networking et AOS-CX sont des marques de Hewlett Packard Enterprise.
+Ce projet est indépendant et n’est ni affilié à HPE ni approuvé par HPE.*
