@@ -18,6 +18,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 CFG = json.loads((HERE / "agent_config.json").read_text(encoding="utf-8"))
 SECRET = HERE / "agent_secret.bin"
+CABLES = HERE / "cable_cache.json"
 IS_WIN = os.name == "nt"
 
 IDLE_SYNC = CFG.get("idle_sync", 60)   # personne sur le dashboard : envoi toutes les 60 s
@@ -274,6 +275,25 @@ def grab(lines, label):
         if m:
             return m[1]
     return None
+
+
+CABLE_ROW = re.compile(r"^\s*(?:(1/1/\d+)\s+)?(?:\(\S+\)\s+)?(\d-\d)\s+(good|open|intra_short|inter_short|high_imp|low_imp|unknown)"
+                       r"\s+(\S+)\s+([\d.]+\s*\+/-\s*[\d.]+|--)", re.I)
+
+
+def parse_cables(lines):
+    """Résultats de « diag cable-diagnostic show » : {port: [{pair, status, imp, dist}]}."""
+    res, cur = {}, None
+    for l in lines:
+        m = CABLE_ROW.match(l)
+        if not m:
+            continue
+        if m[1]:
+            cur = m[1]
+            res[cur] = []
+        if cur:
+            res[cur].append({"pair": m[2], "status": m[3].lower(), "imp": m[4], "dist": m[5]})
+    return res
 
 
 def num(v):
@@ -585,6 +605,15 @@ class Commander(threading.Thread):
             out.append(f"Erreur : {e}")
             ok = False
             self.t = None
+        found = parse_cables(out)
+        if found:
+            now = round(time.time())
+            for port, rows in found.items():
+                self.agent.cables[port] = {"t": now, "rows": rows}
+            try:
+                CABLES.write_text(json.dumps(self.agent.cables), encoding="utf-8")
+            except OSError:
+                pass
         api("/api/agent/result", {"id": c["id"], "status": "done" if ok else "error", "output": "\n".join(out).strip()})
         self.agent.wake.set()  # relevé immédiat pour refléter le changement
 
@@ -596,6 +625,10 @@ class Agent:
         self.col, self.t, self.tlock = Collector(), None, threading.Lock()
         self.settings, self.sver, self.hot_until = {}, None, 0
         self.ips, self.last_scan, self.wake = {}, 0, threading.Event()
+        try:
+            self.cables = json.loads(CABLES.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            self.cables = {}
         self.commander = Commander(self)
 
     def hot(self):
@@ -624,6 +657,7 @@ class Agent:
                     self.last_scan = time.time()
                     threading.Thread(target=self.scan, daemon=True).start()
                 state["ips"] = self.ips
+                state["cables"] = self.cables
                 state["agent"] = {"version": 2, "host": socket.gethostname(),
                                   "scan": CFG.get("scan_subnet"), "sync": HOT_SYNC if self.hot() else IDLE_SYNC}
                 samples, events = self.col.take()

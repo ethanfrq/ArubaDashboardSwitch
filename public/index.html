@@ -147,6 +147,8 @@ header.top .spacer { flex: 1; }
 .jack.idle { --c: #6e5313; --led: #ffcc4d; --ink: #fff3d6; }
 .jack.idle .led { animation: blink 1.6s steps(2) infinite; }
 .jack.off { --led: #ff6b66; --ink: #ffb3b0; background: repeating-linear-gradient(135deg, #5a2422 0 5px, #4a1d1b 5px 10px); }
+.jack.cable { --c: #2c3a4a; --led: #7fb2ff; --ink: #d9e8ff; }
+.jack.fault { --c: #4a2626; --led: #ff8a80; --ink: #ffd9d6; box-shadow: inset 0 -5px 0 rgb(0 0 0 / .22), inset 0 0 0 2px #c9302c; }
 .jack.sfp { height: 44px; box-shadow: inset 0 0 0 2px rgb(0 0 0 / .35); }
 .jack.empty { --c: #262625; --ink: #6f6e68; }
 .jack .slow { color: #ffcc4d; }
@@ -302,7 +304,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 
   <div class="grid">
     <section class="card span-12">
-      <h2>Façade <span class="count" id="fpCount"></span><span class="right note">Clique sur un port pour le gérer · reclique pour le désélectionner</span></h2>
+      <h2>Façade <span class="count" id="fpCount"></span><span class="right"><span class="note">Clique sur un port pour le gérer · reclique pour le désélectionner</span><button class="btn small" id="scanCables" title="Teste les câbles de tous les ports sans lien">Scanner les ports libres</button></span></h2>
       <div class="faceplate-wrap"><div class="faceplate" id="faceplate"></div></div>
       <div class="legend" id="fpLegend"></div>
     </section>
@@ -430,6 +432,7 @@ function fmtBytes(v) {
   while (v >= 1000 && i < u.length - 1) { v /= 1000; i++; }
   return `${(i ? nf : nf0).format(v)} ${u[i]}`;
 }
+const durShort = (s) => (s < 3600 ? `${Math.max(1, Math.round(s / 60))}min` : `${Math.round(s / 3600)}h`);
 const fmtDur = (s) => (s < 60 ? `${Math.round(s)} s` : s < 3600 ? `${Math.round(s / 60)} min` : `${nf.format(s / 3600)} h`);
 const ago = (s) => `il y a ${fmtDur(Math.max(0, s))}`;
 const portNum = (p) => Number(String(p).split('/').pop());
@@ -554,8 +557,9 @@ function renderAgent() {
   const age = NOW - (S.received || S.updated);
   const every = S.agent?.sync || 10;
   const online = age < Math.max(45, every * 2.5);
-  pill.className = 'pill ' + (online ? 'ok' : 'ko');
-  pill.lastElementChild.textContent = online ? `Agent en ligne · ${ago(age)}` : `Agent hors ligne · ${ago(age)}`;
+  const working = !online && age < 600 && LOG.some((c) => c.status === 'running');
+  pill.className = 'pill ' + (online ? 'ok' : working ? '' : 'ko');
+  pill.lastElementChild.textContent = online ? `Agent en ligne · ${ago(age)}` : working ? 'Agent occupé : commande longue en cours…' : `Agent hors ligne · ${ago(age)}`;
   pill.title = `${S.agent?.host ? `Agent sur ${S.agent.host}. ` : ''}Mise à jour toutes les ${every} s (10 s quand le dashboard est ouvert, 60 s sinon).`;
   $('#termMode').textContent = online && every <= 10 ? 'temps réel : exécution en 1 à 3 s' : 'l’agent passe en temps réel dans moins d’une minute';
 }
@@ -594,13 +598,18 @@ function renderFaceplate() {
     const p = ports[n]; if (!p) return '<span></span>';
     const st = pState(p), bps = (p.rx_bps || 0) + (p.tx_bps || 0);
     const empty = sfp && p.reason === 'No XCVR installed';
+    const cab = st === 'down' ? cableOf(p.port) : null;
+    const cabCls = cab && cab.kind !== 'empty' ? (cab.kind === 'fault' ? 'fault' : 'cable') : null;
     const up = isUplink(p), slow = isSlow(p);
-    const meta = st === 'off' ? 'désactivé' : empty ? 'vide' : st === 'down' ? 'libre'
-      : st === 'idle' ? `0 pkt · ${fmtDur(quietFor(p)).replace(' ', '')}` : fmtBps(bps).replace(' ', ' ');
+    const meta = st === 'off' ? 'désactivé' : empty ? 'vide'
+      : st === 'down' ? (cabCls ? `${cab.len} m` : 'libre')
+      : st === 'idle' ? `0 pkt ${durShort(quietFor(p))}` : fmtBps(bps).replace(' ', ' ');
     const tip = [`Port ${n}`, pLabel[st], p.speed && `${p.speed} Mb/s${slow ? ' (lent)' : ''}`, up && 'lien vers un autre switch',
-      p.vlan !== '1' && `VLAN ${p.vlan}`, st === 'idle' && `aucun paquet reçu depuis ${fmtDur(quietFor(p))}`, st === 'up' && fmtBps(bps), p.desc].filter(Boolean).join(' · ');
-    const cls = ['jack', sfp && 'sfp', empty ? 'empty' : st, selected === p.port && 'sel', pendingFor(p.port) && 'busy'].filter(Boolean).join(' ');
-    const tags = (up ? '<span class="tag">⇅</span>' : '') + (p.vlan !== '1' ? `<span class="tag">V${esc(p.vlan)}</span>` : '')
+      p.vlan !== '1' && `VLAN ${p.vlan}`, st === 'idle' && `aucun paquet reçu depuis ${fmtDur(quietFor(p))}`,
+      cab && { empty: 'test câble : rien de branché', open: `test câble : câble ${cab.len} m, rien au bout`, good: `test câble : câble ${cab.len} m en bon état, appareil éteint`, fault: `test câble : DÉFAUT vers ${cab.len} m` }[cab.kind], st === 'up' && fmtBps(bps), p.desc].filter(Boolean).join(' · ');
+    const cls = ['jack', sfp && 'sfp', empty ? 'empty' : cabCls || st, selected === p.port && 'sel', pendingFor(p.port) && 'busy'].filter(Boolean).join(' ');
+    const tags = (cabCls ? `<span class="tag${cabCls === 'fault' ? ' slow' : ''}">${cabCls === 'fault' ? '⚠ défaut' : cab.kind === 'good' ? '↔ ok' : '↔'}</span>` : '')
+      + (up ? '<span class="tag">⇅</span>' : '') + (p.vlan !== '1' ? `<span class="tag">V${esc(p.vlan)}</span>` : '')
       + (p.up && p.speed && !sfp ? `<span class="tag${slow ? ' slow' : ''}">${speedTag(Number(p.speed))}</span>` : '');
     return `<button class="${cls}" data-port="${esc(p.port)}" title="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${selected === p.port}">
       <span class="top"><span class="led"></span><span class="n">${n}</span>${tags}</span>
@@ -611,17 +620,31 @@ function renderFaceplate() {
   for (const [a, b] of [[1, 12], [13, 24]]) { html += '<div class="fp-group">'; for (let n = a; n <= b; n += 2) html += jack(n) + jack(n + 1); html += '</div>'; }
   html += '<div class="fp-group fp-sfp">' + jack(25, 1) + jack(26, 1) + jack(27, 1) + jack(28, 1) + '</div>';
   setHTML($('#faceplate'), html);
+  const downs = (S.ports || []).filter((p) => pState(p) === 'down').map((p) => cableOf(p.port)).filter(Boolean);
+  const cabled = downs.filter((c) => c.kind === 'open' || c.kind === 'good'), faulty = downs.filter((c) => c.kind === 'fault');
   const all = S.ports || [], count = (s) => all.filter((p) => pState(p) === s).length, slow = all.filter(isSlow).length, up = all.filter((p) => p.up).length;
   $('#fpCount').textContent = `${up} branché${up > 1 ? 's' : ''}`;
   $('#fpLegend').innerHTML = `
     <span><i class="sw" style="background:#1f6b34"></i>Actif <b>${count('up')}</b></span>
     <span><i class="sw" style="background:#6e5313"></i>Câble branché, aucun paquet <b>${count('idle')}</b></span>
-    <span><i class="sw" style="background:#3a3a38"></i>Libre <b>${count('down')}</b></span>
+    <span><i class="sw" style="background:#3a3a38"></i>Libre <b>${count('down') - cabled.length - faulty.length}</b></span>
+    <span><i class="sw" style="background:#2c3a4a"></i>↔ Câble branché, pas de lien <b>${cabled.length}</b></span>
+    ${faulty.length ? `<span><i class="sw" style="background:#4a2626;box-shadow:inset 0 0 0 2px #c9302c"></i>Câble en défaut <b>${faulty.length}</b></span>` : ''}
     <span><i class="sw" style="background:repeating-linear-gradient(135deg,#5a2422 0 3px,#4a1d1b 3px 6px)"></i>Désactivé <b>${count('off')}</b></span>
     ${slow ? `<span><span class="speed-slow mono">10M/100M</span>Vitesse réduite <b>${slow}</b></span>` : ''}
     <span><span class="mono">⇅</span>Lien vers un autre switch</span><span><span class="mono">V10</span>VLAN autre que 1</span>`;
 }
 onPick($('#faceplate'));
+
+// Test de câble sur tous les ports sans lien (ne coupe rien : ces ports n'ont pas de lien).
+$('#scanCables').addEventListener('click', () => {
+  const ports = (S?.ports || []).filter((p) => p.enabled && !p.up && p.type === '1GbT').map((p) => p.port);
+  if (!ports.length) return toast('Aucun port libre à tester', { type: 'warn' });
+  const cmd = ['diagnostics', ...ports.flatMap((p) => [`diag cable-diagnostic test ${p}`, 'y', `diag cable-diagnostic show ${p}`])].join('\n');
+  confirmCmd(`Scanner ${ports.length} port(s) libre(s) ?`,
+    `Ports ${ports.map(portNum).join(', ')}. Pour chacun : y a-t-il un câble, sa longueur, et est-il en bon état ? Aucun appareil n’est coupé. Durée : environ ${Math.ceil(ports.length * 8 / 60)} min.`,
+    cmd, `Scan câbles (${ports.length} ports)`, { ports, kind: 'cablescan' });
+});
 
 // Sélection / désélection d'un port
 function onPick(root) {
@@ -767,13 +790,30 @@ function parseCable(out) {
   for (const m of String(out || '').matchAll(/(\d-\d)\s+(good|open|intra_short|inter_short|high_imp|low_imp|unknown)\s+(\S+)\s+((?:[\d.]+\s*\+\/-\s*[\d.]+)|--|\S+)/g)) rows.push({ pair: m[1], status: m[2], imp: m[3], dist: m[4] });
   return rows;
 }
+// Résume un test de câble : vide, câble sans rien au bout, câble bon (appareil éteint), ou défaut.
+function cableKind(rows) {
+  if (!rows?.length) return null;
+  const dist = rows.map((r) => parseFloat(r.dist)).filter((x) => !isNaN(x));
+  const len = dist.length ? Math.round(Math.max(...dist)) : null;
+  const bad = rows.filter((r) => r.status !== 'good');
+  if (bad.every((r) => r.status === 'open') && bad.length === rows.length) return { kind: len !== null && len <= 2 ? 'empty' : 'open', len };
+  return { kind: bad.length ? 'fault' : 'good', len };
+}
+const CABLE_MAX_AGE = 7 * 86400;
+function cableOf(port) {
+  const c = S?.cables?.[port];
+  return c && NOW - c.t < CABLE_MAX_AGE ? { ...c, ...cableKind(c.rows) } : null;
+}
 function cableVerdict(rows, p) {
   if (!rows.length) return null;
+  const k = cableKind(rows);
+  if (k.kind === 'empty') return ['green', 'Aucun câble branché sur ce port.'];
+  if (k.kind === 'good' && !p.up) return ['amber', `Câble en bon état (environ ${k.len} m) mais pas de lien : l’appareil au bout est éteint, en veille profonde ou sa carte réseau est désactivée.`];
   const bad = rows.filter((r) => r.status !== 'good');
   const dist = rows.map((r) => parseFloat(r.dist)).filter((x) => !isNaN(x));
   const len = dist.length ? Math.round(Math.max(...dist)) : null;
   if (!bad.length) return ['green', `Câble en bon état${len ? ` · environ ${len} m` : ''}.`];
-  if (bad.every((r) => r.status === 'open')) return [p.up ? 'amber' : 'amber', `Circuit ouvert à environ ${len ?? '?'} m sur toutes les paires : rien n’est branché au bout (prise murale vide ou appareil débranché).`];
+  if (bad.every((r) => r.status === 'open')) return ['amber', `Câble d’environ ${len ?? '?'} m branché, mais rien au bout : prise murale vide, appareil débranché, ou brassage manquant.`];
   if (bad.length < rows.length && bad.length <= 2) return ['red', `${bad.length} paire(s) défectueuse(s) (${bad.map((r) => `${r.pair} ${CABLE_FR[r.status]}`).join(', ')}) : c’est typique d’un lien bloqué à 100 Mb/s ou 10 Mb/s. Remplace le câble ou refais la prise.`];
   return ['red', `Défaut détecté : ${bad.map((r) => `${r.pair} ${CABLE_FR[r.status]} à ${r.dist} m`).join(', ')}.`];
 }
@@ -784,8 +824,9 @@ function renderPanel(force) {
   const n = portNum(p.port), st = pState(p), uplink = isUplink(p);
   const lldp = (S.lldp || []).filter((l) => l.port === p.port);
   const macs = (S.macs || []).filter((m) => m.port === p.port), ips = S.ips || {};
-  const cableRun = LOG.find((c) => c.kind === `cable:${p.port}`);
-  const cableRows = cableRun && cableRun.status === 'done' ? parseCable(OUT[cableRun.id]) : [];
+  const cableRun = LOG.find((c) => c.kind === `cable:${p.port}` || (c.kind === 'cablescan' && (c.ports || []).includes(p.port)));
+  const stored = S.cables?.[p.port];
+  const cableRows = stored?.rows?.length ? stored.rows : (cableRun && cableRun.status === 'done' ? parseCable(OUT[cableRun.id]) : []);
   const verdict = cableVerdict(cableRows, p);
   const alerts = [
     st === 'idle' && `<div class="alert amber"><b>Câble branché mais aucun paquet reçu depuis ${fmtDur(quietFor(p))}.</b><br>L’appareil est sans doute éteint ou en veille, sa carte réseau est désactivée, ou le câble ne mène nulle part.</div>`,
@@ -828,7 +869,7 @@ function renderPanel(force) {
       ${verdict ? `<div class="alert ${verdict[0]}" style="margin:0">${esc(verdict[1])}</div>
         <table class="cable"><thead><tr><th>Paire</th><th>État</th><th>Impédance</th><th>Distance</th></tr></thead><tbody>
         ${cableRows.map((r) => `<tr><td class="mono">${esc(r.pair)}</td><td>${esc(CABLE_FR[r.status] || r.status)}</td><td class="mono">${esc(r.imp)} Ω</td><td class="mono">${esc(r.dist)} m</td></tr>`).join('')}</tbody></table>
-        <span class="note">Test du ${new Date((cableRun.finished || cableRun.created) * 1000).toLocaleString('fr-FR')}</span>` : ''}
+        <span class="note">Test du ${new Date((stored?.t || cableRun?.finished || cableRun?.created) * 1000).toLocaleString('fr-FR')}</span>` : ''}
       ${cableRun && cableRun.status === 'error' ? '<div class="alert red" style="margin:0">Le test a échoué. Détail dans la console.</div>' : ''}
       ${cableRun && cableRun.status === 'done' && OUT[cableRun.id] !== undefined && !cableRows.length ? '<div class="alert amber" style="margin:0">Le switch n’a pas encore donné de résultat. Relance le test dans quelques secondes.</div>' : ''}
       <button class="btn" data-act="cable" ${p.type !== '1GbT' ? 'disabled title="Test impossible sur un port SFP"' : ''}>Tester le câble</button>
