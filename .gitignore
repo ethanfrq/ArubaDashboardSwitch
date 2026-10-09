@@ -1,4 +1,4 @@
-# secrets et fichiers locaux — ne jamais publier
+# secrets et fichiers locaux : ne jamais publier
 .env*
 .vercel
 ACCES-*.md

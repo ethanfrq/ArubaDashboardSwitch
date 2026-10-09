@@ -6,6 +6,10 @@ Un tableau de bord web moderne pour les switches **HPE Aruba Networking CX** (AO
 appareils connectés avec leur IP, VLANs, test de câble, console de commandes et alertes.
 Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé sur un PC du réseau.
 
+[![Version](https://img.shields.io/github/v/release/ethanfrq/ArubaDashboardSwitch?label=version)](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest)
+[![Licence](https://img.shields.io/badge/licence-tous%20droits%20r%C3%A9serv%C3%A9s-lightgrey)](LICENSE)
+[![AOS-CX](https://img.shields.io/badge/Aruba%20CX-AOS--CX%2010.x-ff8300)](#compatibilité-et-limites)
+
 [![Déployer sur Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch&env=DASHBOARD_PASSWORD,SESSION_SECRET,AGENT_TOKEN&envDescription=Mot%20de%20passe%20du%20dashboard%2C%20cl%C3%A9%20de%20session%20et%20jeton%20de%20l%27agent&project-name=aruba-dashboard)
 
 > Créé par **Ethan** ([@ethanfrq](https://github.com/ethanfrq)).
@@ -122,8 +126,9 @@ Variables facultatives : `ALERT_FROM` (expéditeur des e-mails, ex. `Switch <ale
 et `DASHBOARD_URL` (lien inclus dans les alertes).
 
 ### 2. Installer l’agent
-Tout est expliqué pas à pas dans [`agent/INSTALLATION-WINDOWS.md`](agent/INSTALLATION-WINDOWS.md). En résumé :
-1. Python 3 puis `pip install paramiko`.
+Télécharge l’agent prêt à l’emploi depuis la [dernière version](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest)
+(fichier `aruba-agent-x.y.z.zip`). Tout est expliqué pas à pas dans [`agent/INSTALLATION-WINDOWS.md`](agent/INSTALLATION-WINDOWS.md). En résumé :
+1. Python 3 puis `pip install -r requirements.txt` (dans le dossier de l’agent).
 2. Copier le dossier `agent` sur le PC et créer `agent_config.json` à partir de `agent_config.example.json`
    (IP du switch, URL du dashboard, `AGENT_TOKEN`, réseau à scanner pour trouver les IP).
 3. Test : `demarrer-agent.bat`, puis installation en service avec `installer-service.bat` (en administrateur).
@@ -161,12 +166,18 @@ Ouvre l’URL de ton projet Vercel, connecte-toi, puis règle les alertes avec l
 ---
 
 ## Auteur
-Conçu et développé par **Ethan** — [@ethanfrq](https://github.com/ethanfrq).
+Conçu et développé par **Ethan** ([@ethanfrq](https://github.com/ethanfrq)).
 
 Une idée, un bug, une question ? Ouvre une [issue](https://github.com/ethanfrq/ArubaDashboardSwitch/issues).
 
+## Versions
+Les nouveautés de chaque version sont dans [`CHANGELOG.md`](CHANGELOG.md) et sur la page [Releases](https://github.com/ethanfrq/ArubaDashboardSwitch/releases).
+
 ## Licence
-© 2026 Ethan ([@ethanfrq](https://github.com/ethanfrq)). Tous droits réservés — voir [`LICENSE`](LICENSE).
+© 2026 Ethan ([@ethanfrq](https://github.com/ethanfrq)). Tous droits réservés. Voir [`LICENSE`](LICENSE).
+
+Les composants libres utilisés (Upstash, paramiko…) restent sous leur propre licence :
+voir [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 *Aruba, HPE Aruba Networking et AOS-CX sont des marques de Hewlett Packard Enterprise.
 Ce projet est indépendant et n’est ni affilié à HPE ni approuvé par HPE.*

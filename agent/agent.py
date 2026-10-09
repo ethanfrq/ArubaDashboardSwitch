@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+AGENT_VERSION = "1.0.0"
 HERE = Path(__file__).resolve().parent
 CFG = json.loads((HERE / "agent_config.json").read_text(encoding="utf-8"))
 SECRET = HERE / "agent_secret.bin"
@@ -660,7 +661,7 @@ class Agent:
                 state["cables"] = self.cables
                 if CFG.get("transport") != "console":
                     state["mgmt_ip"] = CFG.get("switch_host")
-                state["agent"] = {"version": 2, "host": socket.gethostname(),
+                state["agent"] = {"version": AGENT_VERSION, "host": socket.gethostname(),
                                   "scan": CFG.get("scan_subnet"), "sync": HOT_SYNC if self.hot() else IDLE_SYNC}
                 samples, events = self.col.take()
                 r = api("/api/agent/sync", {"state": state, "samples": samples, "events": events, "sver": self.sver})
@@ -739,7 +740,7 @@ def main():
         print(json.dumps(col.collect(t, {}), indent=1, ensure_ascii=False))
         return
     lock = single_instance()  # noqa: F841 (gardé ouvert pendant toute la durée)
-    log.info("Agent démarré (%s).", CFG.get("transport", "ssh"))
+    log.info("Agent %s démarré (%s).", AGENT_VERSION, CFG.get("transport", "ssh"))
     Agent().run()
 
 

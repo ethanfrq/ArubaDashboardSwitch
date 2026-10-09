@@ -1,12 +1,12 @@
-# Agent du dashboard switch — installation sur le PC Windows
+# Installation de l’agent sur le PC Windows
 
 Le PC doit être sur le même réseau que le switch et pouvoir le joindre en SSH.
 
 ## 1. Préparer
 1. Installer Python 3 depuis https://www.python.org/downloads/ (cocher « Add python.exe to PATH »).
-2. Ouvrir une invite de commandes : `pip install paramiko`
+2. Dans une invite de commandes ouverte dans le dossier de l’agent : `pip install -r requirements.txt`
 3. Copier ce dossier `agent` sur le PC, par ex. `C:\aruba-agent`.
-4. Créer `agent_config.json` : copier `agent_config.example.json` et y coller le jeton de l’agent (valeur AGENT_TOKEN, fournie à part — jamais dans Git). Si tu copies le dossier depuis le Mac, `agent_config.windows.json` est déjà rempli : renomme-le simplement.
+4. Créer `agent_config.json` : copier `agent_config.example.json` et y coller le jeton de l’agent (valeur AGENT_TOKEN, fournie à part et jamais mise dans Git). Si tu copies le dossier depuis le Mac, `agent_config.windows.json` est déjà rempli : renomme-le simplement.
 
 ## 2. Installer comme service (recommandé)
 Clic droit sur `installer-service.bat` → « Exécuter en tant qu'administrateur ».

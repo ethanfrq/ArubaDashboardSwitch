@@ -284,6 +284,8 @@ tbody tr.click:hover, tbody tr.sel { background: var(--surface-2); }
 .lvl.critical { background: var(--bad); } .lvl.warning { background: var(--warn); border-radius: 2px; } .lvl.ok { background: var(--good); } .lvl.info { background: var(--info); }
 
 /* ---------- notifications (toasts) */
+.foot { max-width: 1320px; margin: 0 auto; padding: 4px 20px 28px; display: flex; gap: 6px 14px; flex-wrap: wrap; justify-content: center; font-size: 12px; color: var(--text-3); }
+.foot a { color: inherit; }
 .toasts { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 50; display: grid; gap: 8px; width: min(440px, calc(100% - 32px)); }
 .toast {
   display: grid; grid-template-columns: 20px 1fr auto; gap: 10px; align-items: start;
@@ -343,12 +345,12 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
   </header>
 
   <section class="kpis">
-    <div class="card kpi"><div class="label">Ports branchés</div><div class="value num" id="kPorts">—</div><div class="hint" id="kPortsHint"></div></div>
-    <div class="card kpi"><div class="label">Débit entrant</div><div class="value num" id="kRx">—</div><div class="hint">reçu par le switch, tous ports</div></div>
-    <div class="card kpi"><div class="label">Débit sortant</div><div class="value num" id="kTx">—</div><div class="hint">envoyé par le switch, tous ports</div></div>
-    <div class="card kpi"><div class="label">Appareils</div><div class="value num" id="kDev">—</div><div class="hint" id="kDevHint"></div></div>
-    <div class="card kpi"><div class="label">CPU · mémoire</div><div class="value num" id="kCpu">—</div><div class="bar"><i id="kCpuBar" style="width:0"></i></div></div>
-    <div class="card kpi"><div class="label">Température max</div><div class="value num" id="kTemp">—</div><div class="hint" id="kTempHint"></div></div>
+    <div class="card kpi"><div class="label">Ports branchés</div><div class="value num" id="kPorts">-</div><div class="hint" id="kPortsHint"></div></div>
+    <div class="card kpi"><div class="label">Débit entrant</div><div class="value num" id="kRx">-</div><div class="hint">reçu par le switch, tous ports</div></div>
+    <div class="card kpi"><div class="label">Débit sortant</div><div class="value num" id="kTx">-</div><div class="hint">envoyé par le switch, tous ports</div></div>
+    <div class="card kpi"><div class="label">Appareils</div><div class="value num" id="kDev">-</div><div class="hint" id="kDevHint"></div></div>
+    <div class="card kpi"><div class="label">CPU · mémoire</div><div class="value num" id="kCpu">-</div><div class="bar"><i id="kCpuBar" style="width:0"></i></div></div>
+    <div class="card kpi"><div class="label">Température max</div><div class="value num" id="kTemp">-</div><div class="hint" id="kTempHint"></div></div>
   </section>
 
   <div class="grid">
@@ -404,6 +406,11 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
     </section>
   </div>
 </main>
+<footer class="foot" id="foot" hidden>
+  <span>Aruba Dashboard Switch <span id="appVersion"></span></span><span id="agentVersion"></span>
+  <span>© 2026 <a href="https://github.com/ethanfrq" target="_blank" rel="noopener">Ethan</a></span>
+  <a href="https://github.com/ethanfrq/ArubaDashboardSwitch" target="_blank" rel="noopener">GitHub</a>
+</footer>
 
 <aside class="drawer panel" id="portPanel" hidden aria-labelledby="ppTitle">
   <div class="drawer-head"><h2 id="ppTitle">Port</h2><button class="btn small" id="ppClose">Fermer</button></div>
@@ -456,6 +463,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
+const APP_VERSION = '1.0.0';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
@@ -463,13 +471,13 @@ const nf0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 const arr = (x) => (Array.isArray(x) ? x : []);
 
 function fmtBps(v) {
-  if (v == null) return '—';
+  if (v == null) return '-';
   const u = ['b/s', 'kb/s', 'Mb/s', 'Gb/s']; let i = 0;
   while (v >= 1000 && i < u.length - 1) { v /= 1000; i++; }
   return `${(i ? nf : nf0).format(v)} ${u[i]}`;
 }
 function fmtBytes(v) {
-  if (v == null) return '—';
+  if (v == null) return '-';
   const u = ['o', 'Ko', 'Mo', 'Go', 'To']; let i = 0;
   while (v >= 1000 && i < u.length - 1) { v /= 1000; i++; }
   return `${(i ? nf : nf0).format(v)} ${u[i]}`;
@@ -541,8 +549,9 @@ async function api(path, body) {
   if (!r.ok) throw new Error(data.error || `Erreur ${r.status}`);
   return data;
 }
-function showLogin() { $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
-function showApp() { $('#login').hidden = true; $('#app').hidden = false; }
+function showLogin() { $('#foot').hidden = true; $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
+function showApp() { $('#login').hidden = true; $('#app').hidden = false; $('#foot').hidden = false; }
+$('#appVersion').textContent = `v${APP_VERSION}`;
 
 $('#loginForm').addEventListener('submit', (e) => {
   e.preventDefault(); $('#loginErr').textContent = '';
@@ -612,6 +621,8 @@ function render() {
 
 function renderAgent() {
   const pill = $('#agentPill');
+  const av = S?.agent?.version;
+  $('#agentVersion').textContent = !S?.agent ? '' : /^\d+\.\d+/.test(String(av)) ? `agent v${av}` : 'agent : version antérieure à 1.0.0';
   if (!S) { pill.className = 'pill ko'; pill.lastElementChild.textContent = 'Agent jamais connecté'; return; }
   const age = NOW - (S.received || S.updated);
   const every = S.agent?.sync || 10;
@@ -632,13 +643,13 @@ function renderKpis() {
   const off = ports.filter((p) => !p.enabled).map((p) => portNum(p.port));
   $('#kPortsHint').textContent = [idle && `${idle} sans trafic`, slow && `${slow} lent${slow > 1 ? 's' : ''}`, off.length && `désactivé : ${off.join(', ')}`].filter(Boolean).join(' · ') || 'tout est normal';
   const last = (S.history || []).at(-1);
-  $('#kRx').textContent = last ? fmtBps(last[1]) : '—';
-  $('#kTx').textContent = last ? fmtBps(last[2]) : '—';
+  $('#kRx').textContent = last ? fmtBps(last[1]) : '-';
+  $('#kTx').textContent = last ? fmtBps(last[2]) : '-';
   const macs = S.macs || [], ips = S.ips || {};
   $('#kDev').textContent = nf0.format(macs.length);
   const withIp = macs.filter((m) => ips[m.mac]).length;
   $('#kDevHint').textContent = S.agent?.scan ? `${withIp} avec IP connue` : 'adresses MAC apprises';
-  $('#kCpu').innerHTML = `${S.cpu ?? '—'} % <small>· ${S.mem ?? '—'} %</small>`;
+  $('#kCpu').innerHTML = `${S.cpu ?? '-'} % <small>· ${S.mem ?? '-'} %</small>`;
   $('#kCpuBar').style.width = `${Math.min(100, S.cpu || 0)}%`;
   const temps = S.temps || [];
   if (temps.length) {
@@ -780,7 +791,7 @@ $('#portSearch').addEventListener('input', (e) => { portQuery = e.target.value.t
 
 function portRow(p, info) {
   const st = pState(p), errs = (p.rx_errors || 0) + (p.tx_errors || 0) + (p.rx_drops || 0) + (p.tx_drops || 0);
-  const dash = '<span class="muted">—</span>';
+  const dash = '<span class="muted">-</span>';
   return `<tr class="click${selected === p.port ? ' sel' : ''}${st === 'down' && !info.mac ? ' is-free' : ''}" data-port="${esc(p.port)}">
     <td class="mono">${portNum(p.port)}</td>
     <td><span class="status ${st}">${pLabel[st]}</span>${st === 'idle' ? ` <span class="muted">${fmtDur(quietFor(p))}</span>` : ''}</td>
@@ -806,7 +817,7 @@ function renderPorts() {
   const main = portQuery || showFree ? hit : hit.filter((r) => !isFree(r));
   const free = hit.filter(isFree), cabled = free.filter((r) => { const c = cableOf(r.p.port); return c && c.kind !== 'empty'; }).length;
   let html = main.map((r) => portRow(r.p, r.info)).join('');
-  if (!portQuery && free.length) html += `<tr class="free-toggle" data-free><td colspan="${PORT_COLS.length}">${showFree ? '▲ Replier les ports libres' : `▼ ${free.length} port${free.length > 1 ? 's' : ''} libre${free.length > 1 ? 's' : ''}${cabled ? ` (dont ${cabled} avec un câble branché)` : ''} — afficher`}</td></tr>`;
+  if (!portQuery && free.length) html += `<tr class="free-toggle" data-free><td colspan="${PORT_COLS.length}">${showFree ? '▲ Replier les ports libres' : `▼ ${free.length} port${free.length > 1 ? 's' : ''} libre${free.length > 1 ? 's' : ''}${cabled ? ` (dont ${cabled} avec un câble branché)` : ''} · afficher`}</td></tr>`;
   if (!html) html = `<tr><td colspan="${PORT_COLS.length}" class="empty">Aucun résultat pour « ${esc(portQuery)} ».</td></tr>`;
   setHTML($('#portRows'), html);
   const used = rows.filter((r) => !isFree(r)).length;
@@ -959,13 +970,13 @@ function renderPanel(force) {
       <dt>Interface</dt><dd class="mono">${esc(p.port)}</dd>
       <dt>Type</dt><dd>${esc(p.type === '--' ? 'SFP (vide)' : p.type)}</dd>
       <dt>VLAN</dt><dd>${esc(p.vlan)} <span class="muted">(${esc(p.mode)})</span></dd>
-      <dt>Vitesse</dt><dd class="num">${p.speed ? esc(p.speed) + ' Mb/s' : '—'}</dd>
-      <dt>État détaillé</dt><dd>${esc(p.reason || (p.up ? 'Lien établi' : '—'))}</dd>
+      <dt>Vitesse</dt><dd class="num">${p.speed ? esc(p.speed) + ' Mb/s' : '-'}</dd>
+      <dt>État détaillé</dt><dd>${esc(p.reason || (p.up ? 'Lien établi' : '-'))}</dd>
       <dt>Débit ↓ / ↑</dt><dd class="num">${fmtBps(p.rx_bps)} / ${fmtBps(p.tx_bps)}</dd>
       <dt>Total ↓ / ↑</dt><dd class="num">${fmtBytes(p.rx_bytes)} / ${fmtBytes(p.tx_bytes)}</dd>
       <dt>Erreurs · CRC</dt><dd class="num">${nf0.format((p.rx_errors || 0) + (p.tx_errors || 0))} · ${nf0.format(p.crc || 0)}</dd>
       <dt>Pertes ↓ / ↑</dt><dd class="num">${nf0.format(p.rx_drops || 0)} / ${nf0.format(p.tx_drops || 0)}</dd>
-      <dt>Appareils</dt><dd>${macs.length ? macs.map((m) => `<span class="mono">${esc(m.mac)}</span>${ips[m.mac] ? ` · <b class="mono">${esc(ips[m.mac].ip)}</b>${ips[m.mac].name ? ` (${esc(ips[m.mac].name)})` : ''}` : ''}`).join('<br>') : '—'}</dd>
+      <dt>Appareils</dt><dd>${macs.length ? macs.map((m) => `<span class="mono">${esc(m.mac)}</span>${ips[m.mac] ? ` · <b class="mono">${esc(ips[m.mac].ip)}</b>${ips[m.mac].name ? ` (${esc(ips[m.mac].name)})` : ''}` : ''}`).join('<br>') : '-'}</dd>
       ${lldp.length ? `<dt>LLDP</dt><dd>${lldp.map((l) => esc(l.name || l.chassis)).join('<br>')}</dd>` : ''}
     </dl>
     <button class="btn small" id="ppHist">Voir l’historique de ce port</button>`);
@@ -1087,7 +1098,7 @@ function renderTerm(force) {
   const stLabel = { pending: 'en attente', running: 'en cours', done: 'ok', error: 'erreur', confirm: 'question' };
   box.innerHTML = items.length ? items.map((c) => `
     <div class="term-entry">
-      <div class="term-cmd"><span class="st ${c.status}">${['pending', 'running'].includes(c.status) ? '<span class="spinner" style="width:9px;height:9px;border-width:1.5px"></span>' : ''}${stLabel[c.status] || c.status}</span><span>${esc(c.label ? `${c.label} — ` : '')}${esc(c.cmd.replace(/\n/g, ' ⏎ '))}</span></div>
+      <div class="term-cmd"><span class="st ${c.status}">${['pending', 'running'].includes(c.status) ? '<span class="spinner" style="width:9px;height:9px;border-width:1.5px"></span>' : ''}${stLabel[c.status] || c.status}</span><span>${esc(c.label ? `${c.label} : ` : '')}${esc(c.cmd.replace(/\n/g, ' ⏎ '))}</span></div>
       ${OUT[c.id] ? `<div class="term-out">${esc(OUT[c.id])}</div>` : ''}
       ${c.status === 'confirm' ? `<div class="term-ask">${esc(c.question || 'Confirmer ?')} <button class="btn small primary" onclick="answer('${c.id}','y',this)">Oui</button><button class="btn small" onclick="answer('${c.id}','n',this)">Non</button></div>` : ''}
     </div>`).join('') : '<div class="muted">Aucune commande pour l’instant. Les sorties s’afficheront ici.</div>';

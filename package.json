@@ -1,7 +1,15 @@
 {
-  "name": "aruba-dashboard",
+  "name": "aruba-dashboard-switch",
+  "version": "1.0.0",
+  "description": "Dashboard web pour superviser et piloter un switch Aruba CX (AOS-CX) via un agent local et Vercel.",
+  "author": "Ethan (https://github.com/ethanfrq)",
+  "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
+  "homepage": "https://github.com/ethanfrq/ArubaDashboardSwitch#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/ethanfrq/ArubaDashboardSwitch.git" },
+  "bugs": { "url": "https://github.com/ethanfrq/ArubaDashboardSwitch/issues" },
+  "keywords": ["aruba", "aos-cx", "switch", "dashboard", "network", "monitoring", "vercel"],
   "engines": { "node": "24.x" },
   "dependencies": {
     "@upstash/qstash": "^2.8.0",
