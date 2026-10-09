@@ -286,6 +286,21 @@ tbody tr.click:hover, tbody tr.sel { background: var(--surface-2); }
 /* ---------- notifications (toasts) */
 .foot { max-width: 1320px; margin: 0 auto; padding: 4px 20px 28px; display: flex; gap: 6px 14px; flex-wrap: wrap; justify-content: center; font-size: 12px; color: var(--text-3); }
 .foot a { color: inherit; }
+.pill.warn { background: var(--warn-soft); color: var(--warn); border: 0; cursor: pointer; font: inherit; font-size: 12px; font-weight: 500; }
+.pill.warn:hover { filter: brightness(1.05); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; font-size: 13px; margin: 0; }
+.kv dt { color: var(--text-3); }
+.kv dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.kv .good { color: var(--good); font-weight: 500; } .kv .bad { color: var(--bad); font-weight: 500; } .kv .warn { color: var(--warn); font-weight: 500; }
+.log-list { max-height: 360px; overflow: auto; }
+.log-item { display: grid; grid-template-columns: 96px 1fr; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.log-item:last-child { border-bottom: 0; }
+.log-item .when { color: var(--text-3); font: 11.5px/1.6 var(--mono); white-space: nowrap; }
+.log-item .src { color: var(--text-3); font-size: 11.5px; }
+.log-item.err .msg { color: var(--bad); } .log-item.warn .msg { color: var(--warn); }
+.badge.red { background: var(--bad-soft); color: var(--bad); } .badge.amber { background: var(--warn-soft); color: var(--warn); }
+.status.blocked { color: var(--bad); }
+.jack .tag.stp { color: #ff8a80; }
 .toasts { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 50; display: grid; gap: 8px; width: min(440px, calc(100% - 32px)); }
 .toast {
   display: grid; grid-template-columns: 20px 1fr auto; gap: 10px; align-items: start;
@@ -329,6 +344,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
     <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d0f00" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg></span>
     <div><h1 id="hostname">Chargement…</h1><div class="sub" id="subtitle"><span class="spinner"></span></div></div>
     <span class="spacer"></span>
+    <button class="pill warn" id="unsavedPill" type="button" hidden title="Des changements ne sont pas encore enregistrés dans la configuration de démarrage">⚠ Config non sauvegardée</button>
     <span class="pill" id="agentPill"><span class="dot"></span><span>…</span></span>
     <button class="btn icon" id="bellBtn" type="button" title="Alertes récentes" aria-label="Alertes récentes">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -386,6 +402,19 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
         <tbody id="portRows"></tbody>
       </table></div>
       <p class="note" style="margin:10px 0 0" id="ipNote"></p>
+    </section>
+
+    <section class="card span-8" id="sec-logs">
+      <h2>Journal du switch <span class="count" id="logCount"></span>
+        <span class="right"><span class="seg" id="logFilter"><button data-f="all" class="on">Tout</button><button data-f="port">Ports</button><button data-f="warn">Avertissements</button></span></span>
+      </h2>
+      <div class="log-list" id="logList"><div class="empty">Chargement du journal…</div></div>
+    </section>
+
+    <section class="card span-4" id="sec-switch">
+      <h2>Switch <span class="right"><button class="btn small" id="diagRefresh">Actualiser</button></span></h2>
+      <dl class="kv" id="swInfo"></dl>
+      <p class="note" id="diagNote" style="margin:12px 0 0"></p>
     </section>
 
     <section class="card span-4" id="sec-vlan">
@@ -463,7 +492,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
@@ -575,6 +604,7 @@ async function poll() {
     S = d.state; NOW = d.now; ALERTS = arr(d.alerts);
     trackCommands(arr(d.log));
     render();
+    maybeDiag();
   } catch (e) { if (e.message === '401') return; }
   const busyNow = LOG.some((c) => ['pending', 'running', 'confirm'].includes(c.status));
   timer = setTimeout(poll, document.hidden ? 30000 : busyNow ? 1500 : 5000);
@@ -596,11 +626,13 @@ async function fetchOutputs(ids) {
   try {
     const outs = await api('/api/output?ids=' + ids.join(','));
     for (const id of ids) { OUT[id] = outs[id] || ''; const c = LOG.find((x) => x.id === id); OUTV[id] = c && (c.v || c.status); }
-    renderTerm(); renderPanel();
+    renderTerm(); if (S) render();
   } catch {}
 }
 function cmdName(c) { return c.label || c.cmd.split('\n')[0]; }
 function onStatus(c) {
+  if (isAuto(c)) return;
+  if (c.status === 'done' && CONFIG_RE.test(c.cmd)) setTimeout(() => maybeDiag(true), 1500); // rafraîchit « config sauvegardée ? »
   const name = cmdName(c);
   if (c.status === 'running') toast(name, { id: c.id, sub: 'Exécution sur le switch…', spinner: true, timeout: 0 });
   if (c.status === 'confirm') toast('Le switch demande une confirmation', { id: c.id, type: 'warn', sub: c.question || name, timeout: 0,
@@ -612,13 +644,155 @@ function onStatus(c) {
   }
 }
 
+// ================================================================ relevés du switch (sans modifier l'agent)
+// Le dashboard envoie lui-même des commandes en lecture seule et analyse les réponses.
+const DIAG_CMD = ['show interface link-status', 'show spanning-tree', 'checkpoint diff startup-config running-config',
+  'show logging -r -n 80', 'show ip interface vlan1', 'show system'].join('\n');
+const DIAG_EVERY = 300;
+const isAuto = (c) => /^(auto|probe)/.test(c.kind || '');
+const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+const STP_FR = { Root: 'racine', Designated: 'désigné', Alternate: 'alternatif', Backup: 'secours', Disabled: 'inactif',
+  Forwarding: 'transmet', Blocking: 'BLOQUÉ', Discarding: 'BLOQUÉ', Learning: 'apprentissage', Listening: 'écoute', Down: 'coupé' };
+let DIAG = null, diagAsked = 0, logFilter = 'all', BCAST = null, bcastPrev = null;
+
+const stpBlocked = (p) => p.up && /Blocking|Discarding/i.test(DIAG?.ports[p.port]?.stp?.state || '');
+function sinceText(p) {
+  const t = DIAG?.ports[p.port]?.last;
+  if (!t) return '';
+  const s = Math.max(0, NOW - t);
+  return `depuis ${s < 3600 ? `${Math.max(1, Math.round(s / 60))} min` : s < 172800 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 86400)} j`}`;
+}
+function flapCell(p, long) {
+  const t = DIAG?.ports[p.port]?.transitions, f = DIAG?.flaps?.[p.port] || 0;
+  if (t == null) return '<span class="muted">-</span>';
+  return `${nf0.format(t)}${f >= 4 ? ' <span class="badge amber" title="coupures récentes">instable</span>' : ''}${long ? ' <span class="muted">depuis le démarrage du switch</span>' : ''}`;
+}
+function latestDiag() { return LOG.find((c) => c.kind === 'auto:diag'); }
+async function maybeDiag(force) {
+  if (!S || $('#app').hidden || document.hidden) return;
+  const last = latestDiag();
+  if (last && ['pending', 'running'].includes(last.status) && NOW - last.created < 180) return;
+  const age = last ? NOW - (last.finished || last.created) : Infinity;
+  if (!force && age < DIAG_EVERY) return;
+  if (Date.now() / 1000 - diagAsked < (force ? 5 : 60)) return;
+  diagAsked = Date.now() / 1000;
+  try { await api('/api/command', { cmd: DIAG_CMD, label: 'Relevé automatique', kind: 'auto:diag' }); setTimeout(poll, 800); } catch {}
+}
+$('#diagRefresh').addEventListener('click', (e) => busy(e.currentTarget, async () => { await maybeDiag(true); toast('Relevé demandé au switch', { sub: 'Résultat dans quelques secondes.' }); }));
+
+function sections(out) {
+  const sec = {}; let cur = null;
+  for (const l of String(out || '').split('\n')) {
+    const m = l.match(/^» (.*)$/);
+    if (m) { cur = m[1].trim(); sec[cur] = []; } else if (cur) sec[cur].push(l);
+  }
+  return sec;
+}
+function frLog(msg) {
+  return msg
+    .replace(/^Link status for interface 1\/1\/(\d+) is (up|down).*$/i, (m, n, st) => `Port ${n} : lien ${st === 'up' ? 'établi' : 'coupé'}`)
+    .replace(/^User (\S+) logged in from (\S+) through (\S+) session\.?$/i, 'Connexion de $1 depuis $2 ($3)')
+    .replace(/^User (\S+) logged out of (\S+) session from (\S+?)\.?$/i, 'Déconnexion de $1 ($2, $3)')
+    .replace(/^User (\S+) login from (\S+) for (\S+) session (?:has )?failed.*$/i, 'Échec de connexion de $1 depuis $2 ($3)')
+    .replace(/^Port 1\/1\/(\d+) blocked on CIST.*$/i, 'Port $1 bloqué par le spanning-tree')
+    .replace(/^CIST - Topology Change generated on port 1\/1\/(\d+).*$/i, 'Changement de topologie spanning-tree (port $1)');
+}
+function parseDiag(c) {
+  const sec = sections(OUT[c.id]);
+  const d = { id: c.id, t: c.finished || c.created, ports: {}, logs: [], flaps: {} };
+  for (const l of sec['show interface link-status'] || []) {
+    const m = l.match(/^(1\/1\/\d+)\s+\S+\s+(up|down)\s+(.+?)\s+(\d+)\s+(.+?)\s*$/);
+    if (!m) continue;
+    const dm = m[5].match(/\(\w{3} (\w{3}) +(\d{1,2}) (\d\d):(\d\d):(\d\d) \S+ (\d{4})\)/);
+    d.ports[m[1]] = { transitions: Number(m[4]), last: dm ? new Date(+dm[6], MONTHS[dm[1]], +dm[2], +dm[3], +dm[4], +dm[5]).getTime() / 1000 : null };
+  }
+  const stpTxt = (sec['show spanning-tree'] || []).join('\n');
+  const rootMac = (stpTxt.match(/Root ID[\s\S]*?MAC-Address:\s*(\S+)/) || [])[1];
+  const brMac = (stpTxt.match(/Bridge ID[\s\S]*?MAC-Address:\s*(\S+)/) || [])[1];
+  for (const l of sec['show spanning-tree'] || []) {
+    const m = l.match(/^(1\/1\/\d+)\s+(\S+)\s+(\S+)\s+\d+/);
+    if (m) (d.ports[m[1]] ||= {}).stp = { role: m[2], state: m[3] };
+  }
+  d.stp = { enabled: /status\s*:\s*Enabled/i.test(stpTxt), protocol: (stpTxt.match(/Protocol:\s*(\S+)/) || [])[1], rootMac, isRoot: Boolean(rootMac && rootMac === brMac),
+    rootPort: Object.entries(d.ports).find(([, v]) => v.stp?.role === 'Root')?.[0] };
+  const diff = (sec['checkpoint diff startup-config running-config'] || []).join('\n');
+  d.saved = /No difference/i.test(diff) ? true : /^[+-]|differ/im.test(diff) ? false : null;
+  for (const l of sec[Object.keys(sec).find((k) => k.startsWith('show logging')) || ''] || []) {
+    const m = l.match(/^(\d{4}-\d\d-\d\dT[\d:.]+[+-]\d\d:\d\d)\s+\S+\s+([\w.-]+)\[\d+\]:\s*(?:Event\|\d+\|(LOG_\w+)\|[^|]*\|[^|]*\|)?(.*)$/);
+    if (!m) continue;
+    const lvl = /ERR|CRIT|ALERT|EMERG/.test(m[3] || '') ? 'err' : /WARN/.test(m[3] || '') ? 'warn' : 'info';
+    d.logs.push({ t: Date.parse(m[1]) / 1000, src: m[2], lvl, raw: m[4].trim(), msg: frLog(m[4].trim()), port: /interface 1\/1\/|port 1\/1\//i.test(m[4]) });
+  }
+  d.ip = ((sec['show ip interface vlan1'] || []).join('\n').match(/IPv4 address\s+(\S+)/) || [])[1];
+  const bm = (sec['show system'] || []).join('\n').match(/Base MAC Address\s*:\s*([0-9a-f]{6})-([0-9a-f]{6})/i);
+  d.mac = bm ? (bm[1] + bm[2]).match(/../g).join(':') : null;
+  // instabilité : coupures supplémentaires depuis le relevé précédent (moins de 15 min)
+  if (DIAG && d.t - DIAG.t < 900) for (const [port, v] of Object.entries(d.ports)) {
+    const before = DIAG.ports[port]?.transitions;
+    if (before != null && v.transitions != null) d.flaps[port] = v.transitions - before;
+  }
+  DIAG = d;
+}
+function updateDiag() {
+  const c = LOG.find((x) => x.kind === 'auto:diag' && ['done', 'error'].includes(x.status) && OUT[x.id]);
+  if (c && c.id !== DIAG?.id) parseDiag(c);
+}
+function updateBcast() {
+  if (!S?.ports || S.updated === bcastPrev?.t) return;
+  const cur = { t: S.updated, v: Object.fromEntries(S.ports.map((p) => [p.port, (p.rx_bcast || 0) + (p.rx_mcast || 0)])) };
+  if (bcastPrev && cur.t > bcastPrev.t) {
+    const dt = cur.t - bcastPrev.t, rates = Object.entries(cur.v).map(([k, v]) => [k, Math.max(0, v - (bcastPrev.v[k] ?? v)) / dt]);
+    rates.sort((a, b) => b[1] - a[1]);
+    BCAST = { total: rates.reduce((a, r) => a + r[1], 0), top: rates[0] };
+  }
+  bcastPrev = cur;
+}
+function renderSwitch() {
+  const d = DIAG, t = (S.temps || []).reduce((a, b) => (!a || b.temp > a.temp ? b : a), null);
+  const blocked = (S.ports || []).filter(stpBlocked).map((p) => portNum(p.port));
+  const rows = [
+    ['IP de gestion', esc(d?.ip?.replace(/\/\d+$/, '') || S.mgmt_ip || '-')],
+    ['Adresse MAC', `<span class="mono">${esc(d?.mac || '-')}</span>`],
+    ['N° de série', `<span class="mono">${esc(S.serial || '-')}</span>`],
+    ['Firmware', esc(S.version ? `AOS-CX ${S.version}` : '-')],
+    ['Configuration', !d || d.saved == null ? '<span class="muted">-</span>' : d.saved ? '<span class="good">✓ sauvegardée</span>'
+      : '<span class="warn">⚠ non sauvegardée</span> <button class="btn small" data-save>Sauvegarder</button>'],
+    ['Spanning-tree', !d ? '-' : !d.stp.enabled ? '<span class="warn">désactivé</span>'
+      : `${esc(d.stp.protocol || '')} · ${d.stp.isRoot ? 'ce switch est la racine' : `racine : autre switch${d.stp.rootPort ? ` (via port ${portNum(d.stp.rootPort)})` : ''}`}`
+        + (blocked.length ? `<br><span class="bad">port${blocked.length > 1 ? 's' : ''} bloqué${blocked.length > 1 ? 's' : ''} : ${blocked.join(', ')}</span>` : '')],
+    ['Broadcast reçu', !BCAST ? '<span class="muted">calcul en cours…</span>' : `<span class="${BCAST.total > 500 ? 'bad' : ''}">${nf0.format(BCAST.total)} paquets/s</span>`
+      + (BCAST.total > 500 ? `<br><span class="bad">possible boucle réseau (surtout port ${portNum(BCAST.top[0])})</span>` : '')],
+    ['Température', t ? `${nf.format(t.temp)} °C <span class="muted">(${(S.temps || []).length} capteurs, ${(S.temps || []).every((x) => x.status === 'normal') ? 'tous normaux' : 'alerte'})</span>` : '-'],
+  ];
+  setHTML($('#swInfo'), rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(''));
+  const last = latestDiag();
+  $('#diagNote').textContent = last && ['pending', 'running'].includes(last.status) ? 'Relevé du switch en cours…'
+    : d ? `Relevé ${ago(NOW - d.t)} · actualisé toutes les 5 min quand le dashboard est ouvert.` : 'Premier relevé en attente…';
+  $('#unsavedPill').hidden = !(d && d.saved === false);
+}
+$('#swInfo').addEventListener('click', (e) => { if (e.target.closest('[data-save]')) $('#unsavedPill').click(); });
+$('#unsavedPill').addEventListener('click', () => confirmCmd('Sauvegarder la configuration ?', 'Les changements en cours deviennent la configuration chargée au démarrage du switch.', 'write memory', 'Configuration sauvegardée'));
+function renderLogs() {
+  const d = DIAG;
+  if (!d) return;
+  const list = d.logs.filter((l) => logFilter === 'all' || (logFilter === 'warn' ? l.lvl !== 'info' : l.port));
+  $('#logCount').textContent = `${d.logs.length} derniers événements`;
+  setHTML($('#logList'), list.length ? list.map((l) => `<div class="log-item ${l.lvl}" title="${esc(l.raw)}"><span class="when">${new Date(l.t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+    <div><span class="msg">${esc(l.msg)}</span> <span class="src">${esc(l.src)}</span></div></div>`).join('') : '<div class="empty">Aucun événement pour ce filtre.</div>');
+}
+$('#logFilter').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  logFilter = b.dataset.f; [...$('#logFilter').children].forEach((x) => x.classList.toggle('on', x === b)); renderLogs();
+});
+
 // ================================================================ rendu
 function render() {
   renderAgent();
   if (!S) { $('#hostname').textContent = 'En attente de l’agent'; $('#subtitle').textContent = 'Aucune donnée reçue pour l’instant.'; renderTerm(); renderAlerts(); return; }
   $('#hostname').textContent = S.hostname || 'Switch';
-  $('#subtitle').textContent = [S.model, S.location && `Emplacement ${S.location}`, S.version && `AOS-CX ${S.version}`, S.uptime && `allumé depuis ${S.uptime.replace(/weeks?/, 'sem.').replace(/days?/, 'j').replace(/hours?/, 'h').replace(/minutes?/, 'min')}`].filter(Boolean).join(' · ');
-  renderKpis(); renderFaceplate(); renderPorts(); renderChart(); renderPanel(); renderVlans(); renderTerm(); renderAlerts(); fillPortSelect();
+  $('#subtitle').textContent = [DIAG?.ip?.replace(/\/\d+$/, '') || S.mgmt_ip, S.model, S.location && `Emplacement ${S.location}`, S.version && `AOS-CX ${S.version}`, S.uptime && `allumé depuis ${S.uptime.replace(/weeks?/, 'sem.').replace(/days?/, 'j').replace(/hours?/, 'h').replace(/minutes?/, 'min')}`].filter(Boolean).join(' · ');
+  updateDiag(); updateBcast();
+  renderKpis(); renderFaceplate(); renderPorts(); renderChart(); renderPanel(); renderVlans(); renderTerm(); renderAlerts(); fillPortSelect(); renderSwitch(); renderLogs();
 }
 
 function renderAgent() {
@@ -678,10 +852,10 @@ function renderFaceplate() {
       : st === 'idle' ? `∅ ${durShort(quietFor(p))}` : fmtBps(bps).replace(' ', ' ');
     const tip = [`Port ${n}`, pLabel[st], p.speed && `${p.speed} Mb/s${slow ? ' (lent)' : ''}`, up && 'lien vers un autre switch',
       p.vlan !== '1' && `VLAN ${p.vlan}`, st === 'idle' && `aucun paquet reçu depuis ${fmtDur(quietFor(p))}`,
-      cab && { empty: 'test câble : rien de branché', open: `test câble : câble ${cab.len} m, rien au bout`, good: `test câble : câble ${cab.len} m en bon état, appareil éteint`, fault: `test câble : DÉFAUT vers ${cab.len} m` }[cab.kind], st === 'up' && `${fmtBps(bps)} (charge ${fmtPct(loadPct(Math.max(p.rx_bps || 0, p.tx_bps || 0), p))})`, p.desc].filter(Boolean).join(' · ');
+      cab && { empty: 'test câble : rien de branché', open: `test câble : câble ${cab.len} m, rien au bout`, good: `test câble : câble ${cab.len} m en bon état, appareil éteint`, fault: `test câble : DÉFAUT vers ${cab.len} m` }[cab.kind], st === 'up' && `${fmtBps(bps)} (charge ${fmtPct(loadPct(Math.max(p.rx_bps || 0, p.tx_bps || 0), p))})`, p.desc, sinceText(p) && `changé ${sinceText(p)}`, DIAG?.ports[p.port]?.transitions != null && `${DIAG.ports[p.port].transitions} coupures depuis le démarrage`, stpBlocked(p) && 'BLOQUÉ par le spanning-tree'].filter(Boolean).join(' · ');
     const cls = ['jack', sfp && 'sfp', empty ? 'nomod' : cabCls || st, selected === p.port && 'sel', pendingFor(p.port) && 'busy'].filter(Boolean).join(' ');
     const tags = (cabCls ? `<span class="tag${cabCls === 'fault' ? ' slow' : ''}">${cabCls === 'fault' ? '⚠' : cab.kind === 'good' ? '↔ ok' : '↔'}</span>` : '')
-      + (up ? '<span class="tag">⇅</span>' : '') + (p.vlan !== '1' ? `<span class="tag">V${esc(p.vlan)}</span>` : '')
+      + (stpBlocked(p) ? '<span class="tag stp">STP</span>' : '') + (up ? '<span class="tag">⇅</span>' : '') + (p.vlan !== '1' ? `<span class="tag">V${esc(p.vlan)}</span>` : '')
       + (p.up && p.speed ? `<span class="tag${slow ? ' slow' : ''}">${speedTag(Number(p.speed))}</span>` : '');
     return `<button class="${cls}" data-port="${esc(p.port)}" title="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${selected === p.port}">
       <span class="top"><span class="led"></span><span class="n">${n}</span>${tags}</span>
@@ -737,7 +911,7 @@ document.addEventListener('pointerdown', (e) => {
 let portSort = { key: 'port', dir: 1 }, showFree = false, portQuery = '';
 const PORT_COLS = [
   ['port', 'Port'], ['state', 'État'], ['speed', 'Vitesse'], ['vlan', 'VLAN'], ['device', 'Appareil'], ['ip', 'IP'], ['mac', 'MAC'],
-  ['rx', 'Entrant', 'r'], ['tx', 'Sortant', 'r'], ['total', 'Total reçu', 'r'], ['errs', 'Erreurs', 'r'],
+  ['rx', 'Entrant', 'r'], ['tx', 'Sortant', 'r'], ['total', 'Total reçu', 'r'], ['flaps', 'Coupures', 'r'], ['errs', 'Erreurs', 'r'],
 ];
 const STATE_ORDER = { up: 0, idle: 1, off: 2, down: 3 };
 const ipNum = (ip) => (ip ? ip.split('.').reduce((a, x) => a * 256 + Number(x), 0) : Infinity);
@@ -774,6 +948,7 @@ function sortVal(p, info, key) {
     case 'rx': return -(p.rx_bps || 0);
     case 'tx': return -(p.tx_bps || 0);
     case 'total': return -(p.rx_bytes || 0);
+    case 'flaps': return -(DIAG?.ports[p.port]?.transitions ?? -1);
     case 'errs': return -((p.rx_errors || 0) + (p.tx_errors || 0) + (p.rx_drops || 0) + (p.tx_drops || 0));
   }
   return 0;
@@ -796,7 +971,7 @@ function portRow(p, info) {
   const dash = '<span class="muted">-</span>';
   return `<tr class="click${selected === p.port ? ' sel' : ''}${st === 'down' && !info.mac ? ' is-free' : ''}" data-port="${esc(p.port)}">
     <td class="mono">${portNum(p.port)}</td>
-    <td><span class="status ${st}">${pLabel[st]}</span>${st === 'idle' ? ` <span class="muted">${fmtDur(quietFor(p))}</span>` : ''}</td>
+    <td>${stpBlocked(p) ? '<span class="status blocked">Bloqué (STP)</span>' : `<span class="status ${st}">${pLabel[st]}</span>`}${st === 'idle' ? ` <span class="muted">${fmtDur(quietFor(p))}</span>` : sinceText(p) ? ` <span class="muted">${sinceText(p)}</span>` : ''}</td>
     <td class="num">${p.speed ? `<span class="${isSlow(p) ? 'speed-slow' : ''}">${esc(p.speed)} Mb/s</span>` : (p.reason === 'No XCVR installed' ? '<span class="muted">pas de module</span>' : dash)}</td>
     <td class="num">${esc(p.vlan)}${p.mode === 'trunk' ? ' <span class="badge">trunk</span>' : ''}</td>
     <td class="dev">${info.name ? esc(info.name) : dash}${isUplink(p) ? ' <span class="badge">⇅ switch</span>' : ''}${info.sub ? `<span class="sub">${esc(info.sub)}</span>` : ''}</td>
@@ -805,6 +980,7 @@ function portRow(p, info) {
     <td class="r num">${p.up ? fmtBps(p.rx_bps) : dash}</td>
     <td class="r num">${p.up ? fmtBps(p.tx_bps) : dash}</td>
     <td class="r num">${fmtBytes(p.rx_bytes)}</td>
+    <td class="r num">${flapCell(p)}</td>
     <td class="r num">${errs ? `<span style="color:var(--warn)" title="erreurs ${(p.rx_errors || 0) + (p.tx_errors || 0)} · CRC ${p.crc || 0} · pertes ${(p.rx_drops || 0) + (p.tx_drops || 0)}">${nf0.format(errs)}</span>` : '<span class="muted">0</span>'}</td>
   </tr>`;
 }
@@ -826,7 +1002,7 @@ function renderPorts() {
   $('#portCount').textContent = portQuery ? `${hit.length} résultat${hit.length > 1 ? 's' : ''}` : `${used} utilisés · ${rows.length - used} libres`;
   // appareils vus sur le réseau mais pas branchés directement sur ce switch
   const onSwitch = new Set((S.macs || []).map((m) => m.mac));
-  const elsewhere = Object.entries(S.ips || {}).filter(([mac, v]) => !onSwitch.has(mac) && v.ip !== S.mgmt_ip).map(([, v]) => v.ip).sort((a, b) => ipNum(a) - ipNum(b));
+  const elsewhere = Object.entries(S.ips || {}).filter(([mac, v]) => !onSwitch.has(mac) && v.ip !== S.mgmt_ip && v.ip !== DIAG?.ip?.replace(/\/\d+$/, '')).map(([, v]) => v.ip).sort((a, b) => ipNum(a) - ipNum(b));
   $('#ipNote').textContent = S.agent?.scan
     ? `IP trouvées par l’agent sur ${S.agent.scan} (toutes les 5 min).${elsewhere.length ? ` Vus sur le réseau mais pas branchés directement ici : ${elsewhere.join(', ')}.` : ''}`
     : 'Les IP s’afficheront quand l’agent tournera sur un PC du même réseau (le switch, lui, ne voit que les adresses MAC).';
@@ -963,6 +1139,8 @@ function renderPanel(force) {
   const verdict = cableVerdict(cableRows, p);
   const alerts = [
     st === 'idle' && `<div class="alert amber"><b>Câble branché mais aucun paquet reçu depuis ${fmtDur(quietFor(p))}.</b><br>L’appareil est sans doute éteint ou en veille, sa carte réseau est désactivée, ou le câble ne mène nulle part.</div>`,
+    stpBlocked(p) && `<div class="alert red"><b>Port bloqué par le spanning-tree.</b><br>Le switch coupe ce port pour éviter une boucle réseau : deux câbles relient probablement les mêmes équipements. Vérifie le câblage.</div>`,
+    (DIAG?.flaps?.[p.port] || 0) >= 4 && `<div class="alert amber"><b>Port instable : ${DIAG.flaps[p.port]} coupures en quelques minutes.</b><br>Câble ou prise défectueux, ou appareil qui redémarre en boucle.</div>`,
     isSlow(p) && `<div class="alert amber"><b>Lien négocié à ${esc(p.speed)} Mb/s au lieu de 1000.</b><br>Souvent, le PC est simplement en veille (sa carte réseau descend à 10 ou 100 Mb/s). S’il est allumé : câble abîmé, prise murale ou carte réseau ancienne. Lance un test de câble ci-dessous.</div>`,
   ].filter(Boolean).join('');
   setHTML($('#ppTitle'), `Port ${n} <span class="status ${st}" style="font-size:12px">${pLabel[st]}</span>`);
@@ -974,6 +1152,9 @@ function renderPanel(force) {
       <dt>VLAN</dt><dd>${esc(p.vlan)} <span class="muted">(${esc(p.mode)})</span></dd>
       <dt>Vitesse</dt><dd class="num">${p.speed ? esc(p.speed) + ' Mb/s' : '-'}</dd>
       <dt>État détaillé</dt><dd>${esc(p.reason || (p.up ? 'Lien établi' : '-'))}</dd>
+      <dt>Dernier changement</dt><dd>${DIAG?.ports[p.port]?.last ? `${esc(sinceText(p).replace(/^depuis /, 'il y a '))} <span class="muted">(${new Date(DIAG.ports[p.port].last * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })})</span>` : '-'}</dd>
+      <dt>Coupures</dt><dd>${flapCell(p, true)}</dd>
+      <dt>Spanning-tree</dt><dd>${DIAG?.ports[p.port]?.stp ? `${esc(STP_FR[DIAG.ports[p.port].stp.role] || DIAG.ports[p.port].stp.role)} · ${esc(STP_FR[DIAG.ports[p.port].stp.state] || DIAG.ports[p.port].stp.state)}` : '-'}</dd>
       <dt>Débit ↓ / ↑</dt><dd class="num">${fmtBps(p.rx_bps)} / ${fmtBps(p.tx_bps)}</dd>
       <dt>Charge du lien ↓ / ↑</dt><dd class="num">${fmtPct(loadPct(p.rx_bps, p))} / ${fmtPct(loadPct(p.tx_bps, p))}</dd>
       <dt>Total ↓ / ↑</dt><dd class="num">${fmtBytes(p.rx_bytes)} / ${fmtBytes(p.tx_bytes)}</dd>
@@ -1092,7 +1273,7 @@ $('#chips').addEventListener('click', (e) => {
 
 let lastLogKey = '';
 function renderTerm(force) {
-  const items = LOG.slice().reverse();
+  const items = LOG.filter((c) => !isAuto(c)).reverse();
   const key = items.map((c) => c.id + c.status + (OUT[c.id] || '').length).join();
   if (key === lastLogKey && !force) return;
   lastLogKey = key;

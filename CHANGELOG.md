@@ -1,5 +1,20 @@
 # Historique des versions
 
+## 1.1.0 (2026-10-09)
+
+Nouvelles informations, sans mise à jour de l’agent : le dashboard interroge lui-même le switch (commandes en lecture seule).
+
+- **Carte « Switch »** : IP de gestion, adresse MAC, numéro de série, firmware, configuration sauvegardée ou non,
+  spanning-tree (racine, ports bloqués), trafic broadcast reçu, température.
+- **Badge « Config non sauvegardée »** dans la barre du haut, avec sauvegarde en un clic.
+- **Journal du switch** : les 80 derniers événements, traduits en français, filtrables (ports, avertissements).
+- **Par port** : depuis quand il est dans son état, nombre de coupures depuis le démarrage, badge « instable »
+  en cas de coupures répétées, rôle et état spanning-tree, alerte si un port est bloqué (boucle réseau).
+- **Charge du lien** en pourcentage de la vitesse négociée.
+- **Façade** : ports SFP alignés avec trois états (vide, module sans lien, actif), libellés plus courts.
+- Relevés automatiques toutes les 5 minutes quand le dashboard est ouvert, partagés entre les navigateurs
+  et masqués de la console.
+
 ## 1.0.0 (2026-10-09)
 
 Première version publique.

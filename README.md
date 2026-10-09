@@ -29,7 +29,11 @@ Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé
 - **Câbles détectés sans lien** : un scan des ports libres indique s’il y a un câble, sa longueur et s’il est en défaut.
 - **Débits et historique** : la dernière heure en direct, puis 24 h, 7 jours et 30 jours, au total ou port par port.
 - **Ports et appareils** : un tableau unique (nom, IP, MAC, débit, erreurs) avec recherche et tri.
-- **Santé du switch** : CPU, mémoire, températures, temps de fonctionnement.
+- **Santé du switch** : CPU, mémoire, températures, temps de fonctionnement, IP, MAC, numéro de série, firmware.
+- **Configuration non sauvegardée** signalée dans la barre du haut, avec sauvegarde en un clic.
+- **Spanning-tree** : switch racine, ports bloqués (boucle réseau), trafic broadcast anormal.
+- **Historique de chaque port** : depuis quand il est branché ou coupé, nombre de coupures, ports instables.
+- **Journal du switch** : les derniers événements traduits en français (liens, connexions, spanning-tree).
 
 ### Gestion
 - Activer, désactiver ou redémarrer un port, changer sa description.
