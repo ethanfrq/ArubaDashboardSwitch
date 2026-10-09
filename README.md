@@ -45,6 +45,13 @@ Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé
 - **Console** : n’importe quelle commande CLI ; les questions oui/non du switch s’affichent sous forme de boutons.
 - Sauvegarde de la configuration en un clic.
 
+### Deux accès
+- **Administrateur** : tout le dashboard, commandes comprises.
+- **Lecture seule**, pour un écran de supervision : un second mot de passe, défini dans les réglages, donne accès à tout
+  l’affichage sans aucune commande. C’est le serveur qui l’impose, pas seulement la page. La session dure 30 jours et
+  l’écran se rafraîchit toutes les 15 s sans forcer l’agent en temps réel, pour rester dans les offres gratuites.
+- **Vue monitoring** : un bouton permet à l’administrateur de masquer toutes les commandes sans se déconnecter.
+
 ### Alertes
 - Par **e-mail** (Resend) et/ou **webhook** (Teams, Slack, Discord, ntfy pour le téléphone…).
 - Port surveillé qui tombe ou revient, température trop haute, agent arrêté, lien lent, lien sans trafic.
@@ -146,6 +153,7 @@ Télécharge l’agent prêt à l’emploi depuis la [dernière version](https:/
 
 ### 3. C’est prêt
 Ouvre l’URL de ton projet Vercel, connecte-toi, puis règle les alertes avec l’icône ⚙.
+Pour un écran de supervision, définis un mot de passe dans ⚙ > **Accès lecture seule** et connecte l’écran avec lui.
 
 ---
 
@@ -154,6 +162,9 @@ Ouvre l’URL de ton projet Vercel, connecte-toi, puis règle les alertes avec l
   blocage de 15 minutes après 8 essais ratés.
 - L’agent s’authentifie avec `AGENT_TOKEN` ; la vérification planifiée avec la signature QStash.
 - Le mot de passe SSH du switch **ne quitte jamais le PC de l’agent** : il y est chiffré par Windows (DPAPI).
+- Accès lecture seule vérifié par le serveur sur chaque requête : aucune commande hors relevés automatiques (contrôlés ligne par ligne),
+  ni réglages, ni historique des commandes, ni détail des différences de configuration. Son mot de passe est stocké haché (scrypt) ;
+  le changer ou le désactiver déconnecte les écrans déjà connectés.
 - Toute modification passe par une fenêtre qui affiche les lignes exactes envoyées au switch.
 - Les commandes dangereuses (redémarrage, effacement, comptes, IP de gestion, liens vers d’autres switches,
   port du PC de l’agent…) exigent une **seconde confirmation imposée par le serveur** :
@@ -173,7 +184,7 @@ Ouvre l’URL de ton projet Vercel, connecte-toi, puis règle les alertes avec l
 |---|---|
 | `public/index.html` | l’interface (une seule page, sans framework ni dépendance) |
 | `api/` | fonctions Vercel (Node 24) |
-| `lib/` | Redis, authentification, notifications |
+| `lib/` | Redis, authentification et droits (admin, lecture seule), notifications |
 | `agent/` | l’agent Python et son installation en service Windows |
 | `scripts/` | création de la vérification planifiée QStash |
 

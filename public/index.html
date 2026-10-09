@@ -101,12 +101,18 @@ input:disabled { opacity: .55; }
 .app { max-width: 1320px; margin: 0 auto; padding: 18px 20px 40px; }
 header.top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
 header.top h1 { font-size: 17px; margin: 0; letter-spacing: -.01em; }
-header.top .sub { color: var(--text-3); font-size: 12.5px; }
+header.top .sub { color: var(--text-3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header.top .title { flex: 1 1 320px; min-width: 0; }
 header.top .spacer { flex: 1; }
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: var(--surface-2); color: var(--text-2); }
 .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .pill.ok { background: var(--good-soft); color: var(--good); }
 .pill.ko { background: var(--bad-soft); color: var(--bad); }
+.pill.role { background: var(--info-soft); color: var(--info); }
+.btn.icon[aria-pressed="true"] { background: var(--info-soft); color: var(--info); border-color: transparent; }
+/* Lecture seule (accès écran de monitoring, ou vue monitoring de l'administrateur) */
+body.readonly .admin-only { display: none !important; }
+body.readonly .pill.warn { cursor: default; }
 .grid { display: grid; gap: 14px; grid-template-columns: repeat(12, minmax(0, 1fr)); }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); min-width: 0; }
 .card h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -370,7 +376,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
   <form id="loginForm">
     <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d0f00" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg></span>
     <h1>Dashboard switch</h1>
-    <p>Accès réservé à l’administration réseau.</p>
+    <p>Mot de passe administrateur, ou mot de passe lecture seule pour un écran de monitoring.</p>
     <div class="field"><label for="pw">Mot de passe</label><input id="pw" type="password" autocomplete="current-password" required autofocus></div>
     <button class="btn primary" style="width:100%" id="loginBtn">Se connecter</button>
     <div class="error" id="loginErr"></div>
@@ -381,15 +387,19 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 <main class="app" id="app" hidden>
   <header class="top">
     <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d0f00" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg></span>
-    <div><h1 id="hostname">Chargement…</h1><div class="sub" id="subtitle"><span class="spinner"></span></div></div>
+    <div class="title"><h1 id="hostname">Chargement…</h1><div class="sub" id="subtitle"><span class="spinner"></span></div></div>
     <span class="spacer"></span>
     <button class="pill warn" id="unsavedPill" type="button" hidden title="Des changements ne sont pas encore enregistrés dans la configuration de démarrage">⚠ Config non sauvegardée</button>
     <span class="pill" id="agentPill"><span class="dot"></span><span>…</span></span>
+    <span class="pill role" id="rolePill" hidden></span>
+    <button class="btn icon" id="viewBtn" type="button" hidden aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    </button>
     <button class="btn icon" id="bellBtn" type="button" title="Alertes récentes" aria-label="Alertes récentes">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       <span class="bell-count" id="bellCount" hidden></span>
     </button>
-    <button class="btn icon" id="settingsBtn" type="button" title="Réglages : alertes et vérifications" aria-label="Réglages">
+    <button class="btn icon admin-only" id="settingsBtn" type="button" title="Réglages : alertes et vérifications" aria-label="Réglages">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
     <button class="btn icon" id="themeBtn" type="button">
@@ -410,7 +420,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 
   <div class="grid">
     <section class="card span-12" id="sec-facade">
-      <h2>Façade <span class="count" id="fpCount"></span><span class="right"><span class="note">Clique sur un port pour le gérer · reclique pour le désélectionner</span><button class="btn small" id="scanCables" title="Teste les câbles de tous les ports sans lien">Scanner les ports libres</button></span></h2>
+      <h2>Façade <span class="count" id="fpCount"></span><span class="right"><span class="note" id="fpNote">Clique sur un port pour le gérer · reclique pour le désélectionner</span><button class="btn small admin-only" id="scanCables" title="Teste les câbles de tous les ports sans lien">Scanner les ports libres</button></span></h2>
       <div class="faceplate-wrap"><div class="faceplate" id="faceplate"></div></div>
       <div class="legend" id="fpLegend"></div>
     </section>
@@ -427,7 +437,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
     </section>
 
     <section class="card span-4" id="sec-alertes">
-      <h2>Alertes récentes <span class="count" id="alertCount"></span><span class="right"><button class="btn small" id="alertSettingsBtn">Réglages</button></span></h2>
+      <h2>Alertes récentes <span class="count" id="alertCount"></span><span class="right"><button class="btn small admin-only" id="alertSettingsBtn">Réglages</button></span></h2>
       <div class="alert-list" id="alertList"></div>
       <p class="note" style="margin:10px 0 0" id="alertChannels"></p>
     </section>
@@ -457,11 +467,11 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
     </section>
 
     <section class="card span-4" id="sec-vlan">
-      <h2>VLAN <span class="count" id="vlanCount"></span><span class="right"><button class="btn small" id="vlanAssignOpen">Affecter des ports</button><button class="btn small" id="vlanNew">+ Nouveau</button></span></h2>
+      <h2>VLAN <span class="count" id="vlanCount"></span><span class="right"><button class="btn small admin-only" id="vlanAssignOpen">Affecter des ports</button><button class="btn small admin-only" id="vlanNew">+ Nouveau</button></span></h2>
       <div class="vlan-list" id="vlanList"></div>
     </section>
 
-    <section class="card span-8" id="sec-console">
+    <section class="card span-8 admin-only" id="sec-console">
       <h2>Console de gestion <span class="count" id="termMode">les commandes passent par l’agent</span></h2>
       <div class="chips" id="chips"></div>
       <div class="term">
@@ -514,6 +524,10 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
       <div class="portpick" id="alPorts"></div>
       <span class="note" id="alPortsNote"></span>
     </div>
+    <div class="field"><span class="label">Accès lecture seule (écran de monitoring)</span>
+      <span class="note" id="alViewerNote" style="margin:0 0 6px"></span>
+      <div class="row"><input id="alViewerPw" type="text" autocomplete="off" spellcheck="false" maxlength="64" placeholder="nouveau mot de passe, 8 caractères minimum"><button type="button" class="btn danger" id="alViewerOff" hidden>Désactiver</button></div>
+    </div>
     <div class="field"><span class="label">Vérifications automatiques</span>
       <label class="check"><input type="checkbox" id="alAutoCable"> tester le câble des ports sans lien jamais testés ou rebranchés, et revérifier les autres toutes les 2 h (ne coupe aucun appareil)</label>
     </div>
@@ -540,7 +554,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
@@ -638,6 +652,29 @@ async function api(path, body) {
   if (!r.ok) { const err = new Error(data.error || `Erreur ${r.status}`); err.status = r.status; err.data = data; throw err; }
   return data;
 }
+// Rôle de la session (donné par le serveur) et vue monitoring choisie par l'administrateur.
+let ROLE = 'admin', MONITOR = false;
+try { MONITOR = localStorage.getItem('aruba-view') === 'monitor'; } catch {}
+const canAdmin = () => ROLE === 'admin' && !MONITOR;
+function applyRole() {
+  const ro = !canAdmin();
+  document.body.classList.toggle('readonly', ro);
+  $('#rolePill').hidden = !ro;
+  $('#rolePill').textContent = ROLE === 'viewer' ? 'Lecture seule' : 'Vue monitoring';
+  $('#rolePill').title = ROLE === 'viewer' ? 'Connecté avec le mot de passe lecture seule : aucune commande possible.' : 'Les commandes sont masquées. Repasse en vue admin pour gérer le switch.';
+  $('#viewBtn').hidden = ROLE !== 'admin';
+  $('#viewBtn').setAttribute('aria-pressed', String(MONITOR));
+  $('#viewBtn').title = MONITOR ? 'Repasser en vue admin (réafficher les commandes)' : 'Vue monitoring : masquer toutes les commandes';
+  $('#viewBtn').setAttribute('aria-label', $('#viewBtn').title);
+  $('#fpNote').textContent = ro ? 'Clique sur un port pour voir son détail' : 'Clique sur un port pour le gérer · reclique pour le désélectionner';
+  if (ro) document.querySelectorAll('dialog[open]').forEach((d) => d.close());
+  if (S) renderPanel(true);
+}
+$('#viewBtn').addEventListener('click', () => {
+  MONITOR = !MONITOR;
+  try { localStorage.setItem('aruba-view', MONITOR ? 'monitor' : 'admin'); } catch {}
+  applyRole();
+});
 function showLogin() { $('#foot').hidden = true; $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
 function showApp() { $('#login').hidden = true; $('#app').hidden = false; $('#foot').hidden = false; }
 $('#appVersion').textContent = `v${APP_VERSION}`;
@@ -658,6 +695,7 @@ async function poll() {
     const d = await api('/api/state' + touch);
     if (d.auth === false) { showLogin(); $('#pw').focus(); return; }
     if (touch) lastTouch = Date.now();
+    if ((d.role || 'admin') !== ROLE || !document.body.dataset.role) { ROLE = d.role || 'admin'; document.body.dataset.role = ROLE; applyRole(); }
     if ($('#app').hidden) { showApp(); loadSettings(); }
     S = d.state; NOW = d.now; ALERTS = arr(d.alerts);
     trackCommands(arr(d.log));
@@ -665,7 +703,7 @@ async function poll() {
     runVerify(); maybeDiag(); maybeCableCheck();
   } catch (e) { if (e.message === '401') return; }
   const busyNow = LOG.some((c) => ['pending', 'running', 'confirm'].includes(c.status));
-  timer = setTimeout(poll, document.hidden ? 30000 : busyNow ? 1500 : 5000);
+  timer = setTimeout(poll, document.hidden ? 30000 : busyNow ? 1500 : ROLE === 'viewer' ? 15000 : 5000);
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('#app').hidden) { lastTouch = 0; poll(); } });
 
@@ -879,6 +917,7 @@ enhanceSelects();
 const DIAG_CMD = ['show interface link-status', 'show spanning-tree', 'checkpoint diff startup-config running-config',
   'show logging -r -n 80', 'show ip interface vlan1', 'show system'].join('\n');
 const DIAG_EVERY = 300;
+const diagEvery = () => (ROLE === 'viewer' ? 2 * DIAG_EVERY : DIAG_EVERY); // écran lecture seule : toutes les 10 min
 const isAuto = (c) => /^(auto|probe)/.test(c.kind || '');
 const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
 const STP_FR = { Root: 'racine', Designated: 'désigné', Alternate: 'alternatif', Backup: 'secours', Disabled: 'inactif',
@@ -903,7 +942,8 @@ async function maybeDiag(force) {
   const last = latestDiag();
   if (last && ['pending', 'running'].includes(last.status) && NOW - last.created < 180) return;
   const age = last ? NOW - (last.finished || last.created) : Infinity;
-  if (!force && age < DIAG_EVERY) return;
+  const failed = last && last.status === 'error' && OUT[last.id] !== undefined && !diagUsable(last); // nouvel essai dans 1 min
+  if (!force && age < (failed ? 60 : diagEvery())) return;
   if (Date.now() / 1000 - diagAsked < (force ? 5 : 60)) return;
   diagAsked = Date.now() / 1000;
   try { await api('/api/command', { cmd: DIAG_CMD, label: 'Relevé automatique', kind: 'auto:diag' }); setTimeout(poll, 800); } catch {}
@@ -963,8 +1003,11 @@ function parseDiag(c) {
   }
   DIAG = d;
 }
+// Relevé exploitable : terminé (même avec une erreur sur une commande) et contenant l'état des ports.
+// Un relevé raté (session SSH coupée par le switch après une longue inactivité…) n'efface pas le précédent.
+const diagUsable = (x) => ['done', 'error'].includes(x.status) && /^1\/1\/\d+\s/m.test(OUT[x.id] || '');
 function updateDiag() {
-  const c = LOG.find((x) => x.kind === 'auto:diag' && ['done', 'error'].includes(x.status) && OUT[x.id]);
+  const c = LOG.find((x) => x.kind === 'auto:diag' && diagUsable(x));
   if (c && c.id !== DIAG?.id) parseDiag(c);
 }
 function updateBcast() {
@@ -986,7 +1029,7 @@ function renderSwitch() {
     ['N° de série', `<span class="mono">${esc(S.serial || '-')}</span>`],
     ['Firmware', esc(S.version ? `AOS-CX ${S.version}` : '-')],
     ['Configuration', !d || d.saved == null ? '<span class="muted">-</span>' : d.saved ? '<span class="good">✓ sauvegardée</span>'
-      : '<span class="warn">⚠ non sauvegardée</span> <button class="btn small" data-save>Sauvegarder</button>'],
+      : '<span class="warn">⚠ non sauvegardée</span> <button class="btn small admin-only" data-save>Sauvegarder</button>'],
     ['Spanning-tree', !d ? '-' : !d.stp.enabled ? '<span class="warn">désactivé</span>'
       : `${esc(d.stp.protocol || '')} · ${d.stp.isRoot ? 'ce switch est la racine' : `racine : autre switch${d.stp.rootPort ? ` (via port ${portNum(d.stp.rootPort)})` : ''}`}`
         + (blocked.length ? `<br><span class="bad">port${blocked.length > 1 ? 's' : ''} bloqué${blocked.length > 1 ? 's' : ''} : ${blocked.join(', ')}</span>` : '')],
@@ -997,11 +1040,11 @@ function renderSwitch() {
   setHTML($('#swInfo'), rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(''));
   const last = latestDiag();
   $('#diagNote').textContent = last && ['pending', 'running'].includes(last.status) ? 'Relevé du switch en cours…'
-    : d ? `Relevé ${ago(NOW - d.t)} · actualisé toutes les 5 min quand le dashboard est ouvert.` : 'Premier relevé en attente…';
+    : d ? `Relevé ${ago(NOW - d.t)} · actualisé toutes les ${diagEvery() / 60} min quand le dashboard est ouvert.` : 'Premier relevé en attente…';
   $('#unsavedPill').hidden = !(d && d.saved === false);
 }
 $('#swInfo').addEventListener('click', (e) => { if (e.target.closest('[data-save]')) $('#unsavedPill').click(); });
-$('#unsavedPill').addEventListener('click', () => confirmCmd('Sauvegarder la configuration ?', 'Les changements en cours deviennent la configuration chargée au démarrage du switch.', 'write memory', 'Configuration sauvegardée'));
+$('#unsavedPill').addEventListener('click', () => canAdmin() && confirmCmd('Sauvegarder la configuration ?', 'Les changements en cours deviennent la configuration chargée au démarrage du switch.', 'write memory', 'Configuration sauvegardée'));
 function renderLogs() {
   const d = DIAG;
   if (!d) return;
@@ -1020,7 +1063,7 @@ function render() {
   renderAgent();
   if (!S) { $('#hostname').textContent = 'En attente de l’agent'; $('#subtitle').textContent = 'Aucune donnée reçue pour l’instant.'; renderTerm(); renderAlerts(); return; }
   $('#hostname').textContent = S.hostname || 'Switch';
-  $('#subtitle').textContent = [DIAG?.ip?.replace(/\/\d+$/, '') || S.mgmt_ip, S.model, S.location && `Emplacement ${S.location}`, S.version && `AOS-CX ${S.version}`, S.uptime && `allumé depuis ${S.uptime.replace(/weeks?/, 'sem.').replace(/days?/, 'j').replace(/hours?/, 'h').replace(/minutes?/, 'min')}`].filter(Boolean).join(' · ');
+  $('#subtitle').textContent = $('#subtitle').title = [DIAG?.ip?.replace(/\/\d+$/, '') || S.mgmt_ip, S.model, S.location && `Emplacement ${S.location}`, S.version && `AOS-CX ${S.version}`, S.uptime && `allumé depuis ${S.uptime.replace(/weeks?/, 'sem.').replace(/days?/, 'j').replace(/hours?/, 'h').replace(/minutes?/, 'min')}`].filter(Boolean).join(' · ');
   updateDiag(); updateBcast();
   renderKpis(); renderFaceplate(); renderPorts(); renderChart(); renderPanel(); renderVlans(); renderTerm(); renderAlerts(); fillPortSelect(); renderSwitch(); renderLogs(); ddSyncAll();
 }
@@ -1284,7 +1327,7 @@ function renderVlans() {
     for (let n = 1; n <= 28; n++) mini += `<i class="${set.has(n) ? 'on' : ''}${n === 25 ? ' gap' : ''}" title="Port ${n}${set.has(n) ? ` · VLAN ${x.id}` : ''}"></i>`;
     return `<div class="vlan-item">
       <div class="vlan-top"><span class="vid">${x.id}</span><b>${esc(x.name)}</b><span class="status ${x.up ? 'up' : 'down'}">${x.up ? 'Actif' : 'Inactif'}</span><span class="grow"></span>
-        ${x.id === 1 ? '<span class="note">par défaut</span>' : `<button class="btn icon" data-vren="${x.id}" title="Renommer" aria-label="Renommer le VLAN ${x.id}">${ICON_EDIT}</button><button class="btn icon danger" data-vdel="${x.id}" title="Supprimer" aria-label="Supprimer le VLAN ${x.id}">${ICON_TRASH}</button>`}</div>
+        ${x.id === 1 ? '<span class="note">par défaut</span>' : `<button class="btn icon admin-only" data-vren="${x.id}" title="Renommer" aria-label="Renommer le VLAN ${x.id}">${ICON_EDIT}</button><button class="btn icon danger admin-only" data-vdel="${x.id}" title="Supprimer" aria-label="Supprimer le VLAN ${x.id}">${ICON_TRASH}</button>`}</div>
       <div class="vlan-ports"><span class="mini" aria-hidden="true">${mini}</span><span class="note">${ports.length ? `${ports.length} port${ports.length > 1 ? 's' : ''} · ${esc(ranges(ports).map((r) => r.replace(/1\/1\//g, '')).join(', '))}` : 'aucun port'}</span></div>
     </div>`;
   }).join(''));
@@ -1302,7 +1345,7 @@ $('#vlanList').addEventListener('click', (e) => {
     confirmCmd(`Supprimer le VLAN ${id} ?`, ports.length ? `Les ports ${ports.join(', ')} seront d’abord remis dans le VLAN 1.` : 'Aucun port n’utilise ce VLAN.', cmd, `Suppression VLAN ${id}`, { ports: ports.map((n) => `1/1/${n}`) });
   }
 });
-$('#vlanAssignOpen').addEventListener('click', () => { $('#vlanAssignDialog').showModal(); $('#vlanPorts').focus(); });
+$('#vlanAssignOpen').addEventListener('click', () => { if (!canAdmin()) return; $('#vlanAssignDialog').showModal(); $('#vlanPorts').focus(); });
 $('#vaNo').addEventListener('click', () => $('#vlanAssignDialog').close());
 let vlanEdit = null;
 function openVlanDialog(id) {
@@ -1312,7 +1355,7 @@ function openVlanDialog(id) {
   $('#vdName').value = id ? (S.vlans.find((v) => v.id === id)?.name || '') : '';
   $('#vdErr').textContent = ''; $('#vlanDialog').showModal(); (id ? $('#vdName') : $('#vdId')).focus();
 }
-$('#vlanNew').addEventListener('click', () => openVlanDialog());
+$('#vlanNew').addEventListener('click', () => canAdmin() && openVlanDialog());
 $('#vdNo').addEventListener('click', () => $('#vlanDialog').close());
 $('#vdYes').addEventListener('click', () => {
   const id = Number($('#vdId').value), name = $('#vdName').value.trim().replace(/\s+/g, '_');
@@ -1464,8 +1507,9 @@ function renderPanel(force) {
       ${lldp.length ? `<dt>${p.up ? 'LLDP' : 'Dernier vu (LLDP)'}</dt><dd>${lldp.map((l) => esc(l.name || l.chassis)).join('<br>')}</dd>` : ''}
     </dl>
     <button class="btn small" id="ppHist">Voir l’historique de ce port</button>`);
-  setHTML($('#ppActions'), `
-    <div class="section">
+  const admin = canAdmin();
+  setHTML($('#ppActions'), `${ROLE === 'viewer' ? '<p class="note">Lecture seule : les actions sont réservées à l’administrateur.</p>' : ''}
+    ${admin ? `<div class="section">
       <h3>Actions</h3>
       ${uplink ? '<div class="alert amber" style="margin:0">Ce port relie un autre switch. Le couper ou le changer de VLAN coupe tout ce qui passe par ce lien.</div>' : ''}
       <div class="row">
@@ -1476,10 +1520,10 @@ function renderPanel(force) {
         <div class="row"><input id="ppDesc" type="text" maxlength="64" value="${esc(p.desc)}" placeholder="ex. PC accueil"><button class="btn" data-act="desc">Enregistrer</button></div></div>
       <div class="field" style="margin:0"><label for="ppVlan">VLAN (mode access)</label>
         <div class="row"><select id="ppVlan">${(S.vlans || []).map((v) => `<option value="${v.id}" ${String(v.id) === p.vlan ? 'selected' : ''}>VLAN ${v.id} · ${esc(v.name)}</option>`).join('')}</select><button class="btn" data-act="vlan">Appliquer</button></div></div>
-    </div>
+    </div>` : ''}
     <div class="section">
       <h3>Test du câble</h3>
-      <p class="note" style="margin:0">Mesure chaque paire du câble (longueur, coupure, court-circuit). Le port est coupé pendant 5 à 10 secondes.</p>
+      ${admin ? `<p class="note" style="margin:0">Mesure chaque paire du câble (longueur, coupure, court-circuit). Le port est coupé pendant 5 à 10 secondes.</p>` : ''}
       ${cableRun && ['pending', 'running', 'confirm'].includes(cableRun.status) ? '<div class="alert amber" style="margin:0"><span class="spinner"></span> Test en cours…</div>' : ''}
       ${verdict ? `<div class="alert ${verdict[0]}" style="margin:0">${esc(verdict[1])}</div>
         <table class="cable"><thead><tr><th>Paire</th><th>État</th><th>Impédance</th><th>Distance</th></tr></thead><tbody>
@@ -1488,9 +1532,10 @@ function renderPanel(force) {
       ${staleNote}
       ${cableRun && cableRun.status === 'error' && !staleT ? '<div class="alert red" style="margin:0">Le test a échoué. Détail dans la console.</div>' : ''}
       ${cableRun && cableRun.status === 'done' && OUT[cableRun.id] !== undefined && !cableRows.length && !staleT ? '<div class="alert amber" style="margin:0">Le switch n’a pas encore donné de résultat. Relance le test dans quelques secondes.</div>' : ''}
-      <button class="btn" data-act="cable" ${p.type !== '1GbT' ? 'disabled title="Test impossible sur un port SFP"' : ''}>Tester le câble</button>
+      ${admin ? `<button class="btn" data-act="cable" ${p.type !== '1GbT' ? 'disabled title="Test impossible sur un port SFP"' : ''}>Tester le câble</button>`
+        : !verdict && !staleNote ? '<p class="note" style="margin:0">Aucun test de câble pour ce port.</p>' : ''}
     </div>
-    <p class="note">Les changements s’appliquent tout de suite. Pense à « Sauvegarder la config » pour qu’ils survivent à un redémarrage.</p>`);
+    ${admin ? '<p class="note">Les changements s’appliquent tout de suite. Pense à « Sauvegarder la config » pour qu’ils survivent à un redémarrage.</p>' : ''}`);
   enhanceSelects($('#ppActions'));
 }
 // Ne touche au DOM que si le contenu a changé (évite de perdre un clic pendant le rafraîchissement).
@@ -1523,6 +1568,7 @@ function dangerStage(on) {
   $('#cfYes').disabled = on;
 }
 function confirmCmd(title, text, cmd, label, opts = {}) {
+  if (!canAdmin()) return toast(ROLE === 'viewer' ? 'Lecture seule' : 'Vue monitoring', { type: 'warn', sub: ROLE === 'viewer' ? 'Action réservée à l’administrateur.' : 'Repasse en vue admin pour gérer le switch.' });
   $('#cfTitle').textContent = title; $('#cfText').textContent = text; $('#cfCmd').textContent = cmd;
   pendingConfirm = { cmd, label, ...opts }; dangerStage(false);
   if (!$('#confirm').open) $('#confirm').showModal();
@@ -1627,9 +1673,9 @@ function renderTerm(force) {
 }
 
 // ================================================================ alertes
-let SETTINGS = null, EMAIL_OK = false, watchSel = null;
+let SETTINGS = null, EMAIL_OK = false, watchSel = null, VIEWER = null, viewerOff = false;
 async function loadSettings() {
-  try { const d = await api('/api/settings'); SETTINGS = d.settings; EMAIL_OK = d.emailAvailable; fillSettings(); renderAlerts(); } catch {}
+  try { const d = await api('/api/settings'); SETTINGS = d.settings; EMAIL_OK = d.emailAvailable; VIEWER = d.viewer || null; fillSettings(); renderAlerts(); } catch {}
 }
 function autoWatch() { return (S?.ports || []).filter((p) => isUplink(p) || p.desc).map((p) => p.port); }
 function fillSettings() {
@@ -1640,6 +1686,11 @@ function fillSettings() {
   $('#alPortDown').checked = s.notify.portDown; $('#alTemp').checked = s.notify.temp; $('#alAgent').checked = s.notify.agentOffline;
   $('#alSlow').checked = s.notify.slowLink; $('#alIdle').checked = s.notify.idleLink; $('#alTempMax').value = s.tempMax;
   $('#alAutoCable').checked = s.autoCable !== false;
+  const vt = VIEWER?.t ? new Date(VIEWER.t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  $('#alViewerNote').textContent = VIEWER?.enabled
+    ? `Activé (mot de passe défini le ${vt}). Saisis-en un nouveau pour le changer : les écrans déjà connectés seront déconnectés.`
+    : 'Désactivé. Définis un second mot de passe pour connecter un écran qui affiche tout le dashboard sans pouvoir rien modifier.';
+  $('#alViewerOff').hidden = !VIEWER?.enabled; $('#alViewerPw').value = '';
   watchSel = s.watchPorts ? new Set(s.watchPorts) : null;
   renderWatch();
 }
@@ -1663,21 +1714,26 @@ $('#alertForm').addEventListener('submit', (e) => {
       const d = await api('/api/settings', {
         email: $('#alEmail').value, webhook: $('#alHook').value, tempMax: $('#alTempMax').value,
         watchPorts: watchSel ? [...watchSel] : null, autoCable: $('#alAutoCable').checked,
+        viewerPassword: $('#alViewerPw').value, viewerDisable: viewerOff,
         notify: { portDown: $('#alPortDown').checked, temp: $('#alTemp').checked, agentOffline: $('#alAgent').checked, slowLink: $('#alSlow').checked, idleLink: $('#alIdle').checked },
       });
-      SETTINGS = d.settings; fillSettings(); renderAlerts(); $('#alertDialog').close();
-      toast('Réglages enregistrés', { type: 'success', sub: 'L’agent applique les alertes à sa prochaine mise à jour.' });
+      const newViewer = $('#alViewerPw').value.trim() && !viewerOff;
+      SETTINGS = d.settings; VIEWER = d.viewer || null; fillSettings(); renderAlerts(); $('#alertDialog').close();
+      toast('Réglages enregistrés', { type: 'success', sub: viewerOff ? 'Accès lecture seule désactivé : les écrans connectés sont déconnectés.'
+        : newViewer ? 'Mot de passe lecture seule enregistré. Les écrans déjà connectés devront se reconnecter.' : 'L’agent applique les alertes à sa prochaine mise à jour.' });
     } catch (err) { if (err.message !== '401') toast('Impossible d’enregistrer', { type: 'error', sub: err.message }); }
+    finally { viewerOff = false; }
   });
 });
 $('#alertTest').addEventListener('click', (e) => busy(e.currentTarget, async () => {
   try { const r = await api('/api/alerts/test', {}); toast('Notification de test envoyée', { type: 'success', sub: `Via : ${r.sent.join(' + ')}` }); setTimeout(poll, 800); }
   catch (err) { if (err.message !== '401') toast('Le test a échoué', { type: 'error', sub: err.message, timeout: 9000 }); }
 }));
-function openAlertSettings() { loadSettings(); $('#alertDialog').showModal(); }
+function openAlertSettings() { if (!canAdmin()) return; loadSettings(); $('#alertDialog').showModal(); }
 $('#settingsBtn').addEventListener('click', openAlertSettings);
 $('#alertSettingsBtn').addEventListener('click', openAlertSettings);
 $('#alClose').addEventListener('click', () => $('#alertDialog').close());
+$('#alViewerOff').addEventListener('click', () => { viewerOff = true; $('#alertForm').requestSubmit(); });
 $('#bellBtn').addEventListener('click', () => {
   const sec = $('#sec-alertes'); sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
   sec.classList.remove('flash'); void sec.offsetWidth; sec.classList.add('flash');

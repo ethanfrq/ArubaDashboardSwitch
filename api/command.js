@@ -2,14 +2,19 @@ import crypto from 'node:crypto';
 import { redis, K, upsert, LOG_MAX } from '../lib/redis.js';
 import { requireSession } from '../lib/auth.js';
 import { analyze } from '../lib/danger.js';
+import { viewerCommandOk } from '../lib/readonly.js';
 
 export default async function handler(req, res) {
-  if (!requireSession(req, res)) return;
+  const s = await requireSession(req, res);
+  if (!s) return;
   if (req.method !== 'POST') return res.status(405).end();
   const r = redis();
+  const admin = s.role === 'admin';
+  const denied = () => res.status(403).json({ error: 'Accès en lecture seule : action réservée à l’administrateur.' });
 
   // Réponse à une question oui/non posée par le switch.
   if (req.body?.answer_to) {
+    if (!admin) return denied();
     const answer = req.body.answer === 'y' ? 'y' : 'n';
     await r.set(K.answer(String(req.body.answer_to)), answer, { ex: 180 });
     await upsert(K.log, { id: String(req.body.answer_to), status: 'running', answer }, LOG_MAX);
@@ -20,6 +25,9 @@ export default async function handler(req, res) {
   if (!cmd) return res.status(400).json({ error: 'Commande vide.' });
   if (cmd.length > 4000) return res.status(400).json({ error: 'Commande trop longue.' });
   const kind = String(req.body?.kind ?? '').slice(0, 40);
+  const state = await r.get(K.state);
+  // Lecture seule : uniquement les relevés automatiques du dashboard, vérifiés ligne par ligne.
+  if (!admin && !viewerCommandOk(cmd, kind, state)) return denied();
   // Relevés automatiques : un seul à la fois, même avec plusieurs pages ouvertes.
   if (kind.startsWith('auto:')) {
     const now = Date.now() / 1000;
@@ -27,7 +35,7 @@ export default async function handler(req, res) {
     if (same) return res.json({ ...same, dedup: true });
   }
   // Commande dangereuse : refus tant qu'elle n'a pas été confirmée une seconde fois (jeton à usage unique).
-  const reasons = analyze(cmd, await r.get(K.state));
+  const reasons = analyze(cmd, state);
   if (reasons.length) {
     const hash = crypto.createHash('sha256').update(cmd).digest('hex');
     const token = req.body?.danger_token ? String(req.body.danger_token) : null;
@@ -44,6 +52,6 @@ export default async function handler(req, res) {
   await upsert(K.log, rec, LOG_MAX);
   await r.rpush(K.queue, JSON.stringify({ id: rec.id, cmd }));
   await r.set(K.qflag, 1);
-  await r.set(K.hot, 1, { ex: 120 });
+  if (admin) await r.set(K.hot, 1, { ex: 120 }); // l'agent relève les commandes en temps réel
   res.json(rec);
 }

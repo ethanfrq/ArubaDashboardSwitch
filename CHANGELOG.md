@@ -1,5 +1,21 @@
 # Historique des versions
 
+## 1.4.0 (2026-10-09)
+
+### Deux accès
+- **Mot de passe lecture seule** pour un écran de supervision, défini dans ⚙ Réglages (8 caractères minimum, différent de celui de l’administrateur).
+  À la connexion, le mot de passe administrateur donne tous les droits, le mot de passe lecture seule donne l’affichage seul.
+- Lecture seule **imposée par le serveur** : aucune commande (seuls les relevés et tests de câble automatiques, vérifiés ligne par ligne),
+  pas de réglages, pas d’historique des commandes, destinataires des alertes et différences de configuration masqués.
+- Mot de passe lecture seule stocké haché (scrypt). Le changer ou le désactiver déconnecte les écrans déjà connectés.
+- Écran lecture seule économe : session de 30 jours, rafraîchissement toutes les 15 s, relevé toutes les 10 min, sans forcer l’agent en temps réel.
+- **Vue monitoring** pour l’administrateur : un bouton masque toutes les commandes (console, actions, VLAN, réglages) sans se déconnecter.
+
+### Corrections
+- Un relevé raté (session SSH fermée par le switch après une longue inactivité) n’efface plus la carte Switch ni le journal :
+  le dernier relevé valable reste affiché et un nouveau est demandé une minute plus tard.
+- Le sous-titre de la barre du haut se raccourcit au lieu de renvoyer les boutons à la ligne.
+
 ## 1.3.0 (2026-10-09)
 
 Plus de vérifications, sans mise à jour de l’agent.

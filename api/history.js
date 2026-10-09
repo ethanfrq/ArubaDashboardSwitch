@@ -5,7 +5,7 @@ const RANGES = { '1h': ['m5', 3600], '24h': ['m5', 86400], '7d': ['m30', 7 * 864
 
 // Points [t, entrant, sortant] (b/s) pour le total ou pour un port.
 export default async function handler(req, res) {
-  if (!requireSession(req, res)) return;
+  if (!(await requireSession(req, res))) return;
   const [key, span] = RANGES[req.query.range] || RANGES['24h'];
   const port = Number(String(req.query.port || '').split('/').pop()) || 0;
   const rows = await redis().lrange(K.hist(key), 0, -1);
