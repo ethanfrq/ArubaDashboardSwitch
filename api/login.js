@@ -10,7 +10,9 @@ export default async function handler(req, res) {
   if (tries > 8) return res.status(429).json({ error: 'Trop de tentatives, réessaie dans 15 minutes.' });
 
   const expected = process.env.DASHBOARD_PASSWORD;
-  if (!expected || !safeEqual(req.body?.password ?? '', expected)) {
+  // Tolère les espaces, guillemets ou accents graves copiés par erreur autour du mot de passe.
+  const given = String(req.body?.password ?? '').trim().replace(/^[`'"«»\s]+|[`'"«»\s]+$/g, '');
+  if (!expected || !safeEqual(given, expected.trim())) {
     const left = 8 - tries;
     return res.status(401).json({ error: `Mot de passe incorrect${left <= 3 ? ` (encore ${left} essai${left > 1 ? 's' : ''} avant blocage 15 min)` : ''}.` });
   }
