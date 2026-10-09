@@ -343,6 +343,15 @@ tbody tr.click:hover, tbody tr.sel { background: var(--surface-2); }
 .toast .acts { display: flex; gap: 6px; margin-top: 8px; }
 @keyframes pop { from { transform: translateY(8px); opacity: 0; } }
 
+.danger { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); border: 1px solid rgb(201 48 44 / .35); font-size: 13px; }
+.danger .danger-head { font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.danger ul { margin: 8px 0 12px 18px; padding: 0; display: grid; gap: 4px; color: var(--text); }
+.danger label { display: block; color: var(--text-2); }
+.danger input { margin-top: 6px; font-family: var(--mono); letter-spacing: .08em; border-color: rgb(201 48 44 / .5); }
+.danger input:focus { border-color: var(--bad); box-shadow: 0 0 0 3px rgb(201 48 44 / .2); }
+.btn.dangerous { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn.dangerous:hover { filter: brightness(.93); }
+.btn.dangerous.loading::after { border-color: #fff transparent #fff transparent; }
 dialog { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); padding: 20px; width: min(460px, calc(100% - 32px)); }
 dialog::backdrop { background: rgb(0 0 0 / .4); }
 dialog h3 { margin: 0 0 8px; font-size: 15px; }
@@ -477,6 +486,12 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
   <h3 id="cfTitle">Confirmer</h3>
   <div id="cfText" class="note"></div>
   <pre id="cfCmd"></pre>
+  <div class="danger" id="cfDanger" hidden>
+    <div class="danger-head">⚠ Commande sensible : seconde confirmation obligatoire</div>
+    <ul id="cfReasons"></ul>
+    <label for="cfWord">Pour l’exécuter quand même, tape <b>CONFIRMER</b> :</label>
+    <input id="cfWord" type="text" autocomplete="off" spellcheck="false" autocapitalize="characters">
+  </div>
   <div class="actions"><button class="btn" id="cfNo">Annuler</button><button class="btn primary" id="cfYes">Envoyer au switch</button></div>
 </dialog>
 
@@ -519,7 +534,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
@@ -579,7 +594,7 @@ function dropToast(id) { const el = TOASTS[id]; if (el) { el.remove(); delete TO
 
 async function busy(btn, fn) {
   if (btn) { btn.classList.add('loading'); btn.disabled = true; }
-  try { return await fn(); } finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+  try { return await fn(); } finally { if (btn) { btn.classList.remove('loading'); btn.disabled = btn.dataset.lock === '1'; } }
 }
 
 // ================================================================ thème clair / sombre
@@ -604,7 +619,7 @@ async function api(path, body) {
   const r = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
   if (r.status === 401 && path !== '/api/login') { showLogin(); throw new Error('401'); }
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error || `Erreur ${r.status}`);
+  if (!r.ok) { const err = new Error(data.error || `Erreur ${r.status}`); err.status = r.status; err.data = data; throw err; }
   return data;
 }
 function showLogin() { $('#foot').hidden = true; $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
@@ -1163,8 +1178,9 @@ function ranges(nums) {
   if (s !== null) r.push([s, p]);
   return r.map(([a, b]) => (a === b ? `1/1/${a}` : `1/1/${a}-1/1/${b}`));
 }
+// Une ligne « interface » par port : l'invite des plages (config-if-<1/1/3-1/1/8>) n'est pas reconnue par l'agent 1.0.0.
 function vlanAssignCmd(nums, vid) {
-  return ['configure terminal', ...ranges(nums).flatMap((r) => [`interface ${r}`, `vlan access ${vid}`, 'exit']), 'end'].join('\n');
+  return ['configure terminal', ...nums.flatMap((n) => [`interface 1/1/${n}`, `vlan access ${vid}`, 'exit']), 'end'].join('\n');
 }
 const ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>';
@@ -1360,20 +1376,54 @@ $('#ppBody').addEventListener('click', (e) => {
 
 // ================================================================ commandes
 let pendingConfirm = null;
+function dangerStage(on) {
+  $('#cfDanger').hidden = !on;
+  $('#cfYes').textContent = on ? 'Exécuter quand même' : 'Envoyer au switch';
+  $('#cfYes').classList.toggle('dangerous', on); $('#cfYes').classList.toggle('primary', !on);
+  $('#cfWord').value = '';
+  $('#cfYes').dataset.lock = on ? '1' : '';
+  $('#cfYes').disabled = on;
+}
 function confirmCmd(title, text, cmd, label, opts = {}) {
   $('#cfTitle').textContent = title; $('#cfText').textContent = text; $('#cfCmd').textContent = cmd;
-  pendingConfirm = { cmd, label, ...opts }; $('#confirm').showModal();
+  pendingConfirm = { cmd, label, ...opts }; dangerStage(false);
+  if (!$('#confirm').open) $('#confirm').showModal();
 }
+// Seconde étape : le serveur a refusé une commande sensible et demande une confirmation explicite.
+function openDanger(cmd, label, opts, info, expired) {
+  if (!$('#confirm').open) confirmCmd('Commande sensible', '', cmd, label, opts);
+  pendingConfirm = { cmd, label, ...opts, danger_token: info.token };
+  $('#cfTitle').textContent = 'Seconde confirmation';
+  $('#cfReasons').innerHTML = arr(info.reasons).map((r) => `<li>${esc(r)}</li>`).join('');
+  dangerStage(true);
+  if (expired) toast('Délai de confirmation dépassé', { type: 'warn', sub: 'Tape à nouveau CONFIRMER.' });
+  setTimeout(() => $('#cfWord').focus(), 50);
+}
+$('#cfWord').addEventListener('input', () => {
+  const ok = $('#cfWord').value.trim().toUpperCase() === 'CONFIRMER';
+  $('#cfYes').dataset.lock = ok ? '' : '1'; $('#cfYes').disabled = !ok;
+});
+$('#cfWord').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !$('#cfYes').disabled) { e.preventDefault(); $('#cfYes').click(); } });
 $('#cfNo').addEventListener('click', () => $('#confirm').close());
 $('#cfYes').addEventListener('click', (e) => busy(e.currentTarget, async () => {
-  if (pendingConfirm) await send(pendingConfirm.cmd, pendingConfirm.label, pendingConfirm);
+  if (!pendingConfirm) return;
+  const p = pendingConfirm;
+  const extra = p.danger_token ? { danger_token: p.danger_token, confirm: 'CONFIRMER' } : {};
+  const r = await send(p.cmd, p.label, { ...p, ...extra }).catch(() => null);
+  if (r?.danger) return; // la fenêtre reste ouverte sur la seconde étape
   $('#confirm').close();
 }));
 
 async function send(cmd, label = '', opts = {}) {
   const tid = toast(label || cmd.split('\n')[0], { sub: 'Envoi au dashboard…', spinner: true, timeout: 0 });
   try {
-    const rec = await api('/api/command', { cmd, label, kind: opts.kind || '' });
+    let rec;
+    try {
+      rec = await api('/api/command', { cmd, label, kind: opts.kind || '', danger_token: opts.danger_token, confirm: opts.confirm });
+    } catch (e) {
+      if (e.status === 409 && e.data?.danger) { dropToast(tid); openDanger(cmd, label, opts, e.data, Boolean(opts.danger_token)); return { danger: true }; }
+      throw e;
+    }
     rec.ports = opts.ports || [];
     dropToast(tid);
     toast(label || cmd.split('\n')[0], { id: rec.id, sub: 'En attente de l’agent…', spinner: true, timeout: 0 });
@@ -1382,6 +1432,7 @@ async function send(cmd, label = '', opts = {}) {
     PORTS_OF[rec.id] = rec.ports;
     renderTerm(true); if (S) { renderFaceplate(); renderPanel(); }
     lastTouch = 0; setTimeout(poll, 600);
+    return rec;
   } catch (e) {
     if (e.message !== '401') toast('Échec de l’envoi', { id: tid, type: 'error', sub: e.message, timeout: 8000 });
     throw e;
@@ -1399,7 +1450,7 @@ window.answer = (id, a, btn) => busy(btn, async () => {
   } catch (e) { if (e.message !== '401') toast('Échec', { type: 'error', sub: e.message }); }
 });
 
-const CONFIG_RE = /^(conf|configure|write|copy|erase|reload|boot|no |interface|vlan|shutdown|diag)/im;
+const CONFIG_RE = /^(conf|configure|write|copy|erase|reload|boot|no |interface|vlan|shutdown|diag|user |aaa|ssh |https-server|spanning-tree|checkpoint|zeroize|ip |lag|vrf)/im;
 $('#termForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const cmd = $('#termInput').value.trim(); if (!cmd) return;

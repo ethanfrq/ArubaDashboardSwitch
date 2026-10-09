@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { redis, K, upsert, LOG_MAX } from '../lib/redis.js';
 import { requireSession } from '../lib/auth.js';
+import { analyze } from '../lib/danger.js';
 
 export default async function handler(req, res) {
   if (!requireSession(req, res)) return;
@@ -18,6 +19,19 @@ export default async function handler(req, res) {
   const cmd = String(req.body?.cmd ?? '').trim();
   if (!cmd) return res.status(400).json({ error: 'Commande vide.' });
   if (cmd.length > 4000) return res.status(400).json({ error: 'Commande trop longue.' });
+  // Commande dangereuse : refus tant qu'elle n'a pas été confirmée une seconde fois (jeton à usage unique).
+  const reasons = analyze(cmd, await r.get(K.state));
+  if (reasons.length) {
+    const hash = crypto.createHash('sha256').update(cmd).digest('hex');
+    const token = req.body?.danger_token ? String(req.body.danger_token) : null;
+    const ok = token && req.body?.confirm === 'CONFIRMER' && (await r.getdel(K.confirm(token))) === hash;
+    if (!ok) {
+      const fresh = crypto.randomUUID();
+      await r.set(K.confirm(fresh), hash, { ex: 120 });
+      return res.status(409).json({ danger: true, reasons, token: fresh, error: 'Commande sensible : seconde confirmation requise.' });
+    }
+  }
+
   const rec = { id: crypto.randomUUID(), cmd, label: String(req.body?.label ?? '').slice(0, 120),
     kind: String(req.body?.kind ?? '').slice(0, 40), status: 'pending', created: Date.now() / 1000 };
   await upsert(K.log, rec, LOG_MAX);

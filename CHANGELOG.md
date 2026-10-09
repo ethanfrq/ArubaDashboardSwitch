@@ -1,5 +1,22 @@
 # Historique des versions
 
+## 1.2.0 (2026-10-09)
+
+### Sécurité
+- **Double confirmation obligatoire pour les commandes dangereuses**, imposée par le serveur :
+  redémarrage, effacement ou remplacement de configuration, comptes administrateurs, accès SSH ou web,
+  IP de gestion, spanning-tree, suppression d’un VLAN utilisé, modification de 8 ports ou plus,
+  et toute coupure, changement de VLAN ou test de câble sur un lien vers un autre switch ou sur le port du PC de l’agent.
+  Le serveur refuse la commande et délivre un jeton à usage unique valable 2 minutes ; il faut taper CONFIRMER pour l’exécuter.
+
+### Corrections
+- Test de câble : un résultat n’est plus affiché si le port a été branché ou débranché depuis le test.
+- « Paires bonnes + paire ouverte » devient un avertissement (normal en 10/100 Mb/s) au lieu d’un défaut.
+- Affectation de VLAN : une commande par port, pour éviter un délai de l’agent 1.0.0 sur les plages de ports.
+
+### Agent 1.2.0 (facultatif)
+- Reconnaît l’invite des plages de ports (`config-if-<1/1/3-1/1/8>`) : les commandes sur plusieurs ports ne sont plus ralenties.
+
 ## 1.1.0 (2026-10-09)
 
 Nouvelles informations, sans mise à jour de l’agent : le dashboard interroge lui-même le switch (commandes en lecture seule).

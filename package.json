@@ -1,6 +1,6 @@
 {
   "name": "aruba-dashboard-switch",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Dashboard web pour superviser et piloter un switch Aruba CX (AOS-CX) via un agent local et Vercel.",
   "author": "Ethan (https://github.com/ethanfrq)",
   "license": "SEE LICENSE IN LICENSE",

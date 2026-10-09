@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-AGENT_VERSION = "1.0.0"
+AGENT_VERSION = "1.2.0"
 HERE = Path(__file__).resolve().parent
 CFG = json.loads((HERE / "agent_config.json").read_text(encoding="utf-8"))
 SECRET = HERE / "agent_secret.bin"
@@ -29,7 +29,7 @@ SCAN_EVERY = 300                       # recherche des IP toutes les 5 min
 HISTORY_MAX = 360                      # 1 h de points à 10 s
 IDLE_ALERT_AFTER = 600                 # lien sans trafic : alerte après 10 min
 
-PROMPT = re.compile(r"[\w.-]+(\([\w./-]+\))?# ?$")
+PROMPT = re.compile(r"[\w.-]+(\([^()]*\))?# ?$")  # y compris (config-if-<1/1/3-1/1/8>)
 CONFIRM = re.compile(r"\(y/n\)\??\s*$|\[y/n\]\??\s*$", re.I)
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 IN_PROGRESS = re.compile(r"currently in progress|test is in progress", re.I)
