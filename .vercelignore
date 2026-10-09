@@ -1,0 +1,7 @@
+/agent
+.env*
+/ACCES-*.md
+/.agents
+/.claude
+skills-lock.json
+node_modules

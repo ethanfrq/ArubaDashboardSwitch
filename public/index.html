@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Switch Aruba</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='9' width='28' height='14' rx='3' fill='%23ff8300'/%3E%3Crect x='6' y='13' width='4' height='4' fill='%23fff'/%3E%3Crect x='12' y='13' width='4' height='4' fill='%23fff'/%3E%3Crect x='18' y='13' width='4' height='4' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f4f1; --surface: #fcfcfb; --surface-2: #efeee9; --border: #e2e1da;
+  --text: #0b0b0b; --text-2: #52514e; --text-3: #85847d;
+  --accent: #ff8300; --accent-ink: #b45200;
+  --rx: #2a78d6; --tx: #eb6834;
+  --good: #1f8a3c; --good-soft: #dff2e3; --bad: #c9302c; --bad-soft: #fbe3e2;
+  --warn: #a86700; --warn-soft: #fbf0d9; --info: #2a6fc9; --info-soft: #e1ecfa;
+  --faceplate: #2b2b2a; --faceplate-ink: #c9c8c0;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --shadow: 0 1px 2px rgb(0 0 0 / .04), 0 1px 1px rgb(0 0 0 / .03);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111110; --surface: #1a1a19; --surface-2: #232321; --border: #2f2f2c;
+    --text: #ffffff; --text-2: #c3c2b7; --text-3: #8b8a82; --accent-ink: #ffa64d;
+    --rx: #3987e5; --tx: #d95926;
+    --good: #4cc26b; --good-soft: #17301d; --bad: #ef6a66; --bad-soft: #3a1b1a;
+    --warn: #e0a83a; --warn-soft: #36290f; --info: #6aa8f0; --info-soft: #172840;
+    --faceplate: #0c0c0b; --faceplate-ink: #9c9b93; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111110; --surface: #1a1a19; --surface-2: #232321; --border: #2f2f2c;
+  --text: #ffffff; --text-2: #c3c2b7; --text-3: #8b8a82; --accent-ink: #ffa64d;
+  --rx: #3987e5; --tx: #d95926;
+  --good: #4cc26b; --good-soft: #17301d; --bad: #ef6a66; --bad-soft: #3a1b1a;
+  --warn: #e0a83a; --warn-soft: #36290f; --info: #6aa8f0; --info-soft: #172840;
+  --faceplate: #0c0c0b; --faceplate-ink: #9c9b93; --shadow: none;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--mono); }
+.muted { color: var(--text-3); }
+[hidden] { display: none !important; }
+
+/* ---------- formulaires & boutons */
+input[type=password], input[type=text], input[type=email], input[type=url], input[type=number], textarea, select {
+  width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); outline: none;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(255 131 0 / .18); }
+input:disabled { opacity: .55; }
+.field { display: grid; gap: 6px; margin-bottom: 12px; }
+.field > label, .label { font-size: 12px; color: var(--text-2); font-weight: 500; }
+.btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; font-weight: 500; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #1d0f00; }
+.btn.primary:hover { filter: brightness(.95); }
+.btn.danger { color: var(--bad); }
+.btn.small { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn.loading { color: transparent !important; pointer-events: none; }
+.btn.loading::after {
+  content: ""; position: absolute; width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid currentColor; border-color: var(--text-2) transparent var(--text-2) transparent; animation: spin .7s linear infinite;
+}
+.btn.primary.loading::after { border-color: #1d0f00 transparent #1d0f00 transparent; }
+.spinner { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; vertical-align: -2px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error { color: var(--bad); font-size: 13px; min-height: 18px; margin-top: 8px; }
+.logo { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--accent); flex-shrink: 0; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--accent); }
+.row { display: flex; gap: 8px; align-items: center; }
+.row > input, .row > select { flex: 1; min-width: 0; }
+
+/* ---------- login */
+.login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.login form { width: min(360px, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; box-shadow: var(--shadow); }
+.login h1 { font-size: 18px; margin: 14px 0 4px; }
+.login p { margin: 0 0 20px; color: var(--text-2); }
+
+/* ---------- mise en page */
+.app { max-width: 1320px; margin: 0 auto; padding: 18px 20px 40px; }
+header.top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+header.top h1 { font-size: 17px; margin: 0; letter-spacing: -.01em; }
+header.top .sub { color: var(--text-3); font-size: 12.5px; }
+header.top .spacer { flex: 1; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: var(--surface-2); color: var(--text-2); }
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.ok { background: var(--good-soft); color: var(--good); }
+.pill.ko { background: var(--bad-soft); color: var(--bad); }
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); min-width: 0; }
+.card h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card h2 .count { color: var(--text-3); font-weight: 500; }
+.card h2 .right { margin-left: auto; font-weight: 400; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.span-12 { grid-column: span 12; } .span-7 { grid-column: span 7; } .span-5 { grid-column: span 5; } .span-6 { grid-column: span 6; }
+@media (max-width: 1000px) { .span-7, .span-5, .span-6 { grid-column: span 12; } }
+.note { font-size: 12px; color: var(--text-3); }
+
+/* ---------- KPIs */
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+@media (max-width: 1000px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi .label { font-size: 12px; color: var(--text-2); }
+.kpi .value { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-top: 2px; }
+.kpi .value small { font-size: 13px; font-weight: 500; color: var(--text-2); letter-spacing: 0; }
+.kpi .hint { font-size: 12px; color: var(--text-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar { height: 4px; border-radius: 4px; background: var(--surface-2); margin-top: 8px; overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: 4px; background: var(--text-2); }
+
+/* ---------- façade */
+.faceplate-wrap { overflow-x: auto; margin: 0 -4px; padding: 0 4px 2px; }
+.faceplate { display: grid; grid-template-columns: 78px minmax(0, 1fr) minmax(0, 1fr) auto; gap: 14px; align-items: center; background: var(--faceplate); border-radius: 12px; padding: 14px 16px; min-width: 860px; }
+.fp-brand { color: var(--faceplate-ink); font-size: 11px; line-height: 1.35; }
+.fp-brand b { color: var(--accent); display: block; font-size: 15px; letter-spacing: -.01em; }
+.fp-group { display: grid; grid-template-rows: auto auto; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 7px; }
+.fp-sfp { grid-auto-columns: 58px; padding-left: 14px; border-left: 1px solid #ffffff1a; }
+.jack {
+  --c: #3a3a38; --led: #4d4d4a; --ink: #a3a29a;
+  position: relative; height: 56px; min-width: 0; border-radius: 6px; border: 0; padding: 6px 7px;
+  background: var(--c); color: var(--ink); cursor: pointer; text-align: left;
+  display: flex; flex-direction: column; justify-content: space-between;
+  box-shadow: inset 0 -5px 0 rgb(0 0 0 / .22); transition: transform .08s;
+}
+.jack:hover { transform: translateY(-1px); filter: brightness(1.12); }
+.jack .top { display: flex; align-items: center; gap: 5px; }
+.jack .led { width: 7px; height: 4px; border-radius: 1px; background: var(--led); flex-shrink: 0; }
+.jack .n { font: 600 13px/1 var(--mono); }
+.jack .tag { margin-left: auto; font: 600 9px/1 var(--mono); opacity: .9; }
+.jack .tag + .tag { margin-left: 4px; }
+.jack > span:last-child, .jack .meter { display: block; }
+.jack .meta { display: block; font: 500 10px/1 var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .9; }
+.jack .meter { height: 3px; border-radius: 2px; background: rgb(0 0 0 / .3); overflow: hidden; margin-top: 4px; }
+.jack .meter i { display: block; height: 100%; background: var(--led); border-radius: 2px; }
+.jack.up { --c: #1f6b34; --led: #7dffa0; --ink: #eafff0; }
+.jack.up .led { box-shadow: 0 0 6px var(--led); }
+.jack.idle { --c: #6e5313; --led: #ffcc4d; --ink: #fff3d6; }
+.jack.idle .led { animation: blink 1.6s steps(2) infinite; }
+.jack.off { --led: #ff6b66; --ink: #ffb3b0; background: repeating-linear-gradient(135deg, #5a2422 0 5px, #4a1d1b 5px 10px); }
+.jack.sfp { height: 44px; box-shadow: inset 0 0 0 2px rgb(0 0 0 / .35); }
+.jack.empty { --c: #262625; --ink: #6f6e68; }
+.jack .slow { color: #ffcc4d; }
+.jack.sel { outline: 2px solid var(--accent); outline-offset: 2px; }
+.jack.busy::after { content: ""; position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid #fff; border-right-color: transparent; animation: spin .7s linear infinite; }
+.jack:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@keyframes blink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .jack.idle .led, .spinner, .btn.loading::after, .jack.busy::after { animation: none; } .jack { transition: none; } }
+.legend { display: flex; gap: 8px 18px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--text-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend b { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.sw { width: 12px; height: 10px; border-radius: 2px; display: inline-block; }
+
+/* ---------- graphique */
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: 220px; overflow: visible; }
+.chart .gridline { stroke: var(--border); stroke-width: 1; }
+.chart .axis { fill: var(--text-3); font-size: 11px; font-family: var(--mono); }
+.chart .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgb(0 0 0 / .12); white-space: nowrap; transform: translate(-50%, -100%); z-index: 2; }
+.chart .tip b { display: block; font-weight: 600; margin-bottom: 4px; }
+.chart .tip div { display: flex; align-items: center; gap: 6px; }
+.chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-2); }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend i { width: 14px; height: 2px; border-radius: 2px; display: inline-block; }
+.empty { color: var(--text-3); font-size: 13px; padding: 30px 0; text-align: center; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: none; padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--text-2); }
+.seg button.on { background: var(--surface-2); color: var(--text); font-weight: 500; }
+select.compact { width: auto; padding: 4px 8px; font-size: 12px; border-radius: 8px; }
+
+/* ---------- tableaux */
+.table-wrap { overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-weight: 500; color: var(--text-3); font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover, tbody tr.sel { background: var(--surface-2); }
+.status { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+.status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.status.up { color: var(--good); } .status.down { color: var(--text-3); } .status.off { color: var(--bad); }
+.status.off::before { border-radius: 1px; }
+.status.idle { color: var(--warn); }
+.status.idle::before { border-radius: 1px; transform: rotate(45deg); }
+.speed-slow { color: var(--warn); font-weight: 500; }
+.badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-weight: 500; }
+
+/* ---------- tiroir port */
+.drawer { position: fixed; top: 12px; right: 12px; bottom: 12px; width: min(420px, calc(100% - 24px)); z-index: 20; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: 0 12px 40px rgb(0 0 0 / .25); }
+.drawer-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.drawer-head h2 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+.drawer-head .btn { margin-left: auto; }
+.alert { font-size: 12.5px; padding: 9px 11px; border-radius: 8px; margin-bottom: 12px; line-height: 1.45; }
+.alert.amber { background: var(--warn-soft); color: var(--warn); }
+.alert.red { background: var(--bad-soft); color: var(--bad); }
+.alert.green { background: var(--good-soft); color: var(--good); }
+.panel dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 14px; font-size: 13px; }
+.panel dt { color: var(--text-3); }
+.panel dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.section { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 14px; display: grid; gap: 10px; }
+.section h3 { font-size: 12px; margin: 0; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.cable { width: 100%; font-size: 12.5px; }
+.cable td, .cable th { padding: 5px 6px; }
+
+/* ---------- console */
+.term { background: #0f0f0e; color: #e6e5de; border-radius: 10px; font: 12.5px/1.5 var(--mono); display: flex; flex-direction: column; height: 460px; }
+.term-log { flex: 1; overflow: auto; padding: 12px 14px; }
+.term-entry { margin-bottom: 12px; }
+.term-cmd { color: #ffb066; white-space: pre-wrap; display: flex; gap: 8px; align-items: baseline; }
+.term-cmd .st { font: 500 10.5px/1 system-ui, sans-serif; padding: 3px 6px; border-radius: 4px; flex-shrink: 0; display: inline-flex; gap: 5px; align-items: center; }
+.st.pending { background: #3a2f12; color: #f0c45a; } .st.running { background: #13304a; color: #7cc0ff; }
+.st.done { background: #14361f; color: #7ee39a; } .st.error { background: #4a1716; color: #ff8f8a; }
+.st.confirm { background: #4a3a10; color: #ffd76a; }
+.term-out { white-space: pre; color: #cfcec6; margin-top: 4px; overflow-x: auto; }
+.term-ask { margin-top: 8px; display: flex; gap: 8px; align-items: center; color: #ffd76a; flex-wrap: wrap; }
+.term-in { border-top: 1px solid #2a2a28; display: flex; gap: 8px; padding: 10px; align-items: flex-end; }
+.term-in textarea { background: #1a1a19; border-color: #2f2f2c; color: #f4f3ec; font-family: var(--mono); resize: none; min-height: 38px; max-height: 140px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.chip { font: 12px var(--mono); padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; color: var(--text-2); }
+.chip:hover { background: var(--surface-2); color: var(--text); }
+.chip.save { border-color: var(--accent); color: var(--accent-ink); }
+.chip.on { background: var(--accent); border-color: var(--accent); color: #1d0f00; }
+.portpick { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 4px; }
+.portpick .chip { padding: 4px 0; text-align: center; }
+@media (max-width: 560px) { .portpick { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+
+/* ---------- alertes */
+.alert-list { display: grid; gap: 0; max-height: 330px; overflow: auto; }
+.alert-item { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; align-items: start; }
+.alert-item:last-child { border-bottom: 0; }
+.alert-item .when { font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
+.alert-item .ch { font-size: 11px; color: var(--text-3); }
+.lvl { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; }
+.lvl.critical { background: var(--bad); } .lvl.warning { background: var(--warn); border-radius: 2px; } .lvl.ok { background: var(--good); } .lvl.info { background: var(--info); }
+
+/* ---------- notifications (toasts) */
+.toasts { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 50; display: grid; gap: 8px; width: min(440px, calc(100% - 32px)); }
+.toast {
+  display: grid; grid-template-columns: 20px 1fr auto; gap: 10px; align-items: start;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-left: 4px solid var(--info);
+  border-radius: 10px; padding: 10px 12px; box-shadow: 0 10px 30px rgb(0 0 0 / .25); font-size: 13px;
+  animation: pop .18s ease-out;
+}
+.toast.success { border-left-color: var(--good); } .toast.error { border-left-color: var(--bad); } .toast.warn { border-left-color: var(--warn); }
+.toast .ic { display: grid; place-items: center; height: 18px; font-weight: 700; }
+.toast.success .ic { color: var(--good); } .toast.error .ic { color: var(--bad); } .toast.warn .ic { color: var(--warn); } .toast .ic { color: var(--info); }
+.toast .sub { color: var(--text-3); font-size: 12px; margin-top: 2px; overflow-wrap: anywhere; }
+.toast .x { border: 0; background: none; cursor: pointer; color: var(--text-3); font-size: 16px; line-height: 1; padding: 0 2px; }
+.toast .acts { display: flex; gap: 6px; margin-top: 8px; }
+@keyframes pop { from { transform: translateY(8px); opacity: 0; } }
+
+dialog { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); padding: 20px; width: min(460px, calc(100% - 32px)); }
+dialog::backdrop { background: rgb(0 0 0 / .4); }
+dialog h3 { margin: 0 0 8px; font-size: 15px; }
+dialog pre { background: var(--surface-2); padding: 10px; border-radius: 8px; font: 12px/1.5 var(--mono); white-space: pre-wrap; max-height: 240px; overflow: auto; }
+dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+@media (max-width: 560px) { .app { padding: 14px 16px 32px; } .term { height: 380px; } }
+</style>
+</head>
+<body>
+
+<!-- ============ CONNEXION ============ -->
+<section class="login" id="login" hidden>
+  <form id="loginForm">
+    <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d0f00" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg></span>
+    <h1>Dashboard switch</h1>
+    <p>Accès réservé à l’administration réseau.</p>
+    <div class="field"><label for="pw">Mot de passe</label><input id="pw" type="password" autocomplete="current-password" required autofocus></div>
+    <button class="btn primary" style="width:100%" id="loginBtn">Se connecter</button>
+    <div class="error" id="loginErr"></div>
+  </form>
+</section>
+
+<!-- ============ APPLICATION ============ -->
+<main class="app" id="app" hidden>
+  <header class="top">
+    <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d0f00" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg></span>
+    <div><h1 id="hostname">Chargement…</h1><div class="sub" id="subtitle"><span class="spinner"></span></div></div>
+    <span class="spacer"></span>
+    <span class="pill" id="agentPill"><span class="dot"></span><span>…</span></span>
+    <button class="btn small" id="logout">Déconnexion</button>
+  </header>
+
+  <section class="kpis">
+    <div class="card kpi"><div class="label">Ports branchés</div><div class="value num" id="kPorts">—</div><div class="hint" id="kPortsHint"></div></div>
+    <div class="card kpi"><div class="label">Débit entrant</div><div class="value num" id="kRx">—</div><div class="hint">reçu par le switch, tous ports</div></div>
+    <div class="card kpi"><div class="label">Débit sortant</div><div class="value num" id="kTx">—</div><div class="hint">envoyé par le switch, tous ports</div></div>
+    <div class="card kpi"><div class="label">Appareils</div><div class="value num" id="kDev">—</div><div class="hint" id="kDevHint"></div></div>
+    <div class="card kpi"><div class="label">CPU · mémoire</div><div class="value num" id="kCpu">—</div><div class="bar"><i id="kCpuBar" style="width:0"></i></div></div>
+    <div class="card kpi"><div class="label">Température max</div><div class="value num" id="kTemp">—</div><div class="hint" id="kTempHint"></div></div>
+  </section>
+
+  <div class="grid">
+    <section class="card span-12">
+      <h2>Façade <span class="count" id="fpCount"></span><span class="right note">Clique sur un port pour le gérer · reclique pour le désélectionner</span></h2>
+      <div class="faceplate-wrap"><div class="faceplate" id="faceplate"></div></div>
+      <div class="legend" id="fpLegend"></div>
+    </section>
+
+    <section class="card span-12">
+      <h2>Débit <span class="count" id="chartTitle">total</span>
+        <span class="right">
+          <select class="compact" id="chartPort" aria-label="Port affiché"><option value="">Tous les ports</option></select>
+          <span class="seg" id="chartRange"><button data-r="1h" class="on">1 h</button><button data-r="24h">24 h</button><button data-r="7d">7 j</button><button data-r="30d">30 j</button></span>
+          <span class="chart-legend"><span><i style="background:var(--rx)"></i>Entrant</span><span><i style="background:var(--tx)"></i>Sortant</span></span>
+        </span>
+      </h2>
+      <div class="chart" id="chart"></div>
+    </section>
+
+    <section class="card span-7">
+      <h2>Ports <span class="count" id="portCount"></span>
+        <span class="right"><span class="seg" id="portFilter"><button data-f="all" class="on">Tous</button><button data-f="up">Branchés</button><button data-f="down">Libres</button></span></span>
+      </h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Port</th><th>État</th><th>Vitesse</th><th>VLAN</th><th>Description</th><th class="r">Entrant</th><th class="r">Sortant</th><th class="r">Total reçu</th><th class="r">Erreurs</th></tr></thead>
+        <tbody id="portRows"></tbody>
+      </table></div>
+    </section>
+
+    <section class="card span-5">
+      <h2>Appareils connectés <span class="count" id="devCount"></span></h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Port</th><th>Nom</th><th>IP</th><th>MAC</th></tr></thead>
+        <tbody id="devRows"></tbody>
+      </table></div>
+      <p class="note" style="margin:12px 0 0" id="ipNote"></p>
+    </section>
+
+    <section class="card span-6">
+      <h2>VLANs <span class="count" id="vlanCount"></span><span class="right"><button class="btn small" id="vlanNew">+ Nouveau VLAN</button></span></h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Nom</th><th>État</th><th>Ports</th><th class="r">Actions</th></tr></thead>
+        <tbody id="vlanRows"></tbody>
+      </table></div>
+      <div class="section">
+        <h3>Affecter des ports à un VLAN</h3>
+        <div class="row">
+          <input id="vlanPorts" type="text" placeholder="Ports, ex. 3-8, 12" aria-label="Ports">
+          <select id="vlanTarget" aria-label="VLAN"></select>
+          <button class="btn" id="vlanAssign">Affecter</button>
+        </div>
+        <p class="note" style="margin:0">Les ports passent en mode « access » sur le VLAN choisi. Attention aux ports marqués ⇅ : ils relient d’autres switches et les changer peut couper le réseau.</p>
+      </div>
+    </section>
+
+    <section class="card span-6">
+      <h2>Alertes <span class="count" id="alertCount"></span><span class="right"><button class="btn small" id="alertTest">Envoyer un test</button></span></h2>
+      <form id="alertForm">
+        <div class="field"><label for="alEmail">E-mail(s)</label><input id="alEmail" type="text" placeholder="admin@exemple.fr, autre@exemple.fr"><span class="note" id="alEmailNote"></span></div>
+        <div class="field"><label for="alHook">Webhook (Teams, Discord, Slack, ntfy pour le téléphone…)</label><input id="alHook" type="url" placeholder="https://…"></div>
+        <div class="field"><span class="label">Prévenir quand…</span>
+          <label class="check"><input type="checkbox" id="alPortDown"> un port surveillé tombe (et quand il revient)</label>
+          <label class="check"><input type="checkbox" id="alTemp"> la température dépasse <input type="number" id="alTempMax" min="40" max="95" style="width:70px;padding:3px 6px"> °C</label>
+          <label class="check"><input type="checkbox" id="alAgent"> l’agent ne répond plus (5 min)</label>
+          <label class="check"><input type="checkbox" id="alSlow"> un port passe à 10 ou 100 Mb/s</label>
+          <label class="check"><input type="checkbox" id="alIdle"> un port surveillé n’a plus de trafic depuis 10 min</label>
+        </div>
+        <div class="field"><span class="label">Ports surveillés <button type="button" class="btn small" id="alAuto" style="margin-left:6px">Auto</button></span>
+          <div class="portpick" id="alPorts"></div>
+          <span class="note" id="alPortsNote"></span>
+        </div>
+        <button class="btn primary" id="alSave">Enregistrer les alertes</button>
+      </form>
+      <div class="section"><h3>Dernières alertes</h3><div class="alert-list" id="alertList"></div></div>
+    </section>
+
+    <section class="card span-12">
+      <h2>Console de gestion <span class="count" id="termMode">les commandes passent par l’agent</span></h2>
+      <div class="chips" id="chips"></div>
+      <div class="term">
+        <div class="term-log" id="termLog"></div>
+        <form class="term-in" id="termForm">
+          <textarea id="termInput" rows="1" placeholder="show vlan    (Entrée pour envoyer, Maj+Entrée pour une nouvelle ligne)"></textarea>
+          <button class="btn primary" id="termSend">Envoyer</button>
+        </form>
+      </div>
+    </section>
+  </div>
+</main>
+
+<aside class="drawer panel" id="portPanel" hidden aria-labelledby="ppTitle">
+  <div class="drawer-head"><h2 id="ppTitle">Port</h2><button class="btn small" id="ppClose">Fermer</button></div>
+  <div id="ppBody"></div>
+</aside>
+
+<dialog id="confirm">
+  <h3 id="cfTitle">Confirmer</h3>
+  <div id="cfText" class="note"></div>
+  <pre id="cfCmd"></pre>
+  <div class="actions"><button class="btn" id="cfNo">Annuler</button><button class="btn primary" id="cfYes">Envoyer au switch</button></div>
+</dialog>
+
+<dialog id="vlanDialog">
+  <h3 id="vdTitle">Nouveau VLAN</h3>
+  <div class="field"><label for="vdId">Numéro (2 à 4094)</label><input id="vdId" type="number" min="2" max="4094"></div>
+  <div class="field"><label for="vdName">Nom</label><input id="vdName" type="text" maxlength="32" placeholder="ex. PROFS"></div>
+  <div class="error" id="vdErr"></div>
+  <div class="actions"><button class="btn" id="vdNo">Annuler</button><button class="btn primary" id="vdYes">Continuer</button></div>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
+const nf0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+const arr = (x) => (Array.isArray(x) ? x : []);
+
+function fmtBps(v) {
+  if (v == null) return '—';
+  const u = ['b/s', 'kb/s', 'Mb/s', 'Gb/s']; let i = 0;
+  while (v >= 1000 && i < u.length - 1) { v /= 1000; i++; }
+  return `${(i ? nf : nf0).format(v)} ${u[i]}`;
+}
+function fmtBytes(v) {
+  if (v == null) return '—';
+  const u = ['o', 'Ko', 'Mo', 'Go', 'To']; let i = 0;
+  while (v >= 1000 && i < u.length - 1) { v /= 1000; i++; }
+  return `${(i ? nf : nf0).format(v)} ${u[i]}`;
+}
+const fmtDur = (s) => (s < 60 ? `${Math.round(s)} s` : s < 3600 ? `${Math.round(s / 60)} min` : `${nf.format(s / 3600)} h`);
+const ago = (s) => `il y a ${fmtDur(Math.max(0, s))}`;
+const portNum = (p) => Number(String(p).split('/').pop());
+const IDLE_AFTER = 120;
+
+let S = null, LOG = [], ALERTS = [], NOW = 0, selected = null, filter = 'all', timer = null, lastTouch = 0;
+const OUT = {}, OUTV = {}, SEEN = {};
+
+const quietFor = (p) => (p.up && p.rx_quiet_since ? Math.max(0, (S.updated || NOW) - p.rx_quiet_since) : 0);
+const pState = (p) => (!p.enabled ? 'off' : !p.up ? 'down' : quietFor(p) >= IDLE_AFTER ? 'idle' : 'up');
+const pLabel = { up: 'Actif', idle: 'Sans trafic', down: 'Libre', off: 'Désactivé' };
+const isSlow = (p) => p.up && p.type === '1GbT' && Number(p.speed) > 0 && Number(p.speed) < 1000;
+const speedTag = (s) => (s >= 1000 ? `${s / 1000}G` : `${s}M`);
+const isUplink = (p) => p.uplink ?? (S.lldp || []).some((l) => l.port === p.port && l.name && /\d{4}|aruba|switch/i.test(l.name));
+const pendingFor = (port) => LOG.some((c) => ['pending', 'running', 'confirm'].includes(c.status) && (c.ports || []).includes(port));
+
+// ================================================================ notifications & chargement
+const TOASTS = {};
+function toast(msg, { type = 'info', sub = '', id = null, timeout = 4500, actions = '', spinner = false } = {}) {
+  id = id || 'tt' + Math.random().toString(36).slice(2);
+  let el = TOASTS[id];
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'toast'; el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    $('#toasts').appendChild(el); TOASTS[id] = el;
+    el.addEventListener('click', (e) => { if (e.target.closest('.x')) dropToast(id); });
+  }
+  clearTimeout(el._t);
+  el.className = `toast ${type}`;
+  const icon = spinner ? '<span class="spinner"></span>' : { success: '✓', error: '✕', warn: '!', info: 'i' }[type];
+  el.innerHTML = `<span class="ic">${icon}</span><div><div>${esc(msg)}</div>${sub ? `<div class="sub">${esc(sub)}</div>` : ''}${actions ? `<div class="acts">${actions}</div>` : ''}</div><button class="x" aria-label="Fermer">×</button>`;
+  if (timeout) el._t = setTimeout(() => dropToast(id), timeout);
+  return id;
+}
+function dropToast(id) { const el = TOASTS[id]; if (el) { el.remove(); delete TOASTS[id]; } }
+
+async function busy(btn, fn) {
+  if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+  try { return await fn(); } finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+}
+
+// ================================================================ API
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  if (r.status === 401 && path !== '/api/login') { showLogin(); throw new Error('401'); }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `Erreur ${r.status}`);
+  return data;
+}
+function showLogin() { $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
+function showApp() { $('#login').hidden = true; $('#app').hidden = false; }
+
+$('#loginForm').addEventListener('submit', (e) => {
+  e.preventDefault(); $('#loginErr').textContent = '';
+  busy($('#loginBtn'), async () => {
+    try { await api('/api/login', { password: $('#pw').value }); $('#pw').value = ''; showApp(); loadSettings(); poll(); toast('Connecté', { type: 'success', timeout: 2000 }); }
+    catch (err) { $('#loginErr').textContent = err.message; $('#pw').select(); }
+  });
+});
+$('#logout').addEventListener('click', (e) => busy(e.currentTarget, async () => { await api('/api/logout', {}).catch(() => {}); showLogin(); }));
+
+async function poll() {
+  clearTimeout(timer);
+  try {
+    const touch = Date.now() - lastTouch > 50000 ? '?touch=1' : '';
+    const d = await api('/api/state' + touch);
+    if (d.auth === false) { showLogin(); $('#pw').focus(); return; }
+    if (touch) lastTouch = Date.now();
+    if ($('#app').hidden) { showApp(); loadSettings(); }
+    S = d.state; NOW = d.now; ALERTS = arr(d.alerts);
+    trackCommands(arr(d.log));
+    render();
+  } catch (e) { if (e.message === '401') return; }
+  const busyNow = LOG.some((c) => ['pending', 'running', 'confirm'].includes(c.status));
+  timer = setTimeout(poll, document.hidden ? 30000 : busyNow ? 1500 : 5000);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('#app').hidden) { lastTouch = 0; poll(); } });
+
+// Suivi des commandes : notifications à chaque changement d'état.
+function trackCommands(log) {
+  for (const c of log) {
+    const prev = SEEN[c.id];
+    if (prev && prev !== c.status) onStatus(c);
+    SEEN[c.id] = c.status;
+  }
+  LOG = log;
+  const need = LOG.filter((c) => ['done', 'error', 'confirm'].includes(c.status) && OUTV[c.id] !== (c.v || c.status)).map((c) => c.id);
+  if (need.length) fetchOutputs(need);
+}
+async function fetchOutputs(ids) {
+  try {
+    const outs = await api('/api/output?ids=' + ids.join(','));
+    for (const id of ids) { OUT[id] = outs[id] || ''; const c = LOG.find((x) => x.id === id); OUTV[id] = c && (c.v || c.status); }
+    renderTerm(); renderPanel();
+  } catch {}
+}
+function cmdName(c) { return c.label || c.cmd.split('\n')[0]; }
+function onStatus(c) {
+  const name = cmdName(c);
+  if (c.status === 'running') toast(name, { id: c.id, sub: 'Exécution sur le switch…', spinner: true, timeout: 0 });
+  if (c.status === 'confirm') toast('Le switch demande une confirmation', { id: c.id, type: 'warn', sub: c.question || name, timeout: 0,
+    actions: `<button class="btn small primary" onclick="answer('${c.id}','y',this)">Oui</button><button class="btn small" onclick="answer('${c.id}','n',this)">Non</button>` });
+  if (c.status === 'done') toast(name, { id: c.id, type: 'success', sub: /^(show|diag|diagnostics)/.test(c.cmd) ? 'Terminé.' : 'Appliqué sur le switch.' });
+  if (c.status === 'error') {
+    toast(name, { id: c.id, type: 'error', sub: 'Le switch a renvoyé une erreur. Détail dans la console.', timeout: 9000 });
+    setTimeout(() => { const l = (OUT[c.id] || '').split('\n').find((x) => /^\s*%|Invalid|Error/i.test(x)); if (l && TOASTS[c.id]) toast(name, { id: c.id, type: 'error', sub: l.trim(), timeout: 9000 }); }, 1200);
+  }
+}
+
+// ================================================================ rendu
+function render() {
+  renderAgent();
+  if (!S) { $('#hostname').textContent = 'En attente de l’agent'; $('#subtitle').textContent = 'Aucune donnée reçue pour l’instant.'; renderTerm(); renderAlerts(); return; }
+  $('#hostname').textContent = S.hostname || 'Switch';
+  $('#subtitle').textContent = [S.model, S.location && `Emplacement ${S.location}`, S.version && `AOS-CX ${S.version}`, S.uptime && `allumé depuis ${S.uptime.replace(/weeks?/, 'sem.').replace(/days?/, 'j').replace(/hours?/, 'h').replace(/minutes?/, 'min')}`].filter(Boolean).join(' · ');
+  renderKpis(); renderFaceplate(); renderPorts(); renderDevices(); renderChart(); renderPanel(); renderVlans(); renderTerm(); renderAlerts(); fillPortSelect();
+}
+
+function renderAgent() {
+  const pill = $('#agentPill');
+  if (!S) { pill.className = 'pill ko'; pill.lastElementChild.textContent = 'Agent jamais connecté'; return; }
+  const age = NOW - (S.received || S.updated);
+  const every = S.agent?.sync || 10;
+  const online = age < Math.max(45, every * 2.5);
+  pill.className = 'pill ' + (online ? 'ok' : 'ko');
+  pill.lastElementChild.textContent = online ? `Agent en ligne · ${ago(age)}` : `Agent hors ligne · ${ago(age)}`;
+  pill.title = `${S.agent?.host ? `Agent sur ${S.agent.host}. ` : ''}Mise à jour toutes les ${every} s (10 s quand le dashboard est ouvert, 60 s sinon).`;
+  $('#termMode').textContent = online && every <= 10 ? 'temps réel : exécution en 1 à 3 s' : 'l’agent passe en temps réel dans moins d’une minute';
+}
+
+function renderKpis() {
+  const ports = S.ports || [];
+  const up = ports.filter((p) => p.up).length;
+  const usable = ports.filter((p) => p.enabled && p.reason !== 'No XCVR installed').length;
+  $('#kPorts').innerHTML = `${up} <small>/ ${usable}</small>`;
+  const idle = ports.filter((p) => pState(p) === 'idle').length, slow = ports.filter(isSlow).length;
+  const off = ports.filter((p) => !p.enabled).map((p) => portNum(p.port));
+  $('#kPortsHint').textContent = [idle && `${idle} sans trafic`, slow && `${slow} lent${slow > 1 ? 's' : ''}`, off.length && `désactivé : ${off.join(', ')}`].filter(Boolean).join(' · ') || 'tout est normal';
+  const last = (S.history || []).at(-1);
+  $('#kRx').textContent = last ? fmtBps(last[1]) : '—';
+  $('#kTx').textContent = last ? fmtBps(last[2]) : '—';
+  const macs = S.macs || [], ips = S.ips || {};
+  $('#kDev').textContent = nf0.format(macs.length);
+  const withIp = macs.filter((m) => ips[m.mac]).length;
+  $('#kDevHint').textContent = S.agent?.scan ? `${withIp} avec IP connue` : 'adresses MAC apprises';
+  $('#kCpu').innerHTML = `${S.cpu ?? '—'} % <small>· ${S.mem ?? '—'} %</small>`;
+  $('#kCpuBar').style.width = `${Math.min(100, S.cpu || 0)}%`;
+  const temps = S.temps || [];
+  if (temps.length) {
+    const max = temps.reduce((a, b) => (b.temp > a.temp ? b : a));
+    const bad = temps.filter((t) => t.status !== 'normal');
+    $('#kTemp').textContent = `${nf.format(max.temp)} °C`;
+    $('#kTempHint').textContent = bad.length ? `⚠ ${bad.length} capteur(s) en alerte` : `tous normaux · air ${nf.format(temps.find((t) => /Inlet/.test(t.sensor))?.temp ?? 0)} °C`;
+  }
+}
+
+// ---------------------------------------------------------------- façade
+const meterPct = (bps) => (bps > 0 ? Math.min(100, Math.max(6, (Math.log10(bps) / 9) * 100)) : 0);
+function renderFaceplate() {
+  const ports = Object.fromEntries((S.ports || []).map((p) => [portNum(p.port), p]));
+  const jack = (n, sfp) => {
+    const p = ports[n]; if (!p) return '<span></span>';
+    const st = pState(p), bps = (p.rx_bps || 0) + (p.tx_bps || 0);
+    const empty = sfp && p.reason === 'No XCVR installed';
+    const up = isUplink(p), slow = isSlow(p);
+    const meta = st === 'off' ? 'désactivé' : empty ? 'vide' : st === 'down' ? 'libre'
+      : st === 'idle' ? `0 pkt · ${fmtDur(quietFor(p)).replace(' ', '')}` : fmtBps(bps).replace(' ', ' ');
+    const tip = [`Port ${n}`, pLabel[st], p.speed && `${p.speed} Mb/s${slow ? ' (lent)' : ''}`, up && 'lien vers un autre switch',
+      p.vlan !== '1' && `VLAN ${p.vlan}`, st === 'idle' && `aucun paquet reçu depuis ${fmtDur(quietFor(p))}`, st === 'up' && fmtBps(bps), p.desc].filter(Boolean).join(' · ');
+    const cls = ['jack', sfp && 'sfp', empty ? 'empty' : st, selected === p.port && 'sel', pendingFor(p.port) && 'busy'].filter(Boolean).join(' ');
+    const tags = (up ? '<span class="tag">⇅</span>' : '') + (p.vlan !== '1' ? `<span class="tag">V${esc(p.vlan)}</span>` : '')
+      + (p.up && p.speed && !sfp ? `<span class="tag${slow ? ' slow' : ''}">${speedTag(Number(p.speed))}</span>` : '');
+    return `<button class="${cls}" data-port="${esc(p.port)}" title="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${selected === p.port}">
+      <span class="top"><span class="led"></span><span class="n">${n}</span>${tags}</span>
+      ${sfp ? `<span class="meta">${esc(meta)}</span>` : `<span><span class="meta">${esc(meta)}</span><span class="meter"><i style="width:${st === 'up' ? meterPct(bps) : 0}%"></i></span></span>`}
+    </button>`;
+  };
+  let html = `<div class="fp-brand"><b>aruba</b>${esc((S.model || '').replace(/^\S+\s/, '').replace(/\s*Swch$/, ''))}</div>`;
+  for (const [a, b] of [[1, 12], [13, 24]]) { html += '<div class="fp-group">'; for (let n = a; n <= b; n += 2) html += jack(n) + jack(n + 1); html += '</div>'; }
+  html += '<div class="fp-group fp-sfp">' + jack(25, 1) + jack(26, 1) + jack(27, 1) + jack(28, 1) + '</div>';
+  setHTML($('#faceplate'), html);
+  const all = S.ports || [], count = (s) => all.filter((p) => pState(p) === s).length, slow = all.filter(isSlow).length, up = all.filter((p) => p.up).length;
+  $('#fpCount').textContent = `${up} branché${up > 1 ? 's' : ''}`;
+  $('#fpLegend').innerHTML = `
+    <span><i class="sw" style="background:#1f6b34"></i>Actif <b>${count('up')}</b></span>
+    <span><i class="sw" style="background:#6e5313"></i>Câble branché, aucun paquet <b>${count('idle')}</b></span>
+    <span><i class="sw" style="background:#3a3a38"></i>Libre <b>${count('down')}</b></span>
+    <span><i class="sw" style="background:repeating-linear-gradient(135deg,#5a2422 0 3px,#4a1d1b 3px 6px)"></i>Désactivé <b>${count('off')}</b></span>
+    ${slow ? `<span><span class="speed-slow mono">10M/100M</span>Vitesse réduite <b>${slow}</b></span>` : ''}
+    <span><span class="mono">⇅</span>Lien vers un autre switch</span><span><span class="mono">V10</span>VLAN autre que 1</span>`;
+}
+onPick($('#faceplate'));
+
+// Sélection / désélection d'un port
+function onPick(root) {
+  root.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; const b = e.target.closest('[data-port]'); if (b) togglePort(b.dataset.port); });
+  root.addEventListener('click', (e) => { if (e.detail !== 0) return; const b = e.target.closest('[data-port]'); if (b) togglePort(b.dataset.port); });
+}
+function togglePort(p) { if (selected === p) closePanel(); else selectPort(p); }
+function selectPort(p) { selected = p; $('#portPanel').hidden = false; $('#ppBody').innerHTML = ''; renderFaceplate(); renderPorts(); renderPanel(true); }
+function closePanel() { if (!selected) return; selected = null; $('#portPanel').hidden = true; renderFaceplate(); renderPorts(); }
+$('#ppClose').addEventListener('click', closePanel);
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && selected && !document.querySelector('dialog[open]')) closePanel(); });
+document.addEventListener('pointerdown', (e) => {
+  if (!selected || $('#portPanel').contains(e.target) || e.target.closest('[data-port],dialog,.toasts')) return;
+  closePanel();
+});
+
+// ---------------------------------------------------------------- ports
+function renderPorts() {
+  const ports = (S.ports || []).filter((p) => filter === 'all' || (filter === 'up' ? p.up : !p.up));
+  $('#portCount').textContent = `${ports.length}`;
+  setHTML($('#portRows'), ports.map((p) => {
+    const st = pState(p);
+    const errs = (p.rx_errors || 0) + (p.tx_errors || 0) + (p.rx_drops || 0) + (p.tx_drops || 0);
+    return `<tr class="click${selected === p.port ? ' sel' : ''}" data-port="${esc(p.port)}">
+      <td class="mono">${esc(p.port)}</td>
+      <td><span class="status ${st}">${pLabel[st]}</span>${st === 'idle' ? ` <span class="muted">${fmtDur(quietFor(p))}</span>` : ''}</td>
+      <td class="num">${p.speed ? `<span class="${isSlow(p) ? 'speed-slow' : ''}">${esc(p.speed)} Mb/s</span>` : (p.reason === 'No XCVR installed' ? '<span class="muted">pas de module</span>' : '<span class="muted">—</span>')}</td>
+      <td class="num">${esc(p.vlan)}${p.mode === 'trunk' ? ' <span class="badge">trunk</span>' : ''}</td>
+      <td>${p.desc ? esc(p.desc) : '<span class="muted">—</span>'}</td>
+      <td class="r num">${p.up ? fmtBps(p.rx_bps) : '<span class="muted">—</span>'}</td>
+      <td class="r num">${p.up ? fmtBps(p.tx_bps) : '<span class="muted">—</span>'}</td>
+      <td class="r num">${fmtBytes(p.rx_bytes)}</td>
+      <td class="r num">${errs ? `<span style="color:var(--warn)" title="erreurs ${(p.rx_errors || 0) + (p.tx_errors || 0)} · CRC ${p.crc || 0} · pertes ${(p.rx_drops || 0) + (p.tx_drops || 0)}">${nf0.format(errs)}</span>` : '<span class="muted">0</span>'}</td>
+    </tr>`;
+  }).join(''));
+}
+onPick($('#portRows'));
+$('#portFilter').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  filter = b.dataset.f; [...$('#portFilter').children].forEach((x) => x.classList.toggle('on', x === b)); renderPorts();
+});
+
+// ---------------------------------------------------------------- appareils
+function deviceName(m) {
+  const lldpByMac = (S.lldp || []).find((l) => l.port_id?.toLowerCase() === m.mac);
+  const onPort = (S.lldp || []).filter((l) => l.port === m.port);
+  const sw = onPort.find((x) => x.name);
+  if (sw) return `Switch ${esc(sw.name)} <span class="muted">(son port ${esc(sw.port_id)}${sw.port_desc ? ' · ' + esc(sw.port_desc) : ''})</span>`;
+  const l = lldpByMac || (onPort.length === 1 && !/^[0-9a-f:]+$/i.test(onPort[0].chassis) ? onPort[0] : null);
+  if (l) return esc(l.chassis);
+  const ip = (S.ips || {})[m.mac];
+  return ip?.name ? esc(ip.name) : '<span class="muted">—</span>';
+}
+function renderDevices() {
+  const ips = S.ips || {};
+  const rows = (S.macs || []).slice().sort((a, b) => portNum(a.port) - portNum(b.port)).map((m) =>
+    `<tr class="click" data-port="${esc(m.port)}"><td class="mono">${esc(m.port)}</td><td>${deviceName(m)}</td><td class="mono">${ips[m.mac] ? esc(ips[m.mac].ip) : '<span class="muted">—</span>'}</td><td class="mono">${esc(m.mac)}</td></tr>`);
+  $('#devCount').textContent = `${(S.macs || []).length}`;
+  $('#devRows').innerHTML = rows.join('') || '<tr><td colspan="4" class="empty">Aucun appareil détecté.</td></tr>';
+  $('#ipNote').textContent = S.agent?.scan
+    ? `IP trouvées par l’agent sur ${S.agent.scan} (mise à jour toutes les 5 min). Les noms viennent du LLDP ou du DNS.`
+    : 'Les IP s’afficheront quand l’agent tournera sur un PC du même réseau avec l’option scan_subnet (le switch, lui, ne voit que les adresses MAC).';
+}
+onPick($('#devRows'));
+
+// ---------------------------------------------------------------- VLANs
+function parsePorts(txt) {
+  const out = new Set();
+  for (const part of String(txt).split(/[,;\s]+/).filter(Boolean)) {
+    const m = part.match(/^(?:1\/1\/)?(\d{1,2})(?:-(?:1\/1\/)?(\d{1,2}))?$/);
+    if (!m) throw new Error(`« ${part} » n’est pas un port valide.`);
+    const a = Number(m[1]), b = Number(m[2] || m[1]);
+    if (a < 1 || b > 28 || b < a) throw new Error(`Plage « ${part} » invalide (ports 1 à 28).`);
+    for (let n = a; n <= b; n++) out.add(n);
+  }
+  return [...out].sort((x, y) => x - y);
+}
+function ranges(nums) {
+  const r = []; let s = null, p = null;
+  for (const n of nums) { if (s === null) s = p = n; else if (n === p + 1) p = n; else { r.push([s, p]); s = p = n; } }
+  if (s !== null) r.push([s, p]);
+  return r.map(([a, b]) => (a === b ? `1/1/${a}` : `1/1/${a}-1/1/${b}`));
+}
+function vlanAssignCmd(nums, vid) {
+  return ['configure terminal', ...ranges(nums).flatMap((r) => [`interface ${r}`, `vlan access ${vid}`, 'exit']), 'end'].join('\n');
+}
+function renderVlans() {
+  const v = S.vlans || [];
+  $('#vlanCount').textContent = `${v.length}`;
+  $('#vlanRows').innerHTML = v.map((x) => {
+    const ports = (S.ports || []).filter((p) => p.vlan === String(x.id) && p.mode === 'access').map((p) => portNum(p.port));
+    return `<tr><td class="mono">${x.id}</td><td>${esc(x.name)}</td>
+      <td><span class="status ${x.up ? 'up' : 'down'}">${x.up ? 'Actif' : 'Inactif'}</span></td>
+      <td class="mono">${ports.length ? esc(ranges(ports).map((r) => r.replace(/1\/1\//g, '')).join(', ')) : '<span class="muted">aucun</span>'}</td>
+      <td class="r">${x.id === 1 ? '<span class="note">par défaut</span>' : `<button class="btn small" data-vren="${x.id}">Renommer</button> <button class="btn small danger" data-vdel="${x.id}">Supprimer</button>`}</td></tr>`;
+  }).join('');
+  const sel = $('#vlanTarget'), cur = sel.value;
+  sel.innerHTML = v.map((x) => `<option value="${x.id}">VLAN ${x.id} · ${esc(x.name)}</option>`).join('');
+  if (cur && v.some((x) => String(x.id) === cur)) sel.value = cur;
+}
+$('#vlanRows').addEventListener('click', (e) => {
+  const ren = e.target.closest('[data-vren]'), del = e.target.closest('[data-vdel]');
+  if (ren) openVlanDialog(Number(ren.dataset.vren));
+  if (del) {
+    const id = Number(del.dataset.vdel);
+    const ports = (S.ports || []).filter((p) => p.vlan === String(id) && p.mode === 'access').map((p) => portNum(p.port));
+    const cmd = ports.length ? vlanAssignCmd(ports, 1).replace(/\nend$/, `\nno vlan ${id}\nend`) : `configure terminal\nno vlan ${id}\nend`;
+    confirmCmd(`Supprimer le VLAN ${id} ?`, ports.length ? `Les ports ${ports.join(', ')} seront d’abord remis dans le VLAN 1.` : 'Aucun port n’utilise ce VLAN.', cmd, `Suppression VLAN ${id}`, { ports: ports.map((n) => `1/1/${n}`) });
+  }
+});
+let vlanEdit = null;
+function openVlanDialog(id) {
+  vlanEdit = id || null;
+  $('#vdTitle').textContent = id ? `Renommer le VLAN ${id}` : 'Nouveau VLAN';
+  $('#vdId').value = id || ''; $('#vdId').disabled = Boolean(id);
+  $('#vdName').value = id ? (S.vlans.find((v) => v.id === id)?.name || '') : '';
+  $('#vdErr').textContent = ''; $('#vlanDialog').showModal(); (id ? $('#vdName') : $('#vdId')).focus();
+}
+$('#vlanNew').addEventListener('click', () => openVlanDialog());
+$('#vdNo').addEventListener('click', () => $('#vlanDialog').close());
+$('#vdYes').addEventListener('click', () => {
+  const id = Number($('#vdId').value), name = $('#vdName').value.trim().replace(/\s+/g, '_');
+  if (!(id >= 2 && id <= 4094)) return ($('#vdErr').textContent = 'Numéro entre 2 et 4094.');
+  if (!vlanEdit && (S.vlans || []).some((v) => v.id === id)) return ($('#vdErr').textContent = `Le VLAN ${id} existe déjà.`);
+  if (name && !/^[\w.-]{1,32}$/.test(name)) return ($('#vdErr').textContent = 'Nom : lettres, chiffres, - _ . (32 max).');
+  $('#vlanDialog').close();
+  confirmCmd(vlanEdit ? `Renommer le VLAN ${id}` : `Créer le VLAN ${id}`, '', `configure terminal\nvlan ${id}\n${name ? `name ${name}` : 'no name'}\nend`, vlanEdit ? `VLAN ${id} renommé` : `VLAN ${id} créé`);
+});
+$('#vlanAssign').addEventListener('click', () => {
+  let nums; try { nums = parsePorts($('#vlanPorts').value); } catch (e) { return toast(e.message, { type: 'error' }); }
+  if (!nums.length) return toast('Indique au moins un port, ex. 3-8, 12', { type: 'warn' });
+  const vid = Number($('#vlanTarget').value);
+  const uplinks = nums.filter((n) => { const p = S.ports.find((x) => portNum(x.port) === n); return p && isUplink(p); });
+  confirmCmd(`Mettre ${nums.length} port(s) dans le VLAN ${vid} ?`,
+    uplinks.length ? `⚠ Les ports ${uplinks.join(', ')} relient d’autres switches : les changer peut couper le réseau.` : 'Les appareils branchés changeront de réseau (ils devront parfois renouveler leur IP).',
+    vlanAssignCmd(nums, vid), `Ports ${nums.join(', ')} → VLAN ${vid}`, { ports: nums.map((n) => `1/1/${n}`) });
+});
+
+// ---------------------------------------------------------------- tiroir du port
+const CABLE_FR = { good: 'bon', open: 'circuit ouvert', intra_short: 'court-circuit (même paire)', inter_short: 'court-circuit (entre paires)', high_imp: 'impédance trop haute', low_imp: 'impédance trop basse', unknown: 'indéterminé' };
+function parseCable(out) {
+  const rows = [];
+  for (const m of String(out || '').matchAll(/(\d-\d)\s+(good|open|intra_short|inter_short|high_imp|low_imp|unknown)\s+(\S+)\s+((?:[\d.]+\s*\+\/-\s*[\d.]+)|--|\S+)/g)) rows.push({ pair: m[1], status: m[2], imp: m[3], dist: m[4] });
+  return rows;
+}
+function cableVerdict(rows, p) {
+  if (!rows.length) return null;
+  const bad = rows.filter((r) => r.status !== 'good');
+  const dist = rows.map((r) => parseFloat(r.dist)).filter((x) => !isNaN(x));
+  const len = dist.length ? Math.round(Math.max(...dist)) : null;
+  if (!bad.length) return ['green', `Câble en bon état${len ? ` · environ ${len} m` : ''}.`];
+  if (bad.every((r) => r.status === 'open')) return [p.up ? 'amber' : 'amber', `Circuit ouvert à environ ${len ?? '?'} m sur toutes les paires : rien n’est branché au bout (prise murale vide ou appareil débranché).`];
+  if (bad.length < rows.length && bad.length <= 2) return ['red', `${bad.length} paire(s) défectueuse(s) (${bad.map((r) => `${r.pair} ${CABLE_FR[r.status]}`).join(', ')}) : c’est typique d’un lien bloqué à 100 Mb/s ou 10 Mb/s. Remplace le câble ou refais la prise.`];
+  return ['red', `Défaut détecté : ${bad.map((r) => `${r.pair} ${CABLE_FR[r.status]} à ${r.dist} m`).join(', ')}.`];
+}
+function renderPanel(force) {
+  const p = (S?.ports || []).find((x) => x.port === selected);
+  if (!p || $('#portPanel').hidden) return;
+  if (!force && $('#portPanel').contains(document.activeElement) && ['INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
+  const n = portNum(p.port), st = pState(p), uplink = isUplink(p);
+  const lldp = (S.lldp || []).filter((l) => l.port === p.port);
+  const macs = (S.macs || []).filter((m) => m.port === p.port), ips = S.ips || {};
+  const cableRun = LOG.find((c) => c.kind === `cable:${p.port}`);
+  const cableRows = cableRun && cableRun.status === 'done' ? parseCable(OUT[cableRun.id]) : [];
+  const verdict = cableVerdict(cableRows, p);
+  const alerts = [
+    st === 'idle' && `<div class="alert amber"><b>Câble branché mais aucun paquet reçu depuis ${fmtDur(quietFor(p))}.</b><br>L’appareil est sans doute éteint ou en veille, sa carte réseau est désactivée, ou le câble ne mène nulle part.</div>`,
+    isSlow(p) && `<div class="alert amber"><b>Lien négocié à ${esc(p.speed)} Mb/s au lieu de 1000.</b><br>Souvent, le PC est simplement en veille (sa carte réseau descend à 10 ou 100 Mb/s). S’il est allumé : câble abîmé, prise murale ou carte réseau ancienne. Lance un test de câble ci-dessous.</div>`,
+  ].filter(Boolean).join('');
+  setHTML($('#ppTitle'), `Port ${n} <span class="status ${st}" style="font-size:12px">${pLabel[st]}</span>`);
+  if (!$('#ppInfo')) $('#ppBody').innerHTML = '<div id="ppInfo"></div><div id="ppActions"></div>';
+  setHTML($('#ppInfo'), `${alerts}
+    <dl>
+      <dt>Interface</dt><dd class="mono">${esc(p.port)}</dd>
+      <dt>Type</dt><dd>${esc(p.type === '--' ? 'SFP (vide)' : p.type)}</dd>
+      <dt>VLAN</dt><dd>${esc(p.vlan)} <span class="muted">(${esc(p.mode)})</span></dd>
+      <dt>Vitesse</dt><dd class="num">${p.speed ? esc(p.speed) + ' Mb/s' : '—'}</dd>
+      <dt>État détaillé</dt><dd>${esc(p.reason || (p.up ? 'Lien établi' : '—'))}</dd>
+      <dt>Débit ↓ / ↑</dt><dd class="num">${fmtBps(p.rx_bps)} / ${fmtBps(p.tx_bps)}</dd>
+      <dt>Total ↓ / ↑</dt><dd class="num">${fmtBytes(p.rx_bytes)} / ${fmtBytes(p.tx_bytes)}</dd>
+      <dt>Erreurs · CRC</dt><dd class="num">${nf0.format((p.rx_errors || 0) + (p.tx_errors || 0))} · ${nf0.format(p.crc || 0)}</dd>
+      <dt>Pertes ↓ / ↑</dt><dd class="num">${nf0.format(p.rx_drops || 0)} / ${nf0.format(p.tx_drops || 0)}</dd>
+      <dt>Appareils</dt><dd>${macs.length ? macs.map((m) => `<span class="mono">${esc(m.mac)}</span>${ips[m.mac] ? ` · <b class="mono">${esc(ips[m.mac].ip)}</b>${ips[m.mac].name ? ` (${esc(ips[m.mac].name)})` : ''}` : ''}`).join('<br>') : '—'}</dd>
+      ${lldp.length ? `<dt>LLDP</dt><dd>${lldp.map((l) => esc(l.name || l.chassis)).join('<br>')}</dd>` : ''}
+    </dl>
+    <button class="btn small" id="ppHist">Voir l’historique de ce port</button>`);
+  setHTML($('#ppActions'), `
+    <div class="section">
+      <h3>Actions</h3>
+      ${uplink ? '<div class="alert amber" style="margin:0">Ce port relie un autre switch. Le couper ou le changer de VLAN coupe tout ce qui passe par ce lien.</div>' : ''}
+      <div class="row">
+        ${p.enabled ? `<button class="btn danger" data-act="shut">Désactiver</button>` : `<button class="btn primary" data-act="noshut">Activer</button>`}
+        <button class="btn" data-act="bounce" ${p.enabled ? '' : 'disabled'} title="Coupe puis réactive le port">Redémarrer</button>
+      </div>
+      <div class="field" style="margin:0"><label for="ppDesc">Description</label>
+        <div class="row"><input id="ppDesc" type="text" maxlength="64" value="${esc(p.desc)}" placeholder="ex. PC accueil"><button class="btn" data-act="desc">Enregistrer</button></div></div>
+      <div class="field" style="margin:0"><label for="ppVlan">VLAN (mode access)</label>
+        <div class="row"><select id="ppVlan">${(S.vlans || []).map((v) => `<option value="${v.id}" ${String(v.id) === p.vlan ? 'selected' : ''}>VLAN ${v.id} · ${esc(v.name)}</option>`).join('')}</select><button class="btn" data-act="vlan">Appliquer</button></div></div>
+    </div>
+    <div class="section">
+      <h3>Test du câble</h3>
+      <p class="note" style="margin:0">Mesure chaque paire du câble (longueur, coupure, court-circuit). Le port est coupé pendant 5 à 10 secondes.</p>
+      ${cableRun && ['pending', 'running', 'confirm'].includes(cableRun.status) ? '<div class="alert amber" style="margin:0"><span class="spinner"></span> Test en cours…</div>' : ''}
+      ${verdict ? `<div class="alert ${verdict[0]}" style="margin:0">${esc(verdict[1])}</div>
+        <table class="cable"><thead><tr><th>Paire</th><th>État</th><th>Impédance</th><th>Distance</th></tr></thead><tbody>
+        ${cableRows.map((r) => `<tr><td class="mono">${esc(r.pair)}</td><td>${esc(CABLE_FR[r.status] || r.status)}</td><td class="mono">${esc(r.imp)} Ω</td><td class="mono">${esc(r.dist)} m</td></tr>`).join('')}</tbody></table>
+        <span class="note">Test du ${new Date((cableRun.finished || cableRun.created) * 1000).toLocaleString('fr-FR')}</span>` : ''}
+      ${cableRun && cableRun.status === 'error' ? '<div class="alert red" style="margin:0">Le test a échoué. Détail dans la console.</div>' : ''}
+      ${cableRun && cableRun.status === 'done' && OUT[cableRun.id] !== undefined && !cableRows.length ? '<div class="alert amber" style="margin:0">Le switch n’a pas encore donné de résultat. Relance le test dans quelques secondes.</div>' : ''}
+      <button class="btn" data-act="cable" ${p.type !== '1GbT' ? 'disabled title="Test impossible sur un port SFP"' : ''}>Tester le câble</button>
+    </div>
+    <p class="note">Les changements s’appliquent tout de suite. Pense à « Sauvegarder la config » pour qu’ils survivent à un redémarrage.</p>`);
+}
+// Ne touche au DOM que si le contenu a changé (évite de perdre un clic pendant le rafraîchissement).
+function setHTML(el, html) { if (el && el._html !== html) { el.innerHTML = html; el._html = html; } }
+$('#ppBody').addEventListener('click', (e) => {
+  if (e.target.id === 'ppHist') { $('#chartPort').value = selected; if (chartRange === '1h') setRange('24h'); else loadChart(); $('#chart').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const p = S.ports.find((x) => x.port === selected), n = portNum(p.port), base = `configure terminal\ninterface ${p.port}\n`, opt = { ports: [p.port] };
+  const warn = isUplink(p) ? '⚠ Ce port relie un autre switch : tout ce qui passe par lui sera coupé. ' : '';
+  if (b.dataset.act === 'shut') confirmCmd(`Désactiver le port ${n} ?`, warn + 'L’appareil branché perdra le réseau.', base + 'shutdown\nend', `Port ${n} désactivé`, opt);
+  if (b.dataset.act === 'noshut') confirmCmd(`Activer le port ${n} ?`, '', base + 'no shutdown\nend', `Port ${n} activé`, opt);
+  if (b.dataset.act === 'bounce') confirmCmd(`Redémarrer le port ${n} ?`, warn + 'Coupure d’environ 3 secondes.', base + 'shutdown\nno shutdown\nend', `Port ${n} redémarré`, opt);
+  if (b.dataset.act === 'desc') {
+    const d = $('#ppDesc').value.trim().replace(/[\r\n]/g, ' ');
+    confirmCmd(`Description du port ${n}`, '', base + (d ? `description ${d}` : 'no description') + '\nend', `Description port ${n}`, opt);
+  }
+  if (b.dataset.act === 'vlan') { const vid = $('#ppVlan').value; confirmCmd(`Port ${n} → VLAN ${vid} ?`, warn + 'L’appareil branché changera de réseau.', base + `vlan access ${vid}\nend`, `Port ${n} → VLAN ${vid}`, opt); }
+  if (b.dataset.act === 'cable') confirmCmd(`Tester le câble du port ${n} ?`, warn + 'Le port sera coupé 5 à 10 secondes pendant la mesure.',
+    `diagnostics\ndiag cable-diagnostic test ${p.port}\ny\ndiag cable-diagnostic show ${p.port}`, `Test câble port ${n}`, { ...opt, kind: `cable:${p.port}` });
+});
+
+// ================================================================ commandes
+let pendingConfirm = null;
+function confirmCmd(title, text, cmd, label, opts = {}) {
+  $('#cfTitle').textContent = title; $('#cfText').textContent = text; $('#cfCmd').textContent = cmd;
+  pendingConfirm = { cmd, label, ...opts }; $('#confirm').showModal();
+}
+$('#cfNo').addEventListener('click', () => $('#confirm').close());
+$('#cfYes').addEventListener('click', (e) => busy(e.currentTarget, async () => {
+  if (pendingConfirm) await send(pendingConfirm.cmd, pendingConfirm.label, pendingConfirm);
+  $('#confirm').close();
+}));
+
+async function send(cmd, label = '', opts = {}) {
+  const tid = toast(label || cmd.split('\n')[0], { sub: 'Envoi au dashboard…', spinner: true, timeout: 0 });
+  try {
+    const rec = await api('/api/command', { cmd, label, kind: opts.kind || '' });
+    rec.ports = opts.ports || [];
+    dropToast(tid);
+    toast(label || cmd.split('\n')[0], { id: rec.id, sub: 'En attente de l’agent…', spinner: true, timeout: 0 });
+    SEEN[rec.id] = 'pending';
+    LOG = [rec, ...LOG.filter((c) => c.id !== rec.id)];
+    PORTS_OF[rec.id] = rec.ports;
+    renderTerm(true); if (S) { renderFaceplate(); renderPanel(); }
+    lastTouch = 0; setTimeout(poll, 600);
+  } catch (e) {
+    if (e.message !== '401') toast('Échec de l’envoi', { id: tid, type: 'error', sub: e.message, timeout: 8000 });
+    throw e;
+  }
+}
+const PORTS_OF = {};
+const _track = trackCommands;
+trackCommands = (log) => { for (const c of log) c.ports = PORTS_OF[c.id] || c.ports || []; _track(log); };
+
+window.answer = (id, a, btn) => busy(btn, async () => {
+  try {
+    await api('/api/command', { answer_to: id, answer: a });
+    toast(a === 'y' ? 'Confirmation envoyée' : 'Refus envoyé', { id, sub: 'Le switch continue…', spinner: true, timeout: 0 });
+    SEEN[id] = 'running'; lastTouch = 0; setTimeout(poll, 500);
+  } catch (e) { if (e.message !== '401') toast('Échec', { type: 'error', sub: e.message }); }
+});
+
+const CONFIG_RE = /^(conf|configure|write|copy|erase|reload|boot|no |interface|vlan|shutdown|diag)/im;
+$('#termForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const cmd = $('#termInput').value.trim(); if (!cmd) return;
+  if (CONFIG_RE.test(cmd)) confirmCmd('Commande de configuration', 'Cette commande modifie le switch.', cmd, '');
+  else busy($('#termSend'), () => send(cmd).catch(() => {}));
+  $('#termInput').value = ''; autoGrow();
+});
+const autoGrow = () => { const t = $('#termInput'); t.style.height = 'auto'; t.style.height = Math.min(140, t.scrollHeight) + 'px'; };
+$('#termInput').addEventListener('input', autoGrow);
+$('#termInput').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#termForm').requestSubmit(); } });
+
+const CHIPS = [['show interface brief'], ['show mac-address-table'], ['show lldp neighbor-info'], ['show vlan'], ['show running-config'], ['show logging -r'], ['show system'], ['write memory', 'Sauvegarder la config', 'save']];
+$('#chips').innerHTML = CHIPS.map(([c, l, cls]) => `<button class="chip ${cls || ''}" data-cmd="${esc(c)}">${esc(l || c)}</button>`).join('');
+$('#chips').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-cmd]'); if (!b) return;
+  if (b.dataset.cmd === 'write memory') confirmCmd('Sauvegarder la configuration ?', 'La configuration actuelle devient celle chargée au démarrage du switch.', 'write memory', 'Configuration sauvegardée');
+  else busy(b, () => send(b.dataset.cmd).catch(() => {}));
+});
+
+let lastLogKey = '';
+function renderTerm(force) {
+  const items = LOG.slice().reverse();
+  const key = items.map((c) => c.id + c.status + (OUT[c.id] || '').length).join();
+  if (key === lastLogKey && !force) return;
+  lastLogKey = key;
+  const box = $('#termLog');
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  const stLabel = { pending: 'en attente', running: 'en cours', done: 'ok', error: 'erreur', confirm: 'question' };
+  box.innerHTML = items.length ? items.map((c) => `
+    <div class="term-entry">
+      <div class="term-cmd"><span class="st ${c.status}">${['pending', 'running'].includes(c.status) ? '<span class="spinner" style="width:9px;height:9px;border-width:1.5px"></span>' : ''}${stLabel[c.status] || c.status}</span><span>${esc(c.label ? `${c.label} — ` : '')}${esc(c.cmd.replace(/\n/g, ' ⏎ '))}</span></div>
+      ${OUT[c.id] ? `<div class="term-out">${esc(OUT[c.id])}</div>` : ''}
+      ${c.status === 'confirm' ? `<div class="term-ask">${esc(c.question || 'Confirmer ?')} <button class="btn small primary" onclick="answer('${c.id}','y',this)">Oui</button><button class="btn small" onclick="answer('${c.id}','n',this)">Non</button></div>` : ''}
+    </div>`).join('') : '<div class="muted">Aucune commande pour l’instant. Les sorties s’afficheront ici.</div>';
+  if (atBottom || force) box.scrollTop = box.scrollHeight;
+}
+
+// ================================================================ alertes
+let SETTINGS = null, EMAIL_OK = false, watchSel = null;
+async function loadSettings() {
+  try { const d = await api('/api/settings'); SETTINGS = d.settings; EMAIL_OK = d.emailAvailable; fillSettings(); } catch {}
+}
+function autoWatch() { return (S?.ports || []).filter((p) => isUplink(p) || p.desc).map((p) => p.port); }
+function fillSettings() {
+  const s = SETTINGS; if (!s) return;
+  $('#alEmail').value = s.email || ''; $('#alEmail').disabled = !EMAIL_OK;
+  $('#alEmailNote').textContent = EMAIL_OK ? 'Sans domaine vérifié chez Resend, les e-mails partent de onboarding@resend.dev et ne peuvent aller qu’à l’adresse du compte Resend.' : 'E-mail indisponible : l’intégration Resend n’est pas encore activée sur Vercel.';
+  $('#alHook').value = s.webhook || '';
+  $('#alPortDown').checked = s.notify.portDown; $('#alTemp').checked = s.notify.temp; $('#alAgent').checked = s.notify.agentOffline;
+  $('#alSlow').checked = s.notify.slowLink; $('#alIdle').checked = s.notify.idleLink; $('#alTempMax').value = s.tempMax;
+  watchSel = s.watchPorts ? new Set(s.watchPorts) : null;
+  renderWatch();
+}
+function renderWatch() {
+  const auto = new Set(autoWatch()), cur = watchSel || auto;
+  $('#alPorts').innerHTML = Array.from({ length: 28 }, (_, i) => `1/1/${i + 1}`).map((p) => `<button type="button" class="chip${cur.has(p) ? ' on' : ''}" data-wp="${p}">${portNum(p)}</button>`).join('');
+  $('#alPortsNote').textContent = watchSel ? `${cur.size} port(s) choisis à la main.` : `Auto : liens vers d’autres switches et ports avec une description (${[...auto].map(portNum).join(', ') || 'aucun pour l’instant'}).`;
+  $('#alAuto').classList.toggle('primary', !watchSel);
+}
+$('#alPorts').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-wp]'); if (!b) return;
+  watchSel = watchSel || new Set(autoWatch());
+  watchSel.has(b.dataset.wp) ? watchSel.delete(b.dataset.wp) : watchSel.add(b.dataset.wp);
+  renderWatch();
+});
+$('#alAuto').addEventListener('click', () => { watchSel = null; renderWatch(); });
+$('#alertForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  busy($('#alSave'), async () => {
+    try {
+      const d = await api('/api/settings', {
+        email: $('#alEmail').value, webhook: $('#alHook').value, tempMax: $('#alTempMax').value,
+        watchPorts: watchSel ? [...watchSel] : null,
+        notify: { portDown: $('#alPortDown').checked, temp: $('#alTemp').checked, agentOffline: $('#alAgent').checked, slowLink: $('#alSlow').checked, idleLink: $('#alIdle').checked },
+      });
+      SETTINGS = d.settings; fillSettings();
+      toast('Alertes enregistrées', { type: 'success', sub: 'L’agent les applique à sa prochaine mise à jour.' });
+    } catch (err) { if (err.message !== '401') toast('Impossible d’enregistrer', { type: 'error', sub: err.message }); }
+  });
+});
+$('#alertTest').addEventListener('click', (e) => busy(e.currentTarget, async () => {
+  try { const r = await api('/api/alerts/test', {}); toast('Notification de test envoyée', { type: 'success', sub: `Via : ${r.sent.join(' + ')}` }); setTimeout(poll, 800); }
+  catch (err) { if (err.message !== '401') toast('Le test a échoué', { type: 'error', sub: err.message, timeout: 9000 }); }
+}));
+function renderAlerts() {
+  $('#alertCount').textContent = ALERTS.length ? `${ALERTS.length}` : '';
+  $('#alertList').innerHTML = ALERTS.length ? ALERTS.map((a) => `<div class="alert-item"><span class="lvl ${esc(a.level)}"></span>
+    <div>${esc(a.text)}<div class="ch">${arr(a.sent).length ? `envoyé par ${arr(a.sent).join(' + ')}` : 'aucun canal configuré'}${arr(a.errors).length ? ` · ⚠ ${esc(arr(a.errors).join(' · '))}` : ''}</div></div>
+    <span class="when">${new Date(a.t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div>`).join('')
+    : '<div class="empty" style="padding:16px 0">Aucune alerte pour l’instant.</div>';
+  if (SETTINGS && !watchSel) renderWatch();
+}
+
+// ================================================================ graphique
+let chartRange = '1h', chartData = null, chartKey = '';
+function fillPortSelect() {
+  const sel = $('#chartPort'), cur = sel.value;
+  const opts = '<option value="">Tous les ports</option>' + (S.ports || []).filter((p) => p.type === '1GbT' || p.up).map((p) => `<option value="${esc(p.port)}">Port ${portNum(p.port)}${p.desc ? ` · ${esc(p.desc)}` : ''}</option>`).join('');
+  if (sel.dataset.sig !== opts) { sel.innerHTML = opts; sel.dataset.sig = opts; sel.value = cur; }
+}
+function setRange(r) { chartRange = r; [...$('#chartRange').children].forEach((x) => x.classList.toggle('on', x.dataset.r === r)); loadChart(); }
+$('#chartRange').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setRange(b.dataset.r); });
+$('#chartPort').addEventListener('change', () => loadChart());
+async function loadChart() {
+  const port = $('#chartPort').value;
+  $('#chartTitle').textContent = port ? `port ${portNum(port)}` : 'total';
+  if (chartRange === '1h' && !port) { chartData = null; renderChart(); return; }
+  const key = `${chartRange}|${port}`;
+  chartKey = key;
+  $('#chart').innerHTML = '<div class="empty"><span class="spinner"></span> Chargement de l’historique…</div>';
+  try {
+    const d = await api(`/api/history?range=${chartRange}&port=${encodeURIComponent(port)}`);
+    if (chartKey === key) { chartData = d.points; renderChart(); }
+  } catch (e) { if (e.message !== '401') $('#chart').innerHTML = `<div class="empty">Historique indisponible : ${esc(e.message)}</div>`; }
+}
+function renderChart() {
+  const live = chartRange === '1h' && !$('#chartPort').value;
+  const h = live ? (S?.history || []) : (chartData || []);
+  const el = $('#chart');
+  if (!live && chartData === null) return;
+  if (h.length < 2) { el.innerHTML = `<div class="empty">${live ? 'Le graphique se remplit après quelques relevés de l’agent.' : 'Pas encore assez d’historique : un point est enregistré toutes les 5 min (24 h), 30 min (7 j) ou 2 h (30 j).'}</div>`; return; }
+  const W = el.clientWidth || 800, H = 220, L = 64, R = 8, T = 10, B = 24;
+  const t0 = h[0][0], t1 = h.at(-1)[0];
+  const maxV = Math.max(1000, ...h.map((d) => Math.max(d[1], d[2])));
+  const step = niceStep(maxV / 4), top = Math.ceil(maxV / step) * step;
+  const x = (t) => L + ((t - t0) / Math.max(1, t1 - t0)) * (W - L - R);
+  const y = (v) => T + (1 - v / top) * (H - T - B);
+  const line = (i) => h.map((d, k) => `${k ? 'L' : 'M'}${x(d[0]).toFixed(1)},${y(d[i]).toFixed(1)}`).join('');
+  const span = t1 - t0;
+  const tfmt = (t) => { const d = new Date(t * 1000); return span > 3 * 86400 ? d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : span > 86400 ? d.toLocaleString('fr-FR', { weekday: 'short', hour: '2-digit' }) + 'h' : d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); };
+  let g = '';
+  for (let v = 0; v <= top + 1; v += step) g += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${fmtBps(v)}</text>`;
+  for (let i = 0; i <= 5; i++) { const t = t0 + (span * i) / 5; g += `<text class="axis" x="${x(t)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : i === 5 ? 'end' : 'middle'}">${tfmt(t)}</text>`; }
+  const area = (i) => `${line(i)}L${x(t1)},${y(0)}L${x(t0)},${y(0)}Z`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Débit entrant et sortant">${g}
+    <path d="${area(1)}" fill="var(--rx)" opacity=".08"/><path d="${area(2)}" fill="var(--tx)" opacity=".08"/>
+    <path d="${line(1)}" fill="none" stroke="var(--rx)" stroke-width="2" stroke-linejoin="round"/>
+    <path d="${line(2)}" fill="none" stroke="var(--tx)" stroke-width="2" stroke-linejoin="round"/>
+    <g id="hover" visibility="hidden"><line id="hl" y1="${T}" y2="${H - B}" stroke="var(--text-3)" stroke-dasharray="3 3"/>
+      <circle id="h1" r="4" fill="var(--rx)" stroke="var(--surface)" stroke-width="2"/><circle id="h2" r="4" fill="var(--tx)" stroke="var(--surface)" stroke-width="2"/></g>
+    <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="hit"/></svg><div class="tip" id="tip" hidden></div>`;
+  const hit = el.querySelector('#hit'), hov = el.querySelector('#hover'), tip = el.querySelector('#tip');
+  hit.addEventListener('pointermove', (e) => {
+    const r = el.querySelector('svg').getBoundingClientRect(), px = ((e.clientX - r.left) / r.width) * W;
+    let best = h[0]; for (const d of h) if (Math.abs(x(d[0]) - px) < Math.abs(x(best[0]) - px)) best = d;
+    const bx = x(best[0]);
+    hov.setAttribute('visibility', 'visible');
+    for (const [id, a, v] of [['#hl', 'x1', bx], ['#hl', 'x2', bx], ['#h1', 'cx', bx], ['#h1', 'cy', y(best[1])], ['#h2', 'cx', bx], ['#h2', 'cy', y(best[2])]]) el.querySelector(id).setAttribute(a, v);
+    tip.hidden = false;
+    tip.style.left = `${Math.min(Math.max((bx / W) * r.width, 90), r.width - 90)}px`;
+    tip.style.top = `${(y(Math.max(best[1], best[2])) / H) * r.height - 10}px`;
+    tip.innerHTML = `<b>${new Date(best[0] * 1000).toLocaleString('fr-FR', { weekday: span > 86400 ? 'short' : undefined, hour: '2-digit', minute: '2-digit', second: live ? '2-digit' : undefined })}</b>
+      <div><i class="sw" style="background:var(--rx);height:2px"></i>Entrant <span class="num" style="margin-left:auto;padding-left:12px">${fmtBps(best[1])}</span></div>
+      <div><i class="sw" style="background:var(--tx);height:2px"></i>Sortant <span class="num" style="margin-left:auto;padding-left:12px">${fmtBps(best[2])}</span></div>`;
+  });
+  hit.addEventListener('pointerleave', () => { hov.setAttribute('visibility', 'hidden'); tip.hidden = true; });
+}
+function niceStep(v) { const p = 10 ** Math.floor(Math.log10(v)); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => S && renderChart(), 150); });
+setInterval(() => { if (!document.hidden && chartRange !== '1h' && !$('#app').hidden) loadChart(); }, 5 * 60 * 1000);
+
+poll();
+</script>
+</body>
+</html>

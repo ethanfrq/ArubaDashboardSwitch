@@ -1,0 +1,15 @@
+# secrets et fichiers locaux — ne jamais publier
+.env*
+.vercel
+ACCES-*.md
+agent/agent_config.json
+agent/agent_config.windows.json
+agent/agent_secret.bin
+agent/agent.log*
+agent/__pycache__/
+node_modules/
+# guides installés par les intégrations Vercel
+.agents/
+.claude/
+skills-lock.json
+.DS_Store

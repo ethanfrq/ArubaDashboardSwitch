@@ -1,0 +1,11 @@
+{
+  "transport": "ssh",
+  "switch_host": "192.168.1.2",
+  "switch_user": "admin",
+  "switch_password": "",
+  "dashboard_url": "https://VOTRE-PROJET.vercel.app",
+  "agent_token": "COLLER_ICI_AGENT_TOKEN",
+  "scan_subnet": "192.168.1.0/24",
+  "idle_sync": 60,
+  "hot_sync": 10
+}
