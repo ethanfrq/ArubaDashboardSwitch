@@ -603,7 +603,7 @@ function renderFaceplate() {
     const up = isUplink(p), slow = isSlow(p);
     const meta = st === 'off' ? 'désactivé' : empty ? 'vide'
       : st === 'down' ? (cabCls ? `${cab.len} m` : 'libre')
-      : st === 'idle' ? `0 pkt ${durShort(quietFor(p))}` : fmtBps(bps).replace(' ', ' ');
+      : st === 'idle' ? `∅ ${durShort(quietFor(p))}` : fmtBps(bps).replace(' ', ' ');
     const tip = [`Port ${n}`, pLabel[st], p.speed && `${p.speed} Mb/s${slow ? ' (lent)' : ''}`, up && 'lien vers un autre switch',
       p.vlan !== '1' && `VLAN ${p.vlan}`, st === 'idle' && `aucun paquet reçu depuis ${fmtDur(quietFor(p))}`,
       cab && { empty: 'test câble : rien de branché', open: `test câble : câble ${cab.len} m, rien au bout`, good: `test câble : câble ${cab.len} m en bon état, appareil éteint`, fault: `test câble : DÉFAUT vers ${cab.len} m` }[cab.kind], st === 'up' && fmtBps(bps), p.desc].filter(Boolean).join(' · ');
@@ -626,7 +626,7 @@ function renderFaceplate() {
   $('#fpCount').textContent = `${up} branché${up > 1 ? 's' : ''}`;
   $('#fpLegend').innerHTML = `
     <span><i class="sw" style="background:#1f6b34"></i>Actif <b>${count('up')}</b></span>
-    <span><i class="sw" style="background:#6e5313"></i>Câble branché, aucun paquet <b>${count('idle')}</b></span>
+    <span><i class="sw" style="background:#6e5313"></i>∅ Lien établi, aucun paquet <b>${count('idle')}</b></span>
     <span><i class="sw" style="background:#3a3a38"></i>Libre <b>${count('down') - cabled.length - faulty.length}</b></span>
     <span><i class="sw" style="background:#2c3a4a"></i>↔ Câble branché, pas de lien <b>${cabled.length}</b></span>
     ${faulty.length ? `<span><i class="sw" style="background:#4a2626;box-shadow:inset 0 0 0 2px #c9302c"></i>Câble en défaut <b>${faulty.length}</b></span>` : ''}
