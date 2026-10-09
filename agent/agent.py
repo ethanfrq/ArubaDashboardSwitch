@@ -9,25 +9,47 @@ et signale les incidents (alertes).
     python agent.py --set-password  # enregistre le mot de passe SSH du switch (chiffré)
     python agent.py --once          # un relevé affiché en JSON, sans rien envoyer
 """
-import argparse, base64, getpass, ipaddress, json, logging, os, queue, re, socket, subprocess
+import argparse, base64, getpass, hashlib, ipaddress, json, logging, os, queue, re, socket, subprocess
 import sys, threading, time, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-AGENT_VERSION = "1.2.0"
+AGENT_VERSION = "1.3.0"
 HERE = Path(__file__).resolve().parent
 CFG = json.loads((HERE / "agent_config.json").read_text(encoding="utf-8"))
 SECRET = HERE / "agent_secret.bin"
 CABLES = HERE / "cable_cache.json"
+HEARTBEAT = HERE / "agent_etat.json"     # lu par mise_a_jour.py pour vérifier qu'une nouvelle version tourne
+UPDATE_STATUS = HERE / "mise_a_jour.json"  # écrit par mise_a_jour.py, affiché dans le dashboard
 IS_WIN = os.name == "nt"
 
 IDLE_SYNC = CFG.get("idle_sync", 60)   # personne sur le dashboard : envoi toutes les 60 s
-HOT_SYNC = CFG.get("hot_sync", 10)     # dashboard ouvert : toutes les 10 s
-POLL_EVERY = 1.5                       # dashboard ouvert : commandes relevées toutes les 1,5 s
+WARM_SYNC = CFG.get("warm_sync", 30)   # écran lecture seule ouvert : toutes les 30 s
+HOT_SYNC = CFG.get("hot_sync", 10)     # dashboard administrateur ouvert : toutes les 10 s
+POLL_BUSY, POLL_EVERY = 1.5, 5         # commandes : toutes les 1,5 s juste après une commande, sinon 5 s
 SCAN_EVERY = 300                       # recherche des IP toutes les 5 min
-HISTORY_MAX = 360                      # 1 h de points à 10 s
+HISTORY_SPAN = 3600                    # débit en direct : la dernière heure
 IDLE_ALERT_AFTER = 600                 # lien sans trafic : alerte après 10 min
+SESSION_CHECK = 120                    # session de commandes inutilisée depuis 2 min : vérifiée avant usage
+
+# Fréquence de chaque relevé (secondes) : (dashboard ouvert, écran lecture seule, personne).
+# Le débit, les appareils et le CPU sont relevés à chaque envoi ; le reste change moins souvent et est espacé
+# pour ne pas charger le switch. Si son CPU dépasse 60 % (80 %), tout est espacé 2 fois (4 fois) plus.
+PERIODS = {
+    "links": (30, 60, 120),     # état des liens : dernier changement, coupures
+    "logs": (30, 60, 120),      # journal du switch
+    "temps": (30, 60, 120), "errors": (30, 60, 120), "lldp": (30, 60, 120),
+    "vlans": (60, 120, 300),
+    "stp": (120, 300, 600),     # spanning-tree
+    "saved": (120, 300, 600),   # configuration sauvegardée ou non
+    "ip": (300, 600, 900), "system": (300, 600, 600),
+}
+LOG_LINES = 50
+DIAG_CMDS = {"links": "show interface link-status", "stp": "show spanning-tree",
+             "saved": "checkpoint diff startup-config running-config", "logs": f"show logging -r -n {LOG_LINES}",
+             "ip": "show ip interface vlan1"}
+DIAG_RESEND = 600                      # relevé complet renvoyé au moins toutes les 10 min, sinon seulement s'il change
 
 PROMPT = re.compile(r"[\w.-]+(\([^()]*\))?# ?$")  # y compris (config-if-<1/1/3-1/1/8>)
 CONFIRM = re.compile(r"\(y/n\)\??\s*$|\[y/n\]\??\s*$", re.I)
@@ -89,6 +111,12 @@ def load_password():
 # ================================================================ transports
 
 class _Base:
+    last_io = 0.0  # dernier échange avec le switch
+    sends = 0      # nombre de lignes envoyées (pour savoir si une commande a pu partir)
+
+    def alive(self):
+        return True
+
     def _read_until_prompt(self, cmd_echo, timeout):
         buf, end = "", time.time() + timeout
         while time.time() < end:
@@ -108,7 +136,9 @@ class _Base:
     def run(self, cmd, timeout=20):
         self._drain()
         self._send(cmd + "\r")
+        self.sends += 1
         buf, last = self._read_until_prompt(cmd, timeout)
+        self.last_io = time.time()
         lines = [ANSI.sub("", l) for l in buf.replace("\r", "").split("\n")]
         return lines[1:-1], last  # sans l'écho ni le prompt
 
@@ -151,6 +181,7 @@ class SSHTransport(_Base):
         self.c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.c.connect(host, username=user, password=password, timeout=10,
                        look_for_keys=False, allow_agent=False)
+        self.c.get_transport().set_keepalive(30)
         self.ch = self.c.invoke_shell(width=400, height=1000)
         self.ch.settimeout(0.2)
         time.sleep(1.5)
@@ -158,6 +189,10 @@ class SSHTransport(_Base):
         self._send("\r")
         self._read_until_prompt("", 10)
         self.run("no page", 5)
+
+    def alive(self):
+        tr = self.c.get_transport()
+        return bool(tr and tr.is_active()) and not self.ch.closed
 
     def _send(self, t):
         self.ch.send(t)
@@ -297,6 +332,46 @@ def parse_cables(lines):
     return res
 
 
+def compact_diag(key, lines):
+    """Réduit une réponse du relevé détaillé à ce qu'affiche le dashboard, sans ce qui change à chaque lecture
+    (« il y a 5 min », compteurs de BPDU) : le relevé n'est renvoyé au dashboard que s'il a vraiment changé."""
+    lines = [l.rstrip() for l in lines]
+    if key == "links":  # port, type, état, raison, transitions, date du dernier changement
+        out = []
+        for l in lines:
+            cols = re.split(r"\s{2,}", l.strip())
+            if re.match(r"^1/1/\d+$", cols[0]) and len(cols) >= 6:
+                when = re.search(r"\([^()]*\)", cols[5])
+                out.append("  ".join(cols[:5] + [when[0] if when else cols[5]]))
+        return out
+    if key == "stp":  # état général, racine, et rôle/état de chaque port
+        out, seen = [], set()
+        for l in lines:
+            m = re.match(r"^(1/1/\d+)\s+(\S+)\s+(\S+)\s+(\d+)", l)
+            if m and m[1] not in seen:
+                seen.add(m[1])
+                out.append("  ".join(m.groups()))
+            elif not m and re.search(r"status|Root ID|Bridge ID|MAC-Address", l):
+                out.append(l.strip())
+        return out
+    if key == "saved":  # sauvegardée ou non, sans le détail des différences
+        if any("No difference" in l for l in lines):
+            return ["No difference in configs."]
+        diff = [l for l in lines if re.match(r"^[+-]", l)]
+        return [f"+ {len(diff)} ligne(s) différente(s)"] if diff else [l for l in lines if ERROR_LINE.match(l)][:1]
+    if key == "logs":
+        return [l for l in lines if re.match(r"^\d{4}-\d\d-\d\dT", l)][:LOG_LINES]
+    if key == "ip":
+        return [l.strip() for l in lines if "IPv4 address" in l]
+    return lines
+
+
+def fmt_mac(v):
+    """« ec50aa-8b9100 » -> « ec:50:aa:8b:91:00 »."""
+    hexa = re.sub(r"[^0-9a-f]", "", (v or "").lower())
+    return ":".join(hexa[i:i + 2] for i in range(0, 12, 2)) if len(hexa) == 12 else None
+
+
 def num(v):
     try:
         return float(v)
@@ -337,28 +412,55 @@ class Bucket:
 class Collector:
     def __init__(self):
         self.prev, self.prev_t, self.history, self.static, self.n = None, None, [], {}, 0
+        self.last, self.force, self.cpu = {}, set(), 0.0   # dernier passage de chaque relevé, relevés à refaire
+        self.errs, self.lldp, self.diag, self.diag_t = {}, [], {}, 0
+        self.diag_text, self.diag_hash, self.diag_sent = "", "", ("", 0)
         self.rx_seen = {}
         self.buckets = {"m5": Bucket(300), "m30": Bucket(1800), "h2": Bucket(7200)}
         self.samples = {k: [] for k in self.buckets}
         self.events = []
         self.prev_up, self.alerted = {}, set()
 
-    def collect(self, t, settings):
-        t.run("no page", 5)
-        if self.n % 10 == 0:
+    def slow_factor(self):
+        return 4 if self.cpu >= 80 else 2 if self.cpu >= 60 else 1
+
+    def due(self, key, mode):
+        """Vrai si ce relevé doit être refait maintenant (selon le mode et la charge du switch)."""
+        hot, warm, idle = PERIODS[key]
+        period = {"hot": hot, "warm": warm}.get(mode, idle) * self.slow_factor()
+        now = time.time()
+        if key in self.force or now - self.last.get(key, 0) >= period - 2:
+            self.force.discard(key)
+            self.last[key] = now
+            return True
+        return False
+
+    def collect(self, t, settings, mode="hot"):
+        if getattr(t, "shared", False):  # console série partagée : la pagination a pu être réactivée
+            t.run("no page", 5)
+        if self.due("system", mode):
             sysl, _ = t.run("show system")
             self.static.update(hostname=grab(sysl, "Hostname"), model=grab(sysl, "Product Name"),
                                serial=grab(sysl, "Chassis Serial Nbr"),
                                version=grab(sysl, "AOS-CX Version"), location=grab(sysl, "System Location"),
-                               uptime=grab(sysl, "Up Time"))
-        self.static["temps"] = parse_temps(t.run("show environment temperature")[0])
+                               uptime=grab(sysl, "Up Time"), base_mac=fmt_mac(grab(sysl, "Base MAC Address")))
+        if self.due("temps", mode):
+            self.static["temps"] = parse_temps(t.run("show environment temperature")[0])
         ports = parse_brief(t.run("show interface brief")[0])
         stats = parse_stats(t.run("show interface statistics", 30)[0])
-        errs = parse_errors(t.run("show interface error-statistics", 30)[0])
+        if self.due("errors", mode):
+            self.errs = parse_errors(t.run("show interface error-statistics", 30)[0])
+        errs = self.errs
         res, _ = t.run("show system resource-utilization")
         macs = parse_macs(t.run("show mac-address-table")[0])
-        lldp = parse_lldp(t.run("show lldp neighbor-info")[0])
-        self.static["vlans"] = parse_vlans(t.run("show vlan")[0])
+        if self.due("lldp", mode):
+            self.lldp = parse_lldp(t.run("show lldp neighbor-info")[0])
+        lldp = self.lldp
+        if self.due("vlans", mode):
+            self.static["vlans"] = parse_vlans(t.run("show vlan")[0])
+        # charge pour espacer les relevés : moyenne sur 1 min (la valeur instantanée varie trop)
+        self.cpu = num(grab(res, "CPU usage(% average over 1 minute)")) or num(grab(res, "CPU usage(%)")) or 0.0
+        self.diag_step(t, mode)
 
         now = time.time()
         dt = now - self.prev_t if self.prev_t else None
@@ -370,11 +472,13 @@ class Collector:
             p.update(s)
             p.update(errs.get(name, {}))
             p["rx_bps"] = p["tx_bps"] = None
+            rx = tx = 0.0
             if self.prev and dt and name in self.prev:
-                p["rx_bps"] = max(0, s.get("rx_bytes", 0) - self.prev[name].get("rx_bytes", 0)) * 8 / dt
-                p["tx_bps"] = max(0, s.get("tx_bytes", 0) - self.prev[name].get("tx_bytes", 0)) * 8 / dt
-                tot_rx += p["rx_bps"]; tot_tx += p["tx_bps"]
-            per_port += [p["rx_bps"] or 0, p["tx_bps"] or 0]
+                rx = max(0, s.get("rx_bytes", 0) - self.prev[name].get("rx_bytes", 0)) * 8 / dt
+                tx = max(0, s.get("tx_bytes", 0) - self.prev[name].get("tx_bytes", 0)) * 8 / dt
+                p["rx_bps"], p["tx_bps"] = round(rx), round(tx)  # entiers : état plus léger à envoyer
+                tot_rx += rx; tot_tx += tx
+            per_port += [rx, tx]
             p["macs"] = sum(1 for m in macs if m["port"] == name)
             seen = self.rx_seen.get(name)
             if not p["up"] or seen is None or s.get("rx_pkts") != seen[0]:
@@ -383,7 +487,7 @@ class Collector:
             p["uplink"] = is_uplink(name, lldp)
 
         if dt:
-            self.history = (self.history + [[round(now), round(tot_rx), round(tot_tx)]])[-HISTORY_MAX:]
+            self.history = [h for h in self.history + [[round(now), round(tot_rx), round(tot_tx)]] if h[0] >= now - HISTORY_SPAN]
             for k, b in self.buckets.items():
                 out = b.add(now, dt, [tot_rx, tot_tx] + per_port)
                 if out:
@@ -391,10 +495,33 @@ class Collector:
         self.prev, self.prev_t = stats, now
         state = {**self.static, "updated": now, "ports": [ports[k] for k in sorted(ports, key=pnum)],
                  "macs": macs, "lldp": lldp, "cpu": num(grab(res, "CPU usage(%)")),
-                 "mem": num(grab(res, "Memory usage(%)")), "history": self.history}
+                 "mem": num(grab(res, "Memory usage(%)")), "history": self.history,
+                 "diag": {"t": round(self.diag_t), "h": self.diag_hash,
+                          "every": PERIODS["links"][{"hot": 0, "warm": 1}.get(mode, 2)] * self.slow_factor()}}
         self.detect(state, settings)
         self.n += 1
         return state
+
+    # ------------------------------------------------------------ relevé détaillé
+    def diag_step(self, t, mode):
+        """Liens, spanning-tree, configuration sauvegardée, journal et IP de gestion, chacun à son rythme."""
+        ran = False
+        for key, cmd in DIAG_CMDS.items():
+            if self.due(key, mode):
+                self.diag[key] = compact_diag(key, t.run(cmd, 30)[0])
+                ran = True
+                if key == "links":
+                    self.diag_t = time.time()
+        if ran:
+            self.diag_text = "\n".join(f"» {DIAG_CMDS[k]}\n" + "\n".join(self.diag[k]) for k in DIAG_CMDS if k in self.diag)
+            self.diag_hash = hashlib.sha1(self.diag_text.encode()).hexdigest()[:12]
+
+    def diag_payload(self):
+        """Relevé détaillé à joindre à l'envoi : seulement s'il a changé (ou toutes les 10 min)."""
+        h, sent_at = self.diag_sent
+        if self.diag_text and (h != self.diag_hash or time.time() - sent_at > DIAG_RESEND):
+            return {"h": self.diag_hash, "t": round(self.diag_t), "out": self.diag_text}
+        return None
 
     # ------------------------------------------------------------ alertes
     def detect(self, state, settings):
@@ -511,23 +638,48 @@ def api(path, payload):
                                  data=json.dumps(payload).encode(), method="POST",
                                  headers={"Content-Type": "application/json",
                                           "Authorization": "Bearer " + CFG["agent_token"],
-                                          "User-Agent": "aruba-agent/2"})
+                                          "User-Agent": f"aruba-agent/{AGENT_VERSION}"})
     with urllib.request.urlopen(req, timeout=25) as r:
         return json.loads(r.read() or b"{}")
 
 
 # ================================================================ commandes
 
+CONFIG_LINE = re.compile(r"^(conf|interface|vlan|no |shutdown|description|name|write|copy|checkpoint)", re.I)
+
+
 class Commander(threading.Thread):
-    """Exécute les commandes du dashboard ; relève la file toutes les 1,5 s quand quelqu'un regarde."""
+    """Exécute les commandes du dashboard ; relève la file quand quelqu'un regarde le dashboard
+    (toutes les 1,5 s juste après une commande, sinon toutes les 5 s)."""
 
     def __init__(self, agent):
         super().__init__(daemon=True)
-        self.agent, self.q, self.t = agent, queue.Queue(), None
+        self.agent, self.q, self.t, self.busy = agent, queue.Queue(), None, False
+
+    def reset(self):
+        try:
+            self.t and self.t.close()
+        except Exception:  # noqa: BLE001
+            pass
+        self.t = None
+
+    def usable(self):
+        """Le switch ferme une session SSH restée inutilisée : on la vérifie avant de s'en servir."""
+        if not self.t.alive():
+            return False
+        if time.time() - self.t.last_io < SESSION_CHECK:
+            return True
+        try:
+            return bool(PROMPT.search(self.t.run("", 5)[1]))
+        except Exception:  # noqa: BLE001
+            return False
 
     def transport(self):
         if CFG.get("transport") == "console":
             return self.agent.ensure_transport(), self.agent.tlock
+        if self.t is not None and not self.usable():
+            log.info("Session de commandes expirée : reconnexion au switch.")
+            self.reset()
         if self.t is None:
             self.t = connect()
         return self.t, threading.Lock()
@@ -536,16 +688,18 @@ class Commander(threading.Thread):
         while True:
             try:
                 if self.agent.hot():
-                    for c in api("/api/agent/poll", {}).get("commands", []):
+                    r = api("/api/agent/poll", {})
+                    self.busy = bool(r.get("busy"))
+                    for c in r.get("commands", []):
                         self.q.put(c)
                 while not self.q.empty():
                     self.execute(self.q.get())
             except Exception as e:  # noqa: BLE001
                 log.warning("Commandes : %s", e)
-                if isinstance(e, (OSError, ConnectionError, EOFError)) and self.t:
-                    self.t = None
+                if isinstance(e, (OSError, ConnectionError, EOFError)):
+                    self.reset()
                 time.sleep(3)
-            time.sleep(POLL_EVERY if self.agent.hot() else 1)
+            time.sleep((POLL_BUSY if self.busy else POLL_EVERY) if self.agent.hot() else 1)
 
     def wait_answer(self, cid):
         end = time.time() + 90
@@ -561,9 +715,31 @@ class Commander(threading.Thread):
     def execute(self, c):
         log.info("Commande %s : %r", c["id"][:8], c["cmd"][:80])
         lines = [l.rstrip() for l in c["cmd"].replace("\r", "").split("\n") if l.strip()]
-        out, ok, last = [], True, ""
+        for attempt in (1, 2):
+            out, ok, retry = self._execute(c, lines, attempt)
+            if not retry:
+                break
+            log.info("Commande %s : session coupée avant l'envoi, nouvel essai.", c["id"][:8])
+        if any(CONFIG_LINE.match(l.strip()) for l in lines):
+            self.agent.col.force.update(("saved", "links", "vlans", "stp"))  # refléter le changement tout de suite
+        found = parse_cables(out)
+        if found:
+            now = round(time.time())
+            for port, rows in found.items():
+                self.agent.cables[port] = {"t": now, "rows": rows}
+            try:
+                CABLES.write_text(json.dumps(self.agent.cables), encoding="utf-8")
+            except OSError:
+                pass
+        api("/api/agent/result", {"id": c["id"], "status": "done" if ok else "error", "output": "\n".join(out).strip()})
+        self.agent.wake.set()  # relevé immédiat pour refléter le changement
+
+    def _execute(self, c, lines, attempt):
+        """Renvoie (sortie, réussite, à_réessayer). On ne réessaie que si rien n'a pu être envoyé au switch."""
+        out, ok, last, t, sent = [], True, "", None, 0
         try:
             t, lock = self.transport()
+            sent = t.sends
             with lock:
                 i, tested = 0, False
                 while i < len(lines):
@@ -603,20 +779,12 @@ class Commander(threading.Thread):
             out.append("Session console non connectée sur le switch.")
             ok = False
         except Exception as e:  # noqa: BLE001
+            self.reset()
+            if attempt == 1 and (t is None or t.sends == sent):
+                return out, False, True
             out.append(f"Erreur : {e}")
             ok = False
-            self.t = None
-        found = parse_cables(out)
-        if found:
-            now = round(time.time())
-            for port, rows in found.items():
-                self.agent.cables[port] = {"t": now, "rows": rows}
-            try:
-                CABLES.write_text(json.dumps(self.agent.cables), encoding="utf-8")
-            except OSError:
-                pass
-        api("/api/agent/result", {"id": c["id"], "status": "done" if ok else "error", "output": "\n".join(out).strip()})
-        self.agent.wake.set()  # relevé immédiat pour refléter le changement
+        return out, ok, False
 
 
 # ================================================================ boucle principale
@@ -624,7 +792,7 @@ class Commander(threading.Thread):
 class Agent:
     def __init__(self):
         self.col, self.t, self.tlock = Collector(), None, threading.Lock()
-        self.settings, self.sver, self.hot_until = {}, None, 0
+        self.settings, self.sver, self.hot_until, self.warm_until = {}, None, 0, 0
         self.ips, self.last_scan, self.wake = {}, 0, threading.Event()
         try:
             self.cables = json.loads(CABLES.read_text(encoding="utf-8"))
@@ -634,6 +802,13 @@ class Agent:
 
     def hot(self):
         return time.time() < self.hot_until
+
+    def mode(self):
+        return "hot" if self.hot() else "warm" if time.time() < self.warm_until else "idle"
+
+    def interval(self):
+        base = {"hot": HOT_SYNC, "warm": WARM_SYNC}.get(self.mode(), IDLE_SYNC)
+        return base * (2 if self.col.cpu >= 80 else 1)  # switch très chargé : on espace
 
     def ensure_transport(self):
         if self.t is None:
@@ -652,8 +827,12 @@ class Agent:
         self.commander.start()
         while True:
             try:
+                started = time.time()
                 with self.tlock:
-                    state = self.col.collect(self.ensure_transport(), self.settings)
+                    state = self.col.collect(self.ensure_transport(), self.settings, self.mode())
+                took = time.time() - started
+                if took > 15:
+                    log.info("Relevé lent : %.0f s (CPU du switch %.0f %%).", took, self.col.cpu)
                 if CFG.get("scan_subnet") and time.time() - self.last_scan > SCAN_EVERY:
                     self.last_scan = time.time()
                     threading.Thread(target=self.scan, daemon=True).start()
@@ -662,19 +841,26 @@ class Agent:
                 if CFG.get("transport") != "console":
                     state["mgmt_ip"] = CFG.get("switch_host")
                 state["agent"] = {"version": AGENT_VERSION, "host": socket.gethostname(),
-                                  "scan": CFG.get("scan_subnet"), "sync": HOT_SYNC if self.hot() else IDLE_SYNC}
+                                  "scan": CFG.get("scan_subnet"), "sync": self.interval(), "took": round(took, 1),
+                                  "maj": read_update_status()}
                 samples, events = self.col.take()
-                r = api("/api/agent/sync", {"state": state, "samples": samples, "events": events, "sver": self.sver})
+                diag = self.col.diag_payload()
+                r = api("/api/agent/sync", {"state": state, "samples": samples, "events": events, "sver": self.sver,
+                                            **({"diag": diag} if diag else {})})
                 self.col.ack(samples, events)
+                if diag:
+                    self.col.diag_sent = (diag["h"], time.time())
                 if "settings" in r:
                     self.settings, self.sver = r["settings"] or {}, r.get("sver")
                 self.hot_until = time.time() + 75 if r.get("hot") else 0
+                self.warm_until = time.time() + 75 if r.get("warm") else 0
                 for c in r.get("commands", []):
                     self.commander.q.put(c)
             except NotLoggedIn:
                 log.warning("Session non connectée sur le switch (prompt login). Nouvel essai dans 30 s.")
                 if CFG.get("transport") != "console":
                     self.t = None
+                heartbeat()
                 time.sleep(30)
                 continue
             except urllib.error.HTTPError as e:
@@ -688,10 +874,28 @@ class Agent:
                 except Exception:  # noqa: BLE001
                     pass
                 self.t = None
+                heartbeat()
                 time.sleep(5)
                 continue
-            self.wake.wait(HOT_SYNC if self.hot() else IDLE_SYNC)
+            heartbeat()  # la boucle tourne (même sans internet ou sans switch) ; un bug, lui, l'arrête avant
+            self.wake.wait(self.interval())
             self.wake.clear()
+
+
+def heartbeat():
+    """Preuve de vie locale : mise_a_jour.py vérifie ainsi qu'une nouvelle version tourne sans planter."""
+    try:
+        HEARTBEAT.write_text(json.dumps({"t": round(time.time()), "version": AGENT_VERSION}), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def read_update_status():
+    try:
+        st = json.loads(UPDATE_STATUS.read_text(encoding="utf-8"))
+        return {k: st.get(k) for k in ("t", "ok", "msg", "commit")}
+    except (OSError, ValueError):
+        return None
 
 
 def setup_logging():

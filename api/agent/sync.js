@@ -6,16 +6,18 @@ import { notify } from '../../lib/notify.js';
 export default async function handler(req, res) {
   if (!requireAgent(req, res)) return;
   if (req.method !== 'POST') return res.status(405).end();
-  const { state, samples = {}, events = [], sver = null } = req.body || {};
+  const { state, samples = {}, events = [], sver = null, diag = null } = req.body || {};
   if (!state || typeof state !== 'object') return res.status(400).json({ error: 'state manquant' });
 
   const r = redis();
   state.received = Date.now() / 1000;
-  const [, [hot, qflag, curVer, offline]] = await Promise.all([
-    r.set(K.state, state),
-    r.mget(K.hot, K.qflag, K.sver, K.offline),
-  ]);
-  const out = { hot: Boolean(hot), commands: [] };
+  const writes = [r.set(K.state, state)];
+  // Relevé détaillé : l'agent ne l'envoie que lorsqu'il a changé (ou toutes les 10 min).
+  if (diag && typeof diag.out === 'string') {
+    writes.push(r.set(K.diag, { h: String(diag.h || '').slice(0, 40), t: Number(diag.t) || 0, out: diag.out.slice(0, 60000) }));
+  }
+  const [[hot, qflag, curVer, offline, warm]] = await Promise.all([r.mget(K.hot, K.qflag, K.sver, K.offline, K.warm), ...writes]);
+  const out = { hot: Boolean(hot), warm: Boolean(warm), commands: [] };
 
   if (qflag) {
     const items = (await r.lpop(K.queue, 20)) || [];

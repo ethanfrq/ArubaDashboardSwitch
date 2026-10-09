@@ -7,5 +7,9 @@
   "agent_token": "COLLER_ICI_AGENT_TOKEN",
   "scan_subnet": "192.168.1.0/24",
   "idle_sync": 60,
-  "hot_sync": 10
+  "hot_sync": 10,
+  "warm_sync": 30,
+  "auto_update": true,
+  "update_repo": "ethanfrq/ArubaDashboardSwitch",
+  "update_branch": "main"
 }

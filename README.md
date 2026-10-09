@@ -37,6 +37,9 @@ Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé
 - **Spanning-tree** : switch racine, ports bloqués (boucle réseau), trafic broadcast anormal.
 - **Historique de chaque port** : depuis quand il est branché ou coupé, nombre de coupures, ports instables.
 - **Journal du switch** : les derniers événements traduits en français (liens, connexions, spanning-tree).
+- **Relevé fréquent sans charger le switch** : état des liens et journal toutes les 30 s, spanning-tree et
+  configuration sauvegardée toutes les 2 min ; les commandes peu changeantes sont espacées et tout ralentit
+  si le CPU du switch monte. Au total, moins de commandes envoyées au switch qu’avec les versions précédentes.
 
 ### Gestion
 - Activer, désactiver ou redémarrer un port, changer sa description.
@@ -49,7 +52,7 @@ Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé
 - **Administrateur** : tout le dashboard, commandes comprises.
 - **Lecture seule**, pour un écran de supervision : un second mot de passe, défini dans les réglages, donne accès à tout
   l’affichage sans aucune commande. C’est le serveur qui l’impose, pas seulement la page. La session dure 30 jours et
-  l’écran se rafraîchit toutes les 15 s sans forcer l’agent en temps réel, pour rester dans les offres gratuites.
+  l’écran se rafraîchit toutes les 30 s sans forcer l’agent en temps réel, pour rester dans les offres gratuites.
 - **Vue monitoring** : un bouton permet à l’administrateur de masquer toutes les commandes sans se déconnecter.
 
 ### Alertes
@@ -110,7 +113,12 @@ lit le switch en SSH, envoie l’état au dashboard et exécute les commandes de
 **C’est toujours l’agent qui contacte Vercel, jamais l’inverse** : aucun port à ouvrir, aucun VPN.
 
 Pour rester dans les offres gratuites, l’agent envoie l’état toutes les **60 s** quand personne ne regarde,
-toutes les **10 s** quand le dashboard est ouvert, et relève alors les commandes toutes les **1,5 s**.
+**30 s** pour un écran lecture seule et **10 s** quand le dashboard administrateur est ouvert. Il relève alors les
+commandes toutes les **5 s** (**1,5 s** juste après une commande). La page relit l’état juste après chaque envoi de
+l’agent, et ne recharge le journal des commandes, les alertes et le relevé détaillé que lorsqu’ils ont changé.
+
+L’agent **se met à jour tout seul** : toutes les 5 minutes, il compare ses fichiers avec le dossier `agent` de ce dépôt
+et installe ce qui a changé, avec retour automatique à l’ancienne version si la nouvelle ne démarre pas.
 
 ---
 
@@ -149,7 +157,8 @@ Télécharge l’agent prêt à l’emploi depuis la [dernière version](https:/
 2. Copier le dossier `agent` sur le PC et créer `agent_config.json` à partir de `agent_config.example.json`
    (IP du switch, URL du dashboard, `AGENT_TOKEN`, réseau à scanner pour trouver les IP).
 3. Test : `demarrer-agent.bat`, puis installation en service avec `installer-service.bat` (en administrateur).
-   L’agent démarre alors avec Windows, sans fenêtre, et redémarre tout seul en cas d’erreur.
+   L’agent démarre alors avec Windows, sans fenêtre, redémarre tout seul en cas d’erreur
+   et se met à jour tout seul depuis GitHub (vérification toutes les 5 minutes).
 
 ### 3. C’est prêt
 Ouvre l’URL de ton projet Vercel, connecte-toi, puis règle les alertes avec l’icône ⚙.

@@ -1,5 +1,33 @@
 # Historique des versions
 
+## 1.5.0 (2026-10-09) · agent 1.3.0
+
+### Relevé plus fréquent, sans charger le switch
+- L’agent fait lui-même le relevé détaillé : **état des liens et journal du switch toutes les 30 s** (au lieu de 5 min),
+  spanning-tree et configuration sauvegardée toutes les 2 min, aussi quand personne ne regarde (2 et 10 min).
+- Les commandes peu changeantes (températures, erreurs, LLDP, VLAN, informations système) sont espacées :
+  environ **un tiers de commandes en moins** envoyées au switch, malgré un relevé détaillé dix fois plus fréquent.
+- Tout est espacé deux fois si le CPU du switch dépasse 60 % en moyenne sur une minute, quatre fois au-delà de 80 %.
+- Après une commande de configuration, l’état des liens, des VLAN et de la sauvegarde est relu tout de suite.
+- Ports instables : coupures comptées sur les 10 dernières minutes.
+
+### Agent 1.3.0
+- **Correction** : la session SSH des commandes, fermée par le switch après une longue inactivité, faisait échouer
+  la commande suivante (« Socket is closed »). Elle est maintenant vérifiée avant usage et rouverte si besoin ;
+  une commande coupée avant tout envoi est retentée une fois, jamais une commande déjà partie.
+- **Mise à jour automatique** (`mise_a_jour.py`, tâche « ArubaDashboardMiseAJour ») : toutes les 5 minutes,
+  les fichiers du dossier `agent` du dépôt GitHub sont comparés à ceux du PC et ceux qui ont changé sont installés.
+  Empreintes vérifiées, scripts compilés avant installation, sauvegarde, et retour automatique à l’ancienne version
+  si la nouvelle ne démarre pas. Configuration et mot de passe jamais touchés. `mettre-a-jour.bat` pour forcer.
+- Version correcte envoyée au dashboard, résultat de la mise à jour automatique affiché en bas de page.
+
+### Offres gratuites (Upstash)
+- La page relit l’état juste après chaque envoi de l’agent au lieu de toutes les 5 s.
+- Journal des commandes, alertes et relevé détaillé ne sont relus que lorsqu’ils ont changé (lecture habituelle :
+  27 Ko au lieu de 59 Ko).
+- L’agent relève les commandes toutes les 5 s (1,5 s juste après une commande) au lieu de 1,5 s en permanence.
+- Écran lecture seule : l’agent envoie toutes les 30 s pendant qu’il est ouvert.
+
 ## 1.4.0 (2026-10-09)
 
 ### Deux accès

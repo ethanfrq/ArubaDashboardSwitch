@@ -17,6 +17,7 @@ export default async function handler(req, res) {
     if (!admin) return denied();
     const answer = req.body.answer === 'y' ? 'y' : 'n';
     await r.set(K.answer(String(req.body.answer_to)), answer, { ex: 180 });
+    await r.set(K.busy, 1, { ex: 90 });
     await upsert(K.log, { id: String(req.body.answer_to), status: 'running', answer }, LOG_MAX);
     return res.json({ ok: true });
   }
@@ -52,6 +53,9 @@ export default async function handler(req, res) {
   await upsert(K.log, rec, LOG_MAX);
   await r.rpush(K.queue, JSON.stringify({ id: rec.id, cmd }));
   await r.set(K.qflag, 1);
-  if (admin) await r.set(K.hot, 1, { ex: 120 }); // l'agent relève les commandes en temps réel
+  if (admin) { // l'agent relève les commandes en temps réel, et très vite pendant 90 s
+    await r.set(K.hot, 1, { ex: 120 });
+    await r.set(K.busy, 1, { ex: 90 });
+  }
   res.json(rec);
 }

@@ -554,7 +554,9 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
+const AGENT_LATEST = '1.3.0'; // dernière version de l'agent publiée avec ce dashboard
+const verNum = (v) => String(v).split('.').reduce((a, x) => a * 1000 + (Number(x) || 0), 0);
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
@@ -580,6 +582,7 @@ const portNum = (p) => Number(String(p).split('/').pop());
 const IDLE_AFTER = 120;
 
 let S = null, LOG = [], ALERTS = [], NOW = 0, selected = null, filter = 'all', timer = null, lastTouch = 0;
+let LV = '', AV = ''; // versions du journal et des alertes déjà reçues : le serveur ne les renvoie que si elles changent
 const OUT = {}, OUTV = {}, SEEN = {};
 
 const quietFor = (p) => (p.up && p.rx_quiet_since ? Math.max(0, (S.updated || NOW) - p.rx_quiet_since) : 0);
@@ -675,7 +678,7 @@ $('#viewBtn').addEventListener('click', () => {
   try { localStorage.setItem('aruba-view', MONITOR ? 'monitor' : 'admin'); } catch {}
   applyRole();
 });
-function showLogin() { $('#foot').hidden = true; $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
+function showLogin() { LV = AV = ''; $('#foot').hidden = true; $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
 function showApp() { $('#login').hidden = true; $('#app').hidden = false; $('#foot').hidden = false; }
 $('#appVersion').textContent = `v${APP_VERSION}`;
 
@@ -691,19 +694,28 @@ $('#logout').addEventListener('click', (e) => busy(e.currentTarget, async () => 
 async function poll() {
   clearTimeout(timer);
   try {
-    const touch = Date.now() - lastTouch > 50000 ? '?touch=1' : '';
-    const d = await api('/api/state' + touch);
+    const touch = Date.now() - lastTouch > 50000;
+    const d = await api(`/api/state?lv=${LV}&av=${AV}${touch ? '&touch=1' : ''}`);
     if (d.auth === false) { showLogin(); $('#pw').focus(); return; }
     if (touch) lastTouch = Date.now();
     if ((d.role || 'admin') !== ROLE || !document.body.dataset.role) { ROLE = d.role || 'admin'; document.body.dataset.role = ROLE; applyRole(); }
     if ($('#app').hidden) { showApp(); loadSettings(); }
-    S = d.state; NOW = d.now; ALERTS = arr(d.alerts);
-    trackCommands(arr(d.log));
+    S = d.state; NOW = d.now;
+    if (d.alerts) { ALERTS = arr(d.alerts); AV = d.av; }
+    if (d.log) { trackCommands(arr(d.log)); LV = d.lv; }
     render();
     runVerify(); maybeDiag(); maybeCableCheck();
   } catch (e) { if (e.message === '401') return; }
   const busyNow = LOG.some((c) => ['pending', 'running', 'confirm'].includes(c.status));
-  timer = setTimeout(poll, document.hidden ? 30000 : busyNow ? 1500 : ROLE === 'viewer' ? 15000 : 5000);
+  timer = setTimeout(poll, document.hidden ? 30000 : busyNow ? 1500 : nextRead());
+}
+// Relit l'état juste après le prochain envoi attendu de l'agent : aussi frais qu'en relisant toutes les 5 s,
+// avec deux à trois fois moins de lectures (offres gratuites).
+function nextRead() {
+  const every = S?.agent?.sync || (ROLE === 'viewer' ? 30 : 10);
+  let wait = S?.received ? S.received + every + 1.5 - NOW : every;
+  if (wait < 1.5) wait = Math.min(every, 10); // agent en retard : on patiente un peu avant de relire
+  return Math.min(wait, every + 2) * 1000;
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('#app').hidden) { lastTouch = 0; poll(); } });
 
@@ -923,6 +935,7 @@ const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7,
 const STP_FR = { Root: 'racine', Designated: 'désigné', Alternate: 'alternatif', Backup: 'secours', Disabled: 'inactif',
   Forwarding: 'transmet', Blocking: 'BLOQUÉ', Discarding: 'BLOQUÉ', Learning: 'apprentissage', Listening: 'écoute', Down: 'coupé' };
 let DIAG = null, diagAsked = 0, logFilter = 'all', BCAST = null, bcastPrev = null;
+let AGENT_DIAG = { h: '', t: 0, out: '' }, diagFetching = false, DIAG_HIST = [];
 
 const stpBlocked = (p) => p.up && /Blocking|Discarding/i.test(DIAG?.ports[p.port]?.stp?.state || '');
 function sinceText(p) {
@@ -937,8 +950,9 @@ function flapCell(p, long) {
   return `${nf0.format(t)}${f >= 4 ? ' <span class="badge amber" title="coupures récentes">instable</span>' : ''}${long ? ' <span class="muted">depuis le démarrage du switch</span>' : ''}`;
 }
 function latestDiag() { return LOG.find((c) => c.kind === 'auto:diag'); }
-async function maybeDiag(force) {
+async function maybeDiag(force, manual) {
   if (!S || $('#app').hidden || document.hidden) return;
+  if (S.diag?.h && !manual) return; // l'agent 1.3.0 fait lui-même le relevé, à son rythme
   const last = latestDiag();
   if (last && ['pending', 'running'].includes(last.status) && NOW - last.created < 180) return;
   const age = last ? NOW - (last.finished || last.created) : Infinity;
@@ -948,7 +962,7 @@ async function maybeDiag(force) {
   diagAsked = Date.now() / 1000;
   try { await api('/api/command', { cmd: DIAG_CMD, label: 'Relevé automatique', kind: 'auto:diag' }); setTimeout(poll, 800); } catch {}
 }
-$('#diagRefresh').addEventListener('click', (e) => busy(e.currentTarget, async () => { await maybeDiag(true); toast('Relevé demandé au switch', { sub: 'Résultat dans quelques secondes.' }); }));
+$('#diagRefresh').addEventListener('click', (e) => busy(e.currentTarget, async () => { await maybeDiag(true, true); toast('Relevé demandé au switch', { sub: 'Résultat dans quelques secondes.' }); }));
 
 function sections(out) {
   const sec = {}; let cur = null;
@@ -967,9 +981,9 @@ function frLog(msg) {
     .replace(/^Port 1\/1\/(\d+) blocked on CIST.*$/i, 'Port $1 bloqué par le spanning-tree')
     .replace(/^CIST - Topology Change generated on port 1\/1\/(\d+).*$/i, 'Changement de topologie spanning-tree (port $1)');
 }
-function parseDiag(c) {
-  const sec = sections(OUT[c.id]);
-  const d = { id: c.id, t: c.finished || c.created, ports: {}, logs: [], flaps: {} };
+function parseDiag(out, t, id, h = '') {
+  const sec = sections(out);
+  const d = { id, src: id === 'agent' ? 'agent' : 'cmd', h, t, ports: {}, logs: [], flaps: {} };
   for (const l of sec['show interface link-status'] || []) {
     const m = l.match(/^(1\/1\/\d+)\s+\S+\s+(up|down)\s+(.+?)\s+(\d+)\s+(.+?)\s*$/);
     if (!m) continue;
@@ -996,19 +1010,39 @@ function parseDiag(c) {
   d.ip = ((sec['show ip interface vlan1'] || []).join('\n').match(/IPv4 address\s+(\S+)/) || [])[1];
   const bm = (sec['show system'] || []).join('\n').match(/Base MAC Address\s*:\s*([0-9a-f]{6})-([0-9a-f]{6})/i);
   d.mac = bm ? (bm[1] + bm[2]).match(/../g).join(':') : null;
-  // instabilité : coupures supplémentaires depuis le relevé précédent (moins de 15 min)
-  if (DIAG && d.t - DIAG.t < 900) for (const [port, v] of Object.entries(d.ports)) {
-    const before = DIAG.ports[port]?.transitions;
-    if (before != null && v.transitions != null) d.flaps[port] = v.transitions - before;
-  }
   DIAG = d;
+}
+// Instabilité : coupures de chaque port pendant les 10 dernières minutes, d'après les relevés successifs.
+function trackFlaps() {
+  if (!DIAG) return;
+  const snap = Object.fromEntries(Object.entries(DIAG.ports).map(([p, v]) => [p, v.transitions]));
+  if (DIAG_HIST.at(-1)?.t !== DIAG.t) DIAG_HIST.push({ t: DIAG.t, ports: snap });
+  DIAG_HIST = DIAG_HIST.filter((x) => DIAG.t - x.t <= 600);
+  const base = DIAG_HIST[0];
+  DIAG.flaps = {};
+  for (const [port, n] of Object.entries(snap)) if (base?.ports[port] != null && n != null) DIAG.flaps[port] = n - base.ports[port];
+}
+async function fetchAgentDiag() {
+  diagFetching = true;
+  try {
+    const { diag } = await api('/api/output?diag=1');
+    if (diag?.out) { AGENT_DIAG = diag; render(); }
+  } catch {} finally { diagFetching = false; }
 }
 // Relevé exploitable : terminé (même avec une erreur sur une commande) et contenant l'état des ports.
 // Un relevé raté (session SSH coupée par le switch après une longue inactivité…) n'efface pas le précédent.
 const diagUsable = (x) => ['done', 'error'].includes(x.status) && /^1\/1\/\d+\s/m.test(OUT[x.id] || '');
 function updateDiag() {
+  const ad = S?.diag;
+  if (ad?.h && ad.h !== AGENT_DIAG.h && !diagFetching) fetchAgentDiag(); // l'agent a vu un changement
   const c = LOG.find((x) => x.kind === 'auto:diag' && diagUsable(x));
-  if (c && c.id !== DIAG?.id) parseDiag(c);
+  const cmdT = c ? c.finished || c.created : 0;
+  const agentT = AGENT_DIAG.out ? Math.max(AGENT_DIAG.t, ad?.h === AGENT_DIAG.h ? ad.t : 0) : 0;
+  if (agentT && agentT >= cmdT) {
+    if (DIAG?.src !== 'agent' || DIAG.h !== AGENT_DIAG.h) parseDiag(AGENT_DIAG.out, agentT, 'agent', AGENT_DIAG.h);
+    else DIAG.t = agentT; // relevé refait par l'agent, rien n'a changé
+  } else if (c && DIAG?.id !== c.id) parseDiag(OUT[c.id], cmdT, c.id);
+  trackFlaps();
 }
 function updateBcast() {
   if (!S?.ports || S.updated === bcastPrev?.t) return;
@@ -1025,7 +1059,7 @@ function renderSwitch() {
   const blocked = (S.ports || []).filter(stpBlocked).map((p) => portNum(p.port));
   const rows = [
     ['IP de gestion', esc(d?.ip?.replace(/\/\d+$/, '') || S.mgmt_ip || '-')],
-    ['Adresse MAC', `<span class="mono">${esc(d?.mac || '-')}</span>`],
+    ['Adresse MAC', `<span class="mono">${esc(d?.mac || S.base_mac || '-')}</span>`],
     ['N° de série', `<span class="mono">${esc(S.serial || '-')}</span>`],
     ['Firmware', esc(S.version ? `AOS-CX ${S.version}` : '-')],
     ['Configuration', !d || d.saved == null ? '<span class="muted">-</span>' : d.saved ? '<span class="good">✓ sauvegardée</span>'
@@ -1039,8 +1073,9 @@ function renderSwitch() {
   ];
   setHTML($('#swInfo'), rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(''));
   const last = latestDiag();
-  $('#diagNote').textContent = last && ['pending', 'running'].includes(last.status) ? 'Relevé du switch en cours…'
-    : d ? `Relevé ${ago(NOW - d.t)} · actualisé toutes les ${diagEvery() / 60} min quand le dashboard est ouvert.` : 'Premier relevé en attente…';
+  const every = S.diag?.every, fmtEvery = (x) => (x < 60 ? `${x} s` : `${Math.round(x / 60)} min`);
+  $('#diagNote').textContent = last && ['pending', 'running'].includes(last.status) && NOW - last.created < 180 ? 'Relevé du switch en cours…'
+    : d ? `Relevé ${ago(NOW - d.t)} · ${every ? `refait par l’agent toutes les ${fmtEvery(every)}` : `actualisé toutes les ${diagEvery() / 60} min quand le dashboard est ouvert`}.` : 'Premier relevé en attente…';
   $('#unsavedPill').hidden = !(d && d.saved === false);
 }
 $('#swInfo').addEventListener('click', (e) => { if (e.target.closest('[data-save]')) $('#unsavedPill').click(); });
@@ -1071,7 +1106,10 @@ function render() {
 function renderAgent() {
   const pill = $('#agentPill');
   const av = S?.agent?.version;
-  $('#agentVersion').textContent = !S?.agent ? '' : /^\d+\.\d+/.test(String(av)) ? `agent v${av}` : 'agent : version antérieure à 1.0.0';
+  const maj = S?.agent?.maj, older = !/^\d+\.\d+/.test(String(av)) || verNum(av) < verNum(AGENT_LATEST);
+  $('#agentVersion').textContent = !S?.agent ? '' : (/^\d+\.\d+/.test(String(av)) ? `agent v${av}` : 'agent : version antérieure à 1.0.0')
+    + (maj ? ` · mise à jour auto ${maj.ok ? '✓' : '⚠'}` : older ? ` · v${AGENT_LATEST} disponible` : '');
+  $('#agentVersion').title = maj ? `${maj.msg || ''} (vérifié ${ago(NOW - (maj.t || 0))})` : older ? 'Mets l’agent à jour : voir agent/INSTALLATION-WINDOWS.md.' : '';
   if (!S) { pill.className = 'pill ko'; pill.lastElementChild.textContent = 'Agent jamais connecté'; return; }
   const age = NOW - (S.received || S.updated);
   const every = S.agent?.sync || 10;
@@ -1079,8 +1117,8 @@ function renderAgent() {
   const working = !online && age < 600 && LOG.some((c) => c.status === 'running');
   pill.className = 'pill ' + (online ? 'ok' : working ? '' : 'ko');
   pill.lastElementChild.textContent = online ? `Agent en ligne · ${ago(age)}` : working ? 'Agent occupé : commande longue en cours…' : `Agent hors ligne · ${ago(age)}`;
-  pill.title = `${S.agent?.host ? `Agent sur ${S.agent.host}. ` : ''}Mise à jour toutes les ${every} s (10 s quand le dashboard est ouvert, 60 s sinon).`;
-  $('#termMode').textContent = online && every <= 10 ? 'temps réel : exécution en 1 à 3 s' : 'l’agent passe en temps réel dans moins d’une minute';
+  pill.title = `${S.agent?.host ? `Agent sur ${S.agent.host}. ` : ''}Envoi toutes les ${every} s (10 s quand le dashboard est ouvert, 30 s pour un écran lecture seule, 60 s sinon).`;
+  $('#termMode').textContent = online && every <= 10 ? 'temps réel : exécution en 1 à 5 s' : 'l’agent passe en temps réel dans moins d’une minute';
 }
 
 function renderKpis() {
