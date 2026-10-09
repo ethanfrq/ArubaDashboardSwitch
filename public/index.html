@@ -980,15 +980,16 @@ function renderFaceplate() {
     const empty = sfp && p.reason === 'No XCVR installed';
     const cab = st === 'down' ? cableOf(p.port) : null;
     const cabCls = cab && cab.kind !== 'empty' ? (cab.kind === 'fault' ? 'fault' : 'cable') : null;
+    const cabWarn = cab?.kind === 'partial';
     const up = isUplink(p), slow = isSlow(p);
     const meta = st === 'off' ? 'désactivé' : empty ? 'vide'
       : st === 'down' ? (cabCls ? `${cab.len} m` : 'libre')
       : st === 'idle' ? `∅ ${durShort(quietFor(p))}` : fmtBps(bps).replace(' ', ' ');
     const tip = [`Port ${n}`, pLabel[st], p.speed && `${p.speed} Mb/s${slow ? ' (lent)' : ''}`, up && 'lien vers un autre switch',
       p.vlan !== '1' && `VLAN ${p.vlan}`, st === 'idle' && `aucun paquet reçu depuis ${fmtDur(quietFor(p))}`,
-      cab && { empty: 'test câble : rien de branché', open: `test câble : câble ${cab.len} m, rien au bout`, good: `test câble : câble ${cab.len} m en bon état, appareil éteint`, fault: `test câble : DÉFAUT vers ${cab.len} m` }[cab.kind], st === 'up' && `${fmtBps(bps)} (charge ${fmtPct(loadPct(Math.max(p.rx_bps || 0, p.tx_bps || 0), p))})`, p.desc, sinceText(p) && `changé ${sinceText(p)}`, DIAG?.ports[p.port]?.transitions != null && `${DIAG.ports[p.port].transitions} coupures depuis le démarrage`, stpBlocked(p) && 'BLOQUÉ par le spanning-tree'].filter(Boolean).join(' · ');
+      cab && { partial: `test câble : paire${cab.open?.length > 1 ? 's' : ''} ${(cab.open || []).join(', ')} ouverte${cab.open?.length > 1 ? 's' : ''}, autres bonnes (${cab.len} m)`, empty: 'test câble : rien de branché', open: `test câble : câble ${cab.len} m, rien au bout`, good: `test câble : câble ${cab.len} m en bon état, appareil éteint`, fault: `test câble : DÉFAUT vers ${cab.len} m` }[cab.kind], st === 'up' && `${fmtBps(bps)} (charge ${fmtPct(loadPct(Math.max(p.rx_bps || 0, p.tx_bps || 0), p))})`, p.desc, sinceText(p) && `changé ${sinceText(p)}`, DIAG?.ports[p.port]?.transitions != null && `${DIAG.ports[p.port].transitions} coupures depuis le démarrage`, stpBlocked(p) && 'BLOQUÉ par le spanning-tree'].filter(Boolean).join(' · ');
     const cls = ['jack', sfp && 'sfp', empty ? 'nomod' : cabCls || st, selected === p.port && 'sel', pendingFor(p.port) && 'busy'].filter(Boolean).join(' ');
-    const tags = (cabCls ? `<span class="tag${cabCls === 'fault' ? ' slow' : ''}">${cabCls === 'fault' ? '⚠' : cab.kind === 'good' ? '↔ ok' : '↔'}</span>` : '')
+    const tags = (cabCls ? `<span class="tag${cabCls === 'fault' || cabWarn ? ' slow' : ''}">${cabCls === 'fault' || cabWarn ? '⚠' : cab.kind === 'good' ? '↔ ok' : '↔'}</span>` : '')
       + (stpBlocked(p) ? '<span class="tag stp">STP</span>' : '') + (up ? '<span class="tag">⇅</span>' : '') + (p.vlan !== '1' ? `<span class="tag">V${esc(p.vlan)}</span>` : '')
       + (p.up && p.speed ? `<span class="tag${slow ? ' slow' : ''}">${speedTag(Number(p.speed))}</span>` : '');
     return `<button class="${cls}" data-port="${esc(p.port)}" title="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${selected === p.port}">
@@ -1001,7 +1002,7 @@ function renderFaceplate() {
   html += '<div class="fp-group fp-sfp">' + jack(25, 1) + jack(26, 1) + jack(27, 1) + jack(28, 1) + '</div>';
   setHTML($('#faceplate'), html);
   const downs = (S.ports || []).filter((p) => pState(p) === 'down').map((p) => cableOf(p.port)).filter(Boolean);
-  const cabled = downs.filter((c) => c.kind === 'open' || c.kind === 'good'), faulty = downs.filter((c) => c.kind === 'fault');
+  const cabled = downs.filter((c) => ['open', 'good', 'partial'].includes(c.kind)), faulty = downs.filter((c) => c.kind === 'fault');
   const all = S.ports || [], count = (s) => all.filter((p) => pState(p) === s).length, slow = all.filter(isSlow).length, up = all.filter((p) => p.up).length;
   $('#fpCount').textContent = `${up} branché${up > 1 ? 's' : ''}`;
   $('#fpLegend').innerHTML = `
@@ -1240,12 +1241,19 @@ function cableKind(rows) {
   const len = dist.length ? Math.round(Math.max(...dist)) : null;
   const bad = rows.filter((r) => r.status !== 'good');
   if (bad.every((r) => r.status === 'open') && bad.length === rows.length) return { kind: len !== null && len <= 2 ? 'empty' : 'open', len };
+  if (bad.length && bad.every((r) => r.status === 'open')) return { kind: 'partial', len, open: bad.map((r) => r.pair) };
   return { kind: bad.length ? 'fault' : 'good', len };
+}
+// Un test devient périmé si le port a changé d'état (branché, débranché) plus d'une minute après lui.
+// La minute de marge couvre la coupure provoquée par le test lui-même.
+function cableStale(port, t) {
+  const last = DIAG?.ports?.[port]?.last;
+  return Boolean(last && t && last > t + 60);
 }
 const CABLE_MAX_AGE = 7 * 86400;
 function cableOf(port) {
   const c = S?.cables?.[port];
-  return c && NOW - c.t < CABLE_MAX_AGE ? { ...c, ...cableKind(c.rows) } : null;
+  return c && NOW - c.t < CABLE_MAX_AGE && !cableStale(port, c.t) ? { ...c, ...cableKind(c.rows) } : null;
 }
 function cableVerdict(rows, p) {
   if (!rows.length) return null;
@@ -1256,8 +1264,8 @@ function cableVerdict(rows, p) {
   const dist = rows.map((r) => parseFloat(r.dist)).filter((x) => !isNaN(x));
   const len = dist.length ? Math.round(Math.max(...dist)) : null;
   if (!bad.length) return ['green', `Câble en bon état${len ? ` · environ ${len} m` : ''}.`];
-  if (bad.every((r) => r.status === 'open')) return ['amber', `Câble d’environ ${len ?? '?'} m branché, mais rien au bout : prise murale vide, appareil débranché, ou brassage manquant.`];
-  if (bad.length < rows.length && bad.length <= 2) return ['red', `${bad.length} paire(s) défectueuse(s) (${bad.map((r) => `${r.pair} ${CABLE_FR[r.status]}`).join(', ')}) : c’est typique d’un lien bloqué à 100 Mb/s ou 10 Mb/s. Remplace le câble ou refais la prise.`];
+  if (bad.every((r) => r.status === 'open') && bad.length === rows.length) return ['amber', `Câble d’environ ${len ?? '?'} m branché, mais rien au bout : prise murale vide, appareil débranché, ou brassage manquant.`];
+  if (k.kind === 'partial') return ['amber', `Paire${bad.length > 1 ? 's' : ''} ${bad.map((r) => `${r.pair} ouverte à ${r.dist} m`).join(', ')}, les autres sont bonnes (environ ${len} m). Normal si l’appareil est en 10/100 Mb/s (il n’utilise que 2 paires). Sinon, un fil est coupé : refais la prise ou change le câble, sans quoi le lien ne montera pas à 1 Gb/s.`];
   return ['red', `Défaut détecté : ${bad.map((r) => `${r.pair} ${CABLE_FR[r.status]} à ${r.dist} m`).join(', ')}.`];
 }
 function renderPanel(force) {
@@ -1269,7 +1277,11 @@ function renderPanel(force) {
   const macs = (S.macs || []).filter((m) => m.port === p.port), ips = S.ips || {};
   const cableRun = LOG.find((c) => c.kind === `cable:${p.port}` || (c.kind === 'cablescan' && (c.ports || []).includes(p.port)));
   const stored = S.cables?.[p.port];
-  const cableRows = stored?.rows?.length ? stored.rows : (cableRun && cableRun.status === 'done' ? parseCable(OUT[cableRun.id]) : []);
+  const runT = cableRun && (cableRun.finished || cableRun.created);
+  const staleT = stored?.rows?.length ? (cableStale(p.port, stored.t) ? stored.t : null) : (runT && cableStale(p.port, runT) ? runT : null);
+  const cableRows = staleT ? [] : stored?.rows?.length ? stored.rows : (cableRun && cableRun.status === 'done' ? parseCable(OUT[cableRun.id]) : []);
+  const fmtHM = (t) => new Date(t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const staleNote = staleT ? `<div class="alert" style="margin:0;background:var(--surface-2);color:var(--text-2)">Le dernier test (${fmtHM(staleT)}) date d’avant le dernier changement du port (${fmtHM(DIAG.ports[p.port].last)}) : il n’est plus valable. Relance le test pour un résultat à jour.</div>` : '';
   const verdict = cableVerdict(cableRows, p);
   const alerts = [
     st === 'idle' && `<div class="alert amber"><b>Câble branché mais aucun paquet reçu depuis ${fmtDur(quietFor(p))}.</b><br>L’appareil est sans doute éteint ou en veille, sa carte réseau est désactivée, ou le câble ne mène nulle part.</div>`,
@@ -1319,8 +1331,9 @@ function renderPanel(force) {
         <table class="cable"><thead><tr><th>Paire</th><th>État</th><th>Impédance</th><th>Distance</th></tr></thead><tbody>
         ${cableRows.map((r) => `<tr><td class="mono">${esc(r.pair)}</td><td>${esc(CABLE_FR[r.status] || r.status)}</td><td class="mono">${esc(r.imp)} Ω</td><td class="mono">${esc(r.dist)} m</td></tr>`).join('')}</tbody></table>
         <span class="note">Test du ${new Date((stored?.t || cableRun?.finished || cableRun?.created) * 1000).toLocaleString('fr-FR')}</span>` : ''}
-      ${cableRun && cableRun.status === 'error' ? '<div class="alert red" style="margin:0">Le test a échoué. Détail dans la console.</div>' : ''}
-      ${cableRun && cableRun.status === 'done' && OUT[cableRun.id] !== undefined && !cableRows.length ? '<div class="alert amber" style="margin:0">Le switch n’a pas encore donné de résultat. Relance le test dans quelques secondes.</div>' : ''}
+      ${staleNote}
+      ${cableRun && cableRun.status === 'error' && !staleT ? '<div class="alert red" style="margin:0">Le test a échoué. Détail dans la console.</div>' : ''}
+      ${cableRun && cableRun.status === 'done' && OUT[cableRun.id] !== undefined && !cableRows.length && !staleT ? '<div class="alert amber" style="margin:0">Le switch n’a pas encore donné de résultat. Relance le test dans quelques secondes.</div>' : ''}
       <button class="btn" data-act="cable" ${p.type !== '1GbT' ? 'disabled title="Test impossible sur un port SFP"' : ''}>Tester le câble</button>
     </div>
     <p class="note">Les changements s’appliquent tout de suite. Pense à « Sauvegarder la config » pour qu’ils survivent à un redémarrage.</p>`);
