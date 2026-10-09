@@ -1,5 +1,25 @@
 # Historique des versions
 
+## 1.3.0 (2026-10-09)
+
+Plus de vérifications, sans mise à jour de l’agent.
+
+### Ports sans lien
+- **Un port n’est plus affiché « libre » sans preuve.** Sans test de câble valable (jamais testé, ou branché
+  et débranché depuis le dernier test), il passe **« à vérifier »** (contour ambre, « ? ») sur la façade, dans le tableau et dans le détail du port.
+- **Vérification automatique des câbles** quand le dashboard est ouvert : les ports à vérifier sont testés par lots de 4,
+  puis tous les ports sans lien sont revérifiés toutes les 2 h (un câble branché sans rien au bout ne laisse aucune trace sur le switch).
+  Jamais devant une commande de l’utilisateur, jamais sur un lien vers un autre switch, et désactivable dans les réglages.
+- État précis dans le tableau : « Libre », « Câble sans lien », « Câble en défaut » ou « À vérifier ».
+  Les ports avec un câble restent visibles ; seuls les ports vérifiés libres sont repliés.
+- Un appareil encore annoncé en LLDP sur un port sans lien est indiqué « dernier appareil vu » au lieu d’apparaître branché.
+
+### Commandes
+- **Vérification après chaque modification** : le dashboard contrôle dans l’état suivant du switch que le changement a bien été pris en compte
+  (port activé ou coupé, VLAN d’un port, description, VLAN créé, renommé ou supprimé, configuration sauvegardée), et prévient sinon.
+- Les relevés automatiques ne sont plus envoyés en double quand plusieurs pages du dashboard sont ouvertes.
+- Journal des commandes porté à 80 entrées.
+
 ## 1.2.0 (2026-10-09)
 
 ### Sécurité

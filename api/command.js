@@ -19,6 +19,13 @@ export default async function handler(req, res) {
   const cmd = String(req.body?.cmd ?? '').trim();
   if (!cmd) return res.status(400).json({ error: 'Commande vide.' });
   if (cmd.length > 4000) return res.status(400).json({ error: 'Commande trop longue.' });
+  const kind = String(req.body?.kind ?? '').slice(0, 40);
+  // Relevés automatiques : un seul à la fois, même avec plusieurs pages ouvertes.
+  if (kind.startsWith('auto:')) {
+    const now = Date.now() / 1000;
+    const same = [].concat((await r.get(K.log)) || []).find((c) => c.kind === kind && ['pending', 'running'].includes(c.status) && now - c.created < 180);
+    if (same) return res.json({ ...same, dedup: true });
+  }
   // Commande dangereuse : refus tant qu'elle n'a pas été confirmée une seconde fois (jeton à usage unique).
   const reasons = analyze(cmd, await r.get(K.state));
   if (reasons.length) {
@@ -33,7 +40,7 @@ export default async function handler(req, res) {
   }
 
   const rec = { id: crypto.randomUUID(), cmd, label: String(req.body?.label ?? '').slice(0, 120),
-    kind: String(req.body?.kind ?? '').slice(0, 40), status: 'pending', created: Date.now() / 1000 };
+    kind, status: 'pending', created: Date.now() / 1000 };
   await upsert(K.log, rec, LOG_MAX);
   await r.rpush(K.queue, JSON.stringify({ id: rec.id, cmd }));
   await r.set(K.qflag, 1);

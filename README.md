@@ -27,6 +27,9 @@ Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé
 - **Façade en direct** : chaque port avec son état, sa vitesse négociée et son débit. Les ports lents (10/100 Mb/s),
   les liens vers d’autres switches et les ports « branchés mais sans trafic » sont signalés.
 - **Câbles détectés sans lien** : un scan des ports libres indique s’il y a un câble, sa longueur et s’il est en défaut.
+- **Ports « libres » vérifiés** : un port sans lien n’est affiché libre que si un test de câble récent le confirme.
+  Les ports jamais testés, ou branchés et débranchés depuis le dernier test, passent « à vérifier » et sont testés
+  automatiquement par petits lots ; les autres sont revérifiés toutes les 2 h (désactivable dans les réglages).
 - **Débits et historique** : la dernière heure en direct, puis 24 h, 7 jours et 30 jours, au total ou port par port.
 - **Ports et appareils** : un tableau unique (nom, IP, MAC, débit, erreurs) avec recherche et tri.
 - **Santé du switch** : CPU, mémoire, températures, temps de fonctionnement, IP, MAC, numéro de série, firmware.
@@ -49,6 +52,8 @@ Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé
 ### Confort
 - Mode clair / sombre, indicateurs de chargement et notifications sur chaque action.
 - Confirmation obligatoire, avec les lignes exactes envoyées au switch, avant toute modification.
+- **Vérification après chaque modification** : le dashboard contrôle dans l’état suivant du switch que le changement
+  est bien appliqué (port activé ou coupé, VLAN, description, VLAN créé ou supprimé, configuration sauvegardée) et prévient sinon.
 
 ---
 
@@ -56,7 +61,8 @@ Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé
 
 *Toutes les captures utilisent des données de démonstration (noms, adresses IP et MAC fictifs).*
 
-**Façade en direct** : ports actifs (vert), sans trafic (ambre), câble branché sans lien (bleu, avec sa longueur), câble en défaut (rouge).
+**Façade en direct** : ports actifs (vert), sans trafic (ambre), câble branché sans lien (bleu, avec sa longueur), câble en défaut (rouge),
+état du câble à vérifier (contour ambre).
 
 ![Façade du switch](docs/captures/facade.png)
 
@@ -76,7 +82,7 @@ Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé
 
 ![Carte VLAN et console de gestion](docs/captures/vlan-console.png)
 
-**Alertes** : e-mail et/ou webhook, ports surveillés, seuil de température.
+**Réglages** : alertes par e-mail et/ou webhook, ports surveillés, seuil de température, vérification automatique des câbles.
 
 ![Réglages des alertes](docs/captures/alertes.png)
 

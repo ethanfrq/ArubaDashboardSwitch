@@ -189,6 +189,7 @@ dialog.wide { width: min(580px, calc(100% - 32px)); }
 .jack.fault { --c: #4a2626; --led: #ff8a80; --ink: #ffd9d6; box-shadow: inset 0 -5px 0 rgb(0 0 0 / .22), inset 0 0 0 2px #c9302c; }
 .jack.sfp { box-shadow: inset 0 0 0 2px rgb(0 0 0 / .35), inset 0 -5px 0 rgb(0 0 0 / .22); }
 .jack.nomod { --c: #262625; --ink: #6f6e68; }
+.jack.unk { --c: #32312d; --led: #d9b45a; --ink: #f2e3b8; box-shadow: inset 0 -5px 0 rgb(0 0 0 / .22), inset 0 0 0 2px rgb(217 180 90 / .5); }
 .jack .slow { color: #ffcc4d; }
 .jack.sel { outline: 2px solid var(--accent); outline-offset: 2px; }
 .jack.busy::after { content: ""; position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid #fff; border-right-color: transparent; animation: spin .7s linear infinite; }
@@ -258,6 +259,8 @@ tbody tr.click:hover, tbody tr.sel { background: var(--surface-2); }
 .status.up { color: var(--good); } .status.down { color: var(--text-3); } .status.off { color: var(--bad); }
 .status.off::before { border-radius: 1px; }
 .status.idle { color: var(--warn); }
+.status.cable { color: var(--info); } .status.fault { color: var(--bad); }
+.status.unk { color: var(--warn); } .status.unk::before { background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
 .status.idle::before { border-radius: 1px; transform: rotate(45deg); }
 .speed-slow { color: var(--warn); font-weight: 500; }
 .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-weight: 500; }
@@ -386,7 +389,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       <span class="bell-count" id="bellCount" hidden></span>
     </button>
-    <button class="btn icon" id="settingsBtn" type="button" title="Réglages des alertes" aria-label="Réglages des alertes">
+    <button class="btn icon" id="settingsBtn" type="button" title="Réglages : alertes et vérifications" aria-label="Réglages">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
     <button class="btn icon" id="themeBtn" type="button">
@@ -496,7 +499,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 </dialog>
 
 <dialog id="alertDialog" class="wide" aria-labelledby="alTitle">
-  <h3 id="alTitle">Réglages des alertes</h3>
+  <h3 id="alTitle">Réglages</h3>
   <form id="alertForm">
     <div class="field"><label for="alEmail">E-mail(s)</label><input id="alEmail" type="text" placeholder="admin@exemple.fr, autre@exemple.fr"><span class="note" id="alEmailNote"></span></div>
     <div class="field"><label for="alHook">Webhook (Teams, Discord, Slack, ntfy pour le téléphone…)</label><input id="alHook" type="url" placeholder="https://…"></div>
@@ -510,6 +513,9 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
     <div class="field"><span class="label">Ports surveillés <button type="button" class="btn small" id="alAuto" style="margin-left:6px">Auto</button></span>
       <div class="portpick" id="alPorts"></div>
       <span class="note" id="alPortsNote"></span>
+    </div>
+    <div class="field"><span class="label">Vérifications automatiques</span>
+      <label class="check"><input type="checkbox" id="alAutoCable"> tester le câble des ports sans lien jamais testés ou rebranchés, et revérifier les autres toutes les 2 h (ne coupe aucun appareil)</label>
     </div>
     <div class="actions"><button type="button" class="btn" id="alertTest">Envoyer un test</button><span style="flex:1"></span><button type="button" class="btn" id="alClose">Fermer</button><button class="btn primary" id="alSave">Enregistrer</button></div>
   </form>
@@ -534,7 +540,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
@@ -571,6 +577,16 @@ const fmtPct = (x) => (x == null ? '-' : x < 0.1 ? '< 0,1 %' : `${nf.format(x)} 
 const speedTag = (s) => (s >= 1000 ? `${s / 1000}G` : `${s}M`);
 const isUplink = (p) => p.uplink ?? (S.lldp || []).some((l) => l.port === p.port && l.name && /\d{4}|aruba|switch/i.test(l.name));
 const pendingFor = (port) => LOG.some((c) => ['pending', 'running', 'confirm'].includes(c.status) && (c.ports || []).includes(port));
+// État affiché d'un port : un port sans lien n'est « libre » que si un test de câble récent le confirme.
+function stInfo(p) {
+  const st = pState(p);
+  if (st !== 'down' || p.type !== '1GbT') return { cls: st, label: pLabel[st] };
+  const cab = cableOf(p.port);
+  if (!cab) return { cls: 'unk', label: 'À vérifier' };
+  if (cab.kind === 'empty') return { cls: 'down', label: 'Libre' };
+  if (cab.kind === 'fault') return { cls: 'fault', label: 'Câble en défaut' };
+  return { cls: 'cable', label: 'Câble sans lien' };
+}
 
 // ================================================================ notifications & chargement
 const TOASTS = {};
@@ -646,7 +662,7 @@ async function poll() {
     S = d.state; NOW = d.now; ALERTS = arr(d.alerts);
     trackCommands(arr(d.log));
     render();
-    maybeDiag();
+    runVerify(); maybeDiag(); maybeCableCheck();
   } catch (e) { if (e.message === '401') return; }
   const busyNow = LOG.some((c) => ['pending', 'running', 'confirm'].includes(c.status));
   timer = setTimeout(poll, document.hidden ? 30000 : busyNow ? 1500 : 5000);
@@ -679,10 +695,75 @@ function onStatus(c) {
   if (c.status === 'running') toast(name, { id: c.id, sub: 'Exécution sur le switch…', spinner: true, timeout: 0 });
   if (c.status === 'confirm') toast('Le switch demande une confirmation', { id: c.id, type: 'warn', sub: c.question || name, timeout: 0,
     actions: `<button class="btn small primary" onclick="answer('${c.id}','y',this)">Oui</button><button class="btn small" onclick="answer('${c.id}','n',this)">Non</button>` });
-  if (c.status === 'done') toast(name, { id: c.id, type: 'success', sub: /^(show|diag|diagnostics)/.test(c.cmd) ? 'Terminé.' : 'Appliqué sur le switch.' });
+  if (c.status === 'done') {
+    const exp = expectations(c.cmd);
+    if (exp.length) { VERIFY[c.id] = { name, exp, since: c.finished || NOW }; toast(name, { id: c.id, type: 'success', sub: 'Appliqué. Vérification sur le switch…', spinner: true, timeout: 0 }); }
+    else toast(name, { id: c.id, type: 'success', sub: /^(show|diag|diagnostics)/.test(c.cmd) ? 'Terminé.' : 'Appliqué sur le switch.' });
+  }
   if (c.status === 'error') {
     toast(name, { id: c.id, type: 'error', sub: 'Le switch a renvoyé une erreur. Détail dans la console.', timeout: 9000 });
     setTimeout(() => { const l = (OUT[c.id] || '').split('\n').find((x) => /^\s*%|Invalid|Error/i.test(x)); if (l && TOASTS[c.id]) toast(name, { id: c.id, type: 'error', sub: l.trim(), timeout: 9000 }); }, 1200);
+  }
+}
+
+// ================================================================ vérification après modification
+// Après chaque changement, on contrôle dans l'état suivant du switch qu'il a bien été pris en compte.
+const VERIFY = {};
+const expandPorts = (list) => String(list).split(',').flatMap((part) => {
+  const m = part.trim().match(/^1\/1\/(\d+)(?:-(?:1\/1\/)?(\d+))?$/); if (!m) return [];
+  return Array.from({ length: Math.max(0, Number(m[2] || m[1]) - Number(m[1]) + 1) }, (_, i) => `1/1/${Number(m[1]) + i}`);
+});
+function expectations(cmd) {
+  const exp = new Map(); let ports = null, vlan = null; // contexte : interface(s) ou VLAN en cours de configuration
+  for (const raw of String(cmd).split('\n')) {
+    const l = raw.trim(); let m;
+    if ((m = l.match(/^interface\s+(1\/1\/[\d\/,-]+)$/i))) { ports = expandPorts(m[1]); vlan = null; continue; }
+    if (/^(exit|end|configure(\s+terminal)?)$/i.test(l)) { ports = vlan = null; continue; }
+    if (/^(write\s+memory|copy\s+running-config\s+startup-config)$/i.test(l)) { exp.set('saved|', true); continue; }
+    if (!ports && (m = l.match(/^vlan\s+(\d+)$/i))) { vlan = m[1]; exp.set(`vex|${vlan}`, true); continue; }
+    if (!ports && (m = l.match(/^no\s+vlan\s+(\d+)$/i))) { exp.delete(`vname|${m[1]}`); exp.set(`vex|${m[1]}`, false); continue; }
+    if (vlan && (m = l.match(/^name\s+(.+)$/i))) { exp.set(`vname|${vlan}`, m[1].trim()); continue; }
+    for (const p of ports || []) {
+      if (/^shutdown$/i.test(l)) exp.set(`en|${p}`, false);
+      else if (/^no\s+shutdown$/i.test(l)) exp.set(`en|${p}`, true);
+      else if ((m = l.match(/^description\s+(.+)$/i))) exp.set(`desc|${p}`, m[1].trim());
+      else if (/^no\s+description$/i.test(l)) exp.set(`desc|${p}`, '');
+      else if ((m = l.match(/^vlan\s+access\s+(\d+)$/i))) exp.set(`vlan|${p}`, m[1]);
+    }
+  }
+  return [...exp];
+}
+function expectOk([key, val], since) {
+  const [k, id] = key.split('|');
+  const p = (S.ports || []).find((x) => x.port === id), v = (S.vlans || []).find((x) => String(x.id) === id);
+  const same = (got, want) => got === want || (want.length > 12 && got.length >= 8 && want.startsWith(got)); // texte parfois tronqué par le switch
+  if (k === 'en') return p?.enabled === val;
+  if (k === 'vlan') return p?.vlan === val;
+  if (k === 'desc') return Boolean(p) && same(p.desc || '', val);
+  if (k === 'vex') return Boolean(v) === val;
+  if (k === 'vname') return Boolean(v) && same(v.name || '', val);
+  if (k === 'saved') return DIAG?.t > since && DIAG.saved === true;
+  return true;
+}
+function expectText([key, val]) {
+  const [k, id] = key.split('|'), n = id.startsWith('1/1/') ? portNum(id) : id;
+  return { en: `port ${n} ${val ? 'activé' : 'désactivé'}`, vlan: `port ${n} sur le VLAN ${val}`, desc: `description du port ${n}`,
+    vex: `VLAN ${n} ${val ? 'présent' : 'supprimé'}`, vname: `VLAN ${n} nommé ${val}`, saved: 'configuration sauvegardée' }[k];
+}
+const listText = (exps) => (exps.length > 3 ? `${exps.slice(0, 3).map(expectText).join(', ')} et ${exps.length - 3} autre(s)` : exps.map(expectText).join(', '));
+function runVerify() {
+  if (!S) return;
+  for (const [id, v] of Object.entries(VERIFY)) {
+    const bad = (S.received || 0) > v.since ? v.exp.filter((e) => !expectOk(e, v.since)) : null;
+    if (bad && !bad.length) { toast(v.name, { id, type: 'success', sub: `Vérifié sur le switch : ${listText(v.exp)}.`, timeout: 6000 }); delete VERIFY[id]; continue; }
+    const age = NOW - v.since, waitDiag = v.exp.some(([k]) => k === 'saved|');
+    if (bad && age > (waitDiag ? 90 : 60) && S.received - v.since > 15) {
+      toast(v.name, { id, type: 'warn', sub: `Pas visible sur le switch : ${listText(bad)}. Vérifie dans la console ou relance la commande.`, timeout: 15000 });
+      delete VERIFY[id];
+    } else if (age > 300) {
+      toast(v.name, { id, type: 'warn', sub: 'Impossible de vérifier le résultat : l’agent n’envoie plus l’état du switch.', timeout: 10000 });
+      delete VERIFY[id];
+    }
   }
 }
 
@@ -996,15 +1077,16 @@ function renderFaceplate() {
     const cab = st === 'down' ? cableOf(p.port) : null;
     const cabCls = cab && cab.kind !== 'empty' ? (cab.kind === 'fault' ? 'fault' : 'cable') : null;
     const cabWarn = cab?.kind === 'partial';
+    const unk = st === 'down' && !cab ? cableUnknown(p) : null;
     const up = isUplink(p), slow = isSlow(p);
     const meta = st === 'off' ? 'désactivé' : empty ? 'vide'
-      : st === 'down' ? (cabCls ? `${cab.len} m` : 'libre')
+      : st === 'down' ? (cabCls ? `${cab.len} m` : unk ? 'à vérifier' : 'libre')
       : st === 'idle' ? `∅ ${durShort(quietFor(p))}` : fmtBps(bps).replace(' ', ' ');
-    const tip = [`Port ${n}`, pLabel[st], p.speed && `${p.speed} Mb/s${slow ? ' (lent)' : ''}`, up && 'lien vers un autre switch',
+    const tip = [`Port ${n}`, stInfo(p).label, unk && unkText(p, unk), p.speed && `${p.speed} Mb/s${slow ? ' (lent)' : ''}`, up && 'lien vers un autre switch',
       p.vlan !== '1' && `VLAN ${p.vlan}`, st === 'idle' && `aucun paquet reçu depuis ${fmtDur(quietFor(p))}`,
       cab && { partial: `test câble : paire${cab.open?.length > 1 ? 's' : ''} ${(cab.open || []).join(', ')} ouverte${cab.open?.length > 1 ? 's' : ''}, autres bonnes (${cab.len} m)`, empty: 'test câble : rien de branché', open: `test câble : câble ${cab.len} m, rien au bout`, good: `test câble : câble ${cab.len} m en bon état, appareil éteint`, fault: `test câble : DÉFAUT vers ${cab.len} m` }[cab.kind], st === 'up' && `${fmtBps(bps)} (charge ${fmtPct(loadPct(Math.max(p.rx_bps || 0, p.tx_bps || 0), p))})`, p.desc, sinceText(p) && `changé ${sinceText(p)}`, DIAG?.ports[p.port]?.transitions != null && `${DIAG.ports[p.port].transitions} coupures depuis le démarrage`, stpBlocked(p) && 'BLOQUÉ par le spanning-tree'].filter(Boolean).join(' · ');
-    const cls = ['jack', sfp && 'sfp', empty ? 'nomod' : cabCls || st, selected === p.port && 'sel', pendingFor(p.port) && 'busy'].filter(Boolean).join(' ');
-    const tags = (cabCls ? `<span class="tag${cabCls === 'fault' || cabWarn ? ' slow' : ''}">${cabCls === 'fault' || cabWarn ? '⚠' : cab.kind === 'good' ? '↔ ok' : '↔'}</span>` : '')
+    const cls = ['jack', sfp && 'sfp', empty ? 'nomod' : cabCls || (unk ? 'unk' : st), selected === p.port && 'sel', pendingFor(p.port) && 'busy'].filter(Boolean).join(' ');
+    const tags = (cabCls ? `<span class="tag${cabCls === 'fault' || cabWarn ? ' slow' : ''}">${cabCls === 'fault' || cabWarn ? '⚠' : cab.kind === 'good' ? '↔ ok' : '↔'}</span>` : unk ? '<span class="tag">?</span>' : '')
       + (stpBlocked(p) ? '<span class="tag stp">STP</span>' : '') + (up ? '<span class="tag">⇅</span>' : '') + (p.vlan !== '1' ? `<span class="tag">V${esc(p.vlan)}</span>` : '')
       + (p.up && p.speed ? `<span class="tag${slow ? ' slow' : ''}">${speedTag(Number(p.speed))}</span>` : '');
     return `<button class="${cls}" data-port="${esc(p.port)}" title="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${selected === p.port}">
@@ -1018,12 +1100,15 @@ function renderFaceplate() {
   setHTML($('#faceplate'), html);
   const downs = (S.ports || []).filter((p) => pState(p) === 'down').map((p) => cableOf(p.port)).filter(Boolean);
   const cabled = downs.filter((c) => ['open', 'good', 'partial'].includes(c.kind)), faulty = downs.filter((c) => c.kind === 'fault');
+  const unknown = (S.ports || []).filter((p) => pState(p) === 'down' && !cableOf(p.port) && cableUnknown(p)).length;
+  const checking = LOG.some((c) => c.kind === 'auto:cable' && ['pending', 'running'].includes(c.status));
   const all = S.ports || [], count = (s) => all.filter((p) => pState(p) === s).length, slow = all.filter(isSlow).length, up = all.filter((p) => p.up).length;
   $('#fpCount').textContent = `${up} branché${up > 1 ? 's' : ''}`;
   $('#fpLegend').innerHTML = `
     <span><i class="sw" style="background:#1f6b34"></i>Actif <b>${count('up')}</b></span>
     <span><i class="sw" style="background:#6e5313"></i>∅ Lien établi, aucun paquet <b>${count('idle')}</b></span>
-    <span><i class="sw" style="background:#3a3a38"></i>Libre <b>${count('down') - cabled.length - faulty.length}</b></span>
+    <span><i class="sw" style="background:#3a3a38"></i>Libre <b>${count('down') - cabled.length - faulty.length - unknown}</b></span>
+    ${unknown ? `<span title="Pas de test de câble valable : jamais testé, ou branché ou débranché depuis le dernier test"><i class="sw" style="background:#32312d;box-shadow:inset 0 0 0 2px rgb(217 180 90 / .6)"></i>? À vérifier <b>${unknown}</b>${checking ? ' <span class="spinner" aria-label="vérification en cours"></span>' : ''}</span>` : ''}
     <span><i class="sw" style="background:#2c3a4a"></i>↔ Câble branché, pas de lien <b>${cabled.length}</b></span>
     ${faulty.length ? `<span><i class="sw" style="background:#4a2626;box-shadow:inset 0 0 0 2px #c9302c"></i>Câble en défaut <b>${faulty.length}</b></span>` : ''}
     <span><i class="sw" style="background:repeating-linear-gradient(135deg,#5a2422 0 3px,#4a1d1b 3px 6px)"></i>Désactivé <b>${count('off')}</b></span>
@@ -1080,8 +1165,11 @@ function portInfo(p) {
   else if (named) name = named.chassis;
   else if (withIp.length && ips[withIp[0]].name) name = ips[withIp[0]].name;
   else if (macs.length) name = macs.length > 1 ? `${macs.length} appareils` : 'Appareil sans nom';
-  const cab = pState(p) === 'down' ? cableOf(p.port) : null;
-  if (!name && cab && cab.kind !== 'empty') name = { open: `Câble ${cab.len} m, rien au bout`, good: `Câble ${cab.len} m, appareil éteint`, fault: `Câble en défaut (~${cab.len} m)` }[cab.kind];
+  // Sans lien, le voisin LLDP reste parfois affiché par le switch : ce n'est plus l'appareil branché.
+  if (!p.up && name) { sub = [`dernier appareil vu : ${name}`, sub].filter(Boolean).join(' · '); name = ''; }
+  const cab = pState(p) === 'down' ? cableOf(p.port) : null, unk = pState(p) === 'down' && !cab ? cableUnknown(p) : null;
+  if (cab && (cab.kind !== 'empty' || sub)) name = { empty: 'Rien de branché', open: `Câble ${cab.len} m, rien au bout`, good: `Câble ${cab.len} m, appareil éteint`, partial: `Câble ${cab.len} m, paire ouverte`, fault: `Câble en défaut (~${cab.len} m)` }[cab.kind];
+  if (unk) { name = 'Câble à vérifier'; sub = [unkText(p, unk), sub].filter(Boolean).join(' · '); }
   const ip = withIp.length ? ips[withIp[0]].ip : '';
   return { name, sub: [sub, p.desc].filter(Boolean).join(' · '), ip, ipMore: Math.max(0, withIp.length - 1), mac: macs[0] || '', macMore: Math.max(0, macs.length - 1),
     text: [p.port, portNum(p.port), name, sub, p.desc, ...macs, ...withIp.map((m) => ips[m].ip), ...withIp.map((m) => ips[m].name || '')].join(' ').toLowerCase() };
@@ -1119,9 +1207,9 @@ $('#portSearch').addEventListener('input', (e) => { portQuery = e.target.value.t
 function portRow(p, info) {
   const st = pState(p), errs = (p.rx_errors || 0) + (p.tx_errors || 0) + (p.rx_drops || 0) + (p.tx_drops || 0);
   const dash = '<span class="muted">-</span>';
-  return `<tr class="click${selected === p.port ? ' sel' : ''}${st === 'down' && !info.mac ? ' is-free' : ''}" data-port="${esc(p.port)}">
+  return `<tr class="click${selected === p.port ? ' sel' : ''}${stInfo(p).cls === 'down' && !info.mac ? ' is-free' : ''}" data-port="${esc(p.port)}">
     <td class="mono">${portNum(p.port)}</td>
-    <td>${stpBlocked(p) ? '<span class="status blocked">Bloqué (STP)</span>' : `<span class="status ${st}">${pLabel[st]}</span>`}${st === 'idle' ? ` <span class="muted">${fmtDur(quietFor(p))}</span>` : sinceText(p) ? ` <span class="muted">${sinceText(p)}</span>` : ''}</td>
+    <td>${stpBlocked(p) ? '<span class="status blocked">Bloqué (STP)</span>' : `<span class="status ${stInfo(p).cls}">${stInfo(p).label}</span>`}${st === 'idle' ? ` <span class="muted">${fmtDur(quietFor(p))}</span>` : sinceText(p) ? ` <span class="muted">${sinceText(p)}</span>` : ''}</td>
     <td class="num">${p.speed ? `<span class="${isSlow(p) ? 'speed-slow' : ''}">${esc(p.speed)} Mb/s</span>` : (p.reason === 'No XCVR installed' ? '<span class="muted">pas de module</span>' : dash)}</td>
     <td class="num">${esc(p.vlan)}${p.mode === 'trunk' ? ' <span class="badge">trunk</span>' : ''}</td>
     <td class="dev">${info.name ? esc(info.name) : dash}${isUplink(p) ? ' <span class="badge">⇅ switch</span>' : ''}${info.sub ? `<span class="sub">${esc(info.sub)}</span>` : ''}</td>
@@ -1140,16 +1228,18 @@ function renderPorts() {
   const hit = rows.filter((r) => !portQuery || r.info.text.includes(portQuery));
   hit.sort((x, y) => { const a = sortVal(x.p, x.info, portSort.key), b = sortVal(y.p, y.info, portSort.key);
     return (a < b ? -1 : a > b ? 1 : portNum(x.p.port) - portNum(y.p.port)) * (a === b ? 1 : portSort.dir); });
-  // ports libres (sans lien ni appareil) repliés, sauf pendant une recherche
-  const isFree = (r) => pState(r.p) === 'down' && !r.info.mac;
+  // ports libres repliés, sauf pendant une recherche. Libre = sans lien ni appareil, et sans câble d'après
+  // un test récent : les ports à vérifier et ceux avec un câble restent visibles.
+  const isFree = (r) => pState(r.p) === 'down' && !r.info.mac && (r.p.type !== '1GbT' || cableOf(r.p.port)?.kind === 'empty');
   const main = portQuery || showFree ? hit : hit.filter((r) => !isFree(r));
-  const free = hit.filter(isFree), cabled = free.filter((r) => { const c = cableOf(r.p.port); return c && c.kind !== 'empty'; }).length;
+  const free = hit.filter(isFree);
   let html = main.map((r) => portRow(r.p, r.info)).join('');
-  if (!portQuery && free.length) html += `<tr class="free-toggle" data-free><td colspan="${PORT_COLS.length}">${showFree ? '▲ Replier les ports libres' : `▼ ${free.length} port${free.length > 1 ? 's' : ''} libre${free.length > 1 ? 's' : ''}${cabled ? ` (dont ${cabled} avec un câble branché)` : ''} · afficher`}</td></tr>`;
+  if (!portQuery && free.length) html += `<tr class="free-toggle" data-free><td colspan="${PORT_COLS.length}">${showFree ? '▲ Replier les ports libres' : `▼ ${free.length} port${free.length > 1 ? 's' : ''} libre${free.length > 1 ? 's' : ''} · afficher`}</td></tr>`;
   if (!html) html = `<tr><td colspan="${PORT_COLS.length}" class="empty">Aucun résultat pour « ${esc(portQuery)} ».</td></tr>`;
   setHTML($('#portRows'), html);
   const used = rows.filter((r) => !isFree(r)).length;
-  $('#portCount').textContent = portQuery ? `${hit.length} résultat${hit.length > 1 ? 's' : ''}` : `${used} utilisés · ${rows.length - used} libres`;
+  const toCheck = rows.filter((r) => stInfo(r.p).cls === 'unk').length;
+  $('#portCount').textContent = portQuery ? `${hit.length} résultat${hit.length > 1 ? 's' : ''}` : `${used - toCheck} utilisés · ${rows.length - used} libres${toCheck ? ` · ${toCheck} à vérifier` : ''}`;
   // appareils vus sur le réseau mais pas branchés directement sur ce switch
   const onSwitch = new Set((S.macs || []).map((m) => m.mac));
   const elsewhere = Object.entries(S.ips || {}).filter(([mac, v]) => !onSwitch.has(mac) && v.ip !== S.mgmt_ip && v.ip !== DIAG?.ip?.replace(/\/\d+$/, '')).map(([, v]) => v.ip).sort((a, b) => ipNum(a) - ipNum(b));
@@ -1269,7 +1359,51 @@ function cableStale(port, t) {
 const CABLE_MAX_AGE = 7 * 86400;
 function cableOf(port) {
   const c = S?.cables?.[port];
-  return c && NOW - c.t < CABLE_MAX_AGE && !cableStale(port, c.t) ? { ...c, ...cableKind(c.rows) } : null;
+  return c?.rows?.length && NOW - c.t < CABLE_MAX_AGE && !cableStale(port, c.t) ? { ...c, ...cableKind(c.rows) } : null;
+}
+// Port sans lien sans test valable : impossible de dire s'il est libre. Renvoie la raison, ou null.
+function cableUnknown(p) {
+  if (pState(p) !== 'down' || p.type !== '1GbT' || cableOf(p.port)) return null;
+  const c = S?.cables?.[p.port];
+  if (!c?.rows?.length) return { why: 'never' };
+  return { why: cableStale(p.port, c.t) ? 'stale' : 'old', prev: { ...c, ...cableKind(c.rows) } };
+}
+const CABLE_TXT = { empty: 'rien de branché', open: 'câble ~{len} m', good: 'câble ~{len} m', partial: 'câble ~{len} m', fault: 'câble en défaut' };
+function unkText(p, u) {
+  const when = (t) => new Date(t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const prev = u.prev && CABLE_TXT[u.prev.kind].replace('{len}', u.prev.len ?? '?');
+  const txt = u.why === 'never' ? 'jamais testé'
+    : u.why === 'stale' ? `${prev} au test du ${when(u.prev.t)}, mais le port a changé d’état depuis`
+    : `dernier test trop ancien (${when(u.prev.t)})`;
+  return txt + (pendingFor(p.port) ? ' · vérification en cours' : SETTINGS?.autoCable !== false ? ' · vérification automatique' : '');
+}
+
+// Vérification automatique des câbles, par petits lots, quand le dashboard est ouvert :
+// d'abord les ports sans test valable (jamais testés, branchés ou débranchés depuis), puis une revérification
+// toutes les 2 h des autres (un câble branché sans rien au bout ne provoque aucun événement sur le switch).
+// Sans risque : ces ports n'ont pas de lien, le test ne coupe rien. Désactivable dans les réglages.
+const CABLE_RECHECK = 2 * 3600, CABLE_RETRY = 600, CABLE_BATCH = 4;
+let cableAsked = 0;
+function cablePorts(c) { // ports testés par une commande
+  return [...String(c.cmd || '').matchAll(/^diag cable-diagnostic test (\S+)$/gm)].map((m) => m[1]);
+}
+async function maybeCableCheck() {
+  if (!S || !DIAG || !SETTINGS || SETTINGS.autoCable === false || $('#app').hidden || document.hidden) return;
+  if (NOW - (S.received || 0) > 90 || NOW - DIAG.t > 900) return; // agent muet ou relevé trop ancien pour juger
+  // jamais devant une commande de l'utilisateur, et un seul lot à la fois
+  if (LOG.some((c) => ['pending', 'running', 'confirm'].includes(c.status) && (!isAuto(c) || c.kind === 'auto:cable'))) return;
+  if (Date.now() / 1000 - cableAsked < 60) return;
+  const tried = {}; // dernier test lancé sur chaque port, toutes pages confondues (le journal est partagé)
+  for (const c of LOG) for (const port of cablePorts(c)) tried[port] = Math.max(tried[port] || 0, c.created);
+  const todo = (S.ports || []).filter((p) => pState(p) === 'down' && p.type === '1GbT' && !isUplink(p))
+    .map((p) => ({ port: p.port, unk: Boolean(cableUnknown(p)), age: S.cables?.[p.port]?.t ? NOW - S.cables[p.port].t : Infinity }))
+    .filter((x) => (x.unk || x.age > CABLE_RECHECK) && NOW - (tried[x.port] || 0) > CABLE_RETRY)
+    .sort((a, b) => b.unk - a.unk || b.age - a.age)
+    .slice(0, CABLE_BATCH).map((x) => x.port);
+  if (!todo.length) return;
+  cableAsked = Date.now() / 1000;
+  const cmd = ['diagnostics', ...todo.flatMap((p) => [`diag cable-diagnostic test ${p}`, 'y', `diag cable-diagnostic show ${p}`])].join('\n');
+  try { await api('/api/command', { cmd, label: `Vérification des câbles (ports ${todo.map(portNum).join(', ')})`, kind: 'auto:cable' }); setTimeout(poll, 800); } catch {}
 }
 function cableVerdict(rows, p) {
   if (!rows.length) return null;
@@ -1291,13 +1425,17 @@ function renderPanel(force) {
   const n = portNum(p.port), st = pState(p), uplink = isUplink(p);
   const lldp = (S.lldp || []).filter((l) => l.port === p.port);
   const macs = (S.macs || []).filter((m) => m.port === p.port), ips = S.ips || {};
-  const cableRun = LOG.find((c) => c.kind === `cable:${p.port}` || (c.kind === 'cablescan' && (c.ports || []).includes(p.port)));
+  const cableRun = LOG.find((c) => c.kind === `cable:${p.port}` || (['cablescan', 'auto:cable'].includes(c.kind) && (c.ports || []).includes(p.port)));
   const stored = S.cables?.[p.port];
   const runT = cableRun && (cableRun.finished || cableRun.created);
   const staleT = stored?.rows?.length ? (cableStale(p.port, stored.t) ? stored.t : null) : (runT && cableStale(p.port, runT) ? runT : null);
   const cableRows = staleT ? [] : stored?.rows?.length ? stored.rows : (cableRun && cableRun.status === 'done' ? parseCable(OUT[cableRun.id]) : []);
   const fmtHM = (t) => new Date(t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-  const staleNote = staleT ? `<div class="alert" style="margin:0;background:var(--surface-2);color:var(--text-2)">Le dernier test (${fmtHM(staleT)}) date d’avant le dernier changement du port (${fmtHM(DIAG.ports[p.port].last)}) : il n’est plus valable. Relance le test pour un résultat à jour.</div>` : '';
+  const autoNote = SETTINGS?.autoCable !== false && st === 'down' && !uplink ? ' La vérification automatique va le refaire dans quelques instants.' : ' Relance le test pour un résultat à jour.';
+  const unk = cableUnknown(p);
+  const staleNote = staleT ? `<div class="alert amber" style="margin:0">Le dernier test (${fmtHM(staleT)}) date d’avant le dernier changement du port (${fmtHM(DIAG.ports[p.port].last)}) : il n’est plus valable${st === 'down' ? ', on ne sait pas si un câble est branché' : ''}.${st === 'down' ? autoNote : ''}</div>`
+    : unk?.why === 'never' && !cableRows.length ? `<div class="alert amber" style="margin:0">Ce port n’a jamais été testé : sans lien, impossible de savoir s’il y a un câble.${autoNote}</div>`
+    : unk?.why === 'old' ? `<div class="alert amber" style="margin:0">Le dernier test (${fmtHM(unk.prev.t)}) est trop ancien pour être fiable.${autoNote}</div>` : '';
   const verdict = cableVerdict(cableRows, p);
   const alerts = [
     st === 'idle' && `<div class="alert amber"><b>Câble branché mais aucun paquet reçu depuis ${fmtDur(quietFor(p))}.</b><br>L’appareil est sans doute éteint ou en veille, sa carte réseau est désactivée, ou le câble ne mène nulle part.</div>`,
@@ -1305,7 +1443,7 @@ function renderPanel(force) {
     (DIAG?.flaps?.[p.port] || 0) >= 4 && `<div class="alert amber"><b>Port instable : ${DIAG.flaps[p.port]} coupures en quelques minutes.</b><br>Câble ou prise défectueux, ou appareil qui redémarre en boucle.</div>`,
     isSlow(p) && `<div class="alert amber"><b>Lien négocié à ${esc(p.speed)} Mb/s au lieu de 1000.</b><br>Souvent, le PC est simplement en veille (sa carte réseau descend à 10 ou 100 Mb/s). S’il est allumé : câble abîmé, prise murale ou carte réseau ancienne. Lance un test de câble ci-dessous.</div>`,
   ].filter(Boolean).join('');
-  setHTML($('#ppTitle'), `Port ${n} <span class="status ${st}" style="font-size:12px">${pLabel[st]}</span>`);
+  setHTML($('#ppTitle'), `Port ${n} <span class="status ${stInfo(p).cls}" style="font-size:12px">${stInfo(p).label}</span>`);
   if (!$('#ppInfo')) $('#ppBody').innerHTML = '<div id="ppInfo"></div><div id="ppActions"></div>';
   setHTML($('#ppInfo'), `${alerts}
     <dl>
@@ -1323,7 +1461,7 @@ function renderPanel(force) {
       <dt>Erreurs · CRC</dt><dd class="num">${nf0.format((p.rx_errors || 0) + (p.tx_errors || 0))} · ${nf0.format(p.crc || 0)}</dd>
       <dt>Pertes ↓ / ↑</dt><dd class="num">${nf0.format(p.rx_drops || 0)} / ${nf0.format(p.tx_drops || 0)}</dd>
       <dt>Appareils</dt><dd>${macs.length ? macs.map((m) => `<span class="mono">${esc(m.mac)}</span>${ips[m.mac] ? ` · <b class="mono">${esc(ips[m.mac].ip)}</b>${ips[m.mac].name ? ` (${esc(ips[m.mac].name)})` : ''}` : ''}`).join('<br>') : '-'}</dd>
-      ${lldp.length ? `<dt>LLDP</dt><dd>${lldp.map((l) => esc(l.name || l.chassis)).join('<br>')}</dd>` : ''}
+      ${lldp.length ? `<dt>${p.up ? 'LLDP' : 'Dernier vu (LLDP)'}</dt><dd>${lldp.map((l) => esc(l.name || l.chassis)).join('<br>')}</dd>` : ''}
     </dl>
     <button class="btn small" id="ppHist">Voir l’historique de ce port</button>`);
   setHTML($('#ppActions'), `
@@ -1440,7 +1578,7 @@ async function send(cmd, label = '', opts = {}) {
 }
 const PORTS_OF = {};
 const _track = trackCommands;
-trackCommands = (log) => { for (const c of log) c.ports = PORTS_OF[c.id] || c.ports || []; _track(log); };
+trackCommands = (log) => { for (const c of log) c.ports = PORTS_OF[c.id] || (c.ports?.length ? c.ports : cablePorts(c)); _track(log); };
 
 window.answer = (id, a, btn) => busy(btn, async () => {
   try {
@@ -1501,6 +1639,7 @@ function fillSettings() {
   $('#alHook').value = s.webhook || '';
   $('#alPortDown').checked = s.notify.portDown; $('#alTemp').checked = s.notify.temp; $('#alAgent').checked = s.notify.agentOffline;
   $('#alSlow').checked = s.notify.slowLink; $('#alIdle').checked = s.notify.idleLink; $('#alTempMax').value = s.tempMax;
+  $('#alAutoCable').checked = s.autoCable !== false;
   watchSel = s.watchPorts ? new Set(s.watchPorts) : null;
   renderWatch();
 }
@@ -1523,11 +1662,11 @@ $('#alertForm').addEventListener('submit', (e) => {
     try {
       const d = await api('/api/settings', {
         email: $('#alEmail').value, webhook: $('#alHook').value, tempMax: $('#alTempMax').value,
-        watchPorts: watchSel ? [...watchSel] : null,
+        watchPorts: watchSel ? [...watchSel] : null, autoCable: $('#alAutoCable').checked,
         notify: { portDown: $('#alPortDown').checked, temp: $('#alTemp').checked, agentOffline: $('#alAgent').checked, slowLink: $('#alSlow').checked, idleLink: $('#alIdle').checked },
       });
       SETTINGS = d.settings; fillSettings(); renderAlerts(); $('#alertDialog').close();
-      toast('Alertes enregistrées', { type: 'success', sub: 'L’agent les applique à sa prochaine mise à jour.' });
+      toast('Réglages enregistrés', { type: 'success', sub: 'L’agent applique les alertes à sa prochaine mise à jour.' });
     } catch (err) { if (err.message !== '401') toast('Impossible d’enregistrer', { type: 'error', sub: err.message }); }
   });
 });

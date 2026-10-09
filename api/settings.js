@@ -21,6 +21,7 @@ export default async function handler(req, res) {
     watchPorts: watch && watch.length ? watch : null,
     tempMax: Math.min(95, Math.max(40, Number(b.tempMax) || DEFAULT_SETTINGS.tempMax)),
     notify: Object.fromEntries(Object.keys(DEFAULT_SETTINGS.notify).map((k) => [k, Boolean(b.notify?.[k])])),
+    autoCable: b.autoCable === undefined ? DEFAULT_SETTINGS.autoCable : Boolean(b.autoCable),
   };
   const r = redis();
   await r.set(K.settings, settings);
