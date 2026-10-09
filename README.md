@@ -10,6 +10,11 @@ Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé
 
 > Créé par **Ethan** ([@ethanfrq](https://github.com/ethanfrq)).
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/captures/apercu-sombre.png">
+  <img alt="Aperçu du dashboard : indicateurs, façade du switch, débit et alertes" src="docs/captures/apercu-clair.png">
+</picture>
+
 ---
 
 ## Fonctionnalités
@@ -36,6 +41,36 @@ Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé
 ### Confort
 - Mode clair / sombre, indicateurs de chargement et notifications sur chaque action.
 - Confirmation obligatoire, avec les lignes exactes envoyées au switch, avant toute modification.
+
+---
+
+## Captures d’écran
+
+*Toutes les captures utilisent des données de démonstration (noms, adresses IP et MAC fictifs).*
+
+**Façade en direct** : ports actifs (vert), sans trafic (ambre), câble branché sans lien (bleu, avec sa longueur), câble en défaut (rouge).
+
+![Façade du switch](docs/captures/facade.png)
+
+**Ports et appareils** : un tableau unique avec nom, IP, MAC, débits et erreurs, recherche et tri.
+
+![Tableau des ports et appareils](docs/captures/ports-appareils.png)
+
+**Détail d’un port** : informations, actions (activer, redémarrer, description, VLAN) et test de câble paire par paire.
+
+![Panneau de détail d’un port avec test de câble](docs/captures/port-detail.png)
+
+**Historique** : débit total ou par port sur 1 h, 24 h, 7 jours ou 30 jours.
+
+![Historique du débit sur 24 heures](docs/captures/historique.png)
+
+**VLAN et console** : chaque VLAN avec sa mini-façade, et une console qui exécute n’importe quelle commande du switch.
+
+![Carte VLAN et console de gestion](docs/captures/vlan-console.png)
+
+**Alertes** : e-mail et/ou webhook, ports surveillés, seuil de température.
+
+![Réglages des alertes](docs/captures/alertes.png)
 
 ---
 
