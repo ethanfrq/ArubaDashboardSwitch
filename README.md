@@ -148,6 +148,10 @@ Ouvre l’URL de ton projet Vercel, connecte-toi, puis règle les alertes avec l
   blocage de 15 minutes après 8 essais ratés.
 - L’agent s’authentifie avec `AGENT_TOKEN` ; la vérification planifiée avec la signature QStash.
 - Le mot de passe SSH du switch **ne quitte jamais le PC de l’agent** : il y est chiffré par Windows (DPAPI).
+- Toute modification passe par une fenêtre qui affiche les lignes exactes envoyées au switch.
+- Les commandes dangereuses (redémarrage, effacement, comptes, IP de gestion, liens vers d’autres switches,
+  port du PC de l’agent…) exigent une **seconde confirmation imposée par le serveur** :
+  jeton à usage unique valable 2 minutes et saisie du mot CONFIRMER.
 - Aucun secret n’est versionné (`.env*`, `agent_config.json` et `agent_secret.bin` sont exclus).
 
 > Le dashboard donne un accès administrateur au switch depuis internet : choisis un mot de passe solide,
