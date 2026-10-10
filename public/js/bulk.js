@@ -89,7 +89,7 @@
     title: 'Sélectionne plusieurs ports d’un simple clic (pratique sur mobile) pour les modifier ensemble. Sur ordinateur : Maj+clic ou Ctrl+clic sur les ports.',
     open: () => setMode(!mode) };
   function setMode(on) {
-    mode = Boolean(on) && canAdmin();
+    mode = Boolean(on) && canOperate();
     tool.badge = mode ? 'activée' : '';
     renderTools(); note(); changed();
     if (mode) toast('Sélection multiple activée', { sub: 'Touche les ports à sélectionner. Termine avec × dans la barre du bas.', timeout: 3500 });
@@ -99,7 +99,7 @@
   // Clics sur la façade et le tableau : écouteurs en phase de capture, avant celui qui ouvre le volet du port.
   const modKey = (e) => e.shiftKey || e.ctrlKey || e.metaKey;
   function onDown(e) {
-    if (e.button !== 0 || !canAdmin()) return;
+    if (e.button !== 0 || !canOperate()) return;
     const b = e.target.closest?.('[data-port]'); if (!b) return;
     if (!modKey(e) && !mode) return;
     e.stopPropagation(); // le volet du port ne s'ouvre pas
@@ -109,12 +109,12 @@
   function onClick(e) {
     const b = e.target.closest?.('[data-port]'); if (!b) return;
     if (handled && handled.port === b.dataset.port && Date.now() - handled.t < 2000) { handled = null; e.stopPropagation(); return; }
-    if (!canAdmin() || (!modKey(e) && !mode)) return;
+    if (!canOperate() || (!modKey(e) && !mode)) return;
     e.stopPropagation(); e.preventDefault();
     toggle(b.dataset.port);
   }
   function onMouseDown(e) { // Maj+clic : pas de sélection de texte dans le tableau
-    if (e.button === 0 && canAdmin() && (modKey(e) || mode) && e.target.closest?.('[data-port]')) e.preventDefault();
+    if (e.button === 0 && canOperate() && (modKey(e) || mode) && e.target.closest?.('[data-port]')) e.preventDefault();
   }
   function onMenu(e) { // Ctrl+clic sur Mac ouvre aussi le menu contextuel
     if (handled && Date.now() - handled.t < 1500 && e.target.closest?.('[data-port]')) e.preventDefault();
@@ -179,7 +179,7 @@ body.bulk-on .drawer { bottom: 84px; }
   bar.addEventListener('click', onBar);
 
   function renderBar() {
-    const show = canAdmin() && (sel.size > 0 || mode);
+    const show = canOperate() && (sel.size > 0 || mode);
     bar.hidden = !show;
     document.body.classList.toggle('bulk-on', show);
     if (!show) return;
@@ -191,7 +191,7 @@ body.bulk-on .drawer { bottom: 84px; }
         <span class="bulk-list"${n ? ` title="Ports ${esc(portsText(nums))}"` : ''}>${n ? esc(portsText(nums)) : 'touche les ports à sélectionner'}</span></div>
       <div class="bulk-acts">
         ${btn('enable', 'Activer')}${btn('disable', 'Désactiver', ' danger')}${btn('bounce', 'Redémarrer', '', 'Coupe puis réactive chaque port (environ 3 s)')}
-        ${btn('vlan', 'VLAN…')}${btn('desc', 'Description…')}${prof ? btn('profile', 'Profil…') : ''}
+        ${btn('vlan', 'VLAN…')}${btn('desc', 'Description…')}${prof && canAdmin() ? btn('profile', 'Profil…') : ''}
         ${wake ? btn('wake', 'Allumer', '', 'Allume les appareils connus de ces ports (Wake-on-LAN)') : ''}
         ${btn('cable', 'Tester les câbles', '', 'Seulement les ports cuivre sans lien : aucun appareil n’est coupé')}
         <span class="bulk-sep" aria-hidden="true"></span>
@@ -203,7 +203,7 @@ body.bulk-on .drawer { bottom: 84px; }
 
   function onBar(e) {
     const b = e.target.closest?.('[data-bulk]');
-    if (!b || b.disabled || !canAdmin()) return;
+    if (!b || b.disabled || !canOperate()) return;
     const run = {
       clear,
       close: () => { sel.clear(); if (mode) setMode(false); else changed(); },
@@ -423,7 +423,7 @@ body.bulk-on .drawer { bottom: 84px; }
 
   Object.assign(ADMIN, {
     selection: () => asPorts(selNums()),
-    selectPorts: (ports, on = true) => { if (!canAdmin()) return; for (const n of toNums(ports)) { if (on) sel.add(`1/1/${n}`); else sel.delete(`1/1/${n}`); } changed(); },
+    selectPorts: (ports, on = true) => { if (!canOperate()) return; for (const n of toNums(ports)) { if (on) sel.add(`1/1/${n}`); else sel.delete(`1/1/${n}`); } changed(); },
     clearSelection: () => { sel.clear(); changed(); },
     bulkCmd,
   });

@@ -73,16 +73,22 @@ Everything is set from the **Administration** card and the ⚙ settings:
 - **Port diagnosis** (clear steps and a one-sentence conclusion) and a **"device not working?"** troubleshooting guide.
 - **Health check**: unsaved configuration, protections on user ports, NTP, default SNMP community,
   unused ports, cables, slow or unstable ports, and more, with one-click fixes.
-- **Settings**: site name, time zone, agent pace, alerts, read-only access, two-factor authentication.
+- **Settings**: site name, time zone, agent pace, alerts.
+- **Sidebar** to move between the dashboard, the tools and the account pages, on a computer or a phone.
 
-### Two access levels
-- **Administrator**: the whole dashboard, commands included. Protected by a password and, once enabled,
-  by **two-factor authentication**: a 6-digit code from an app such as Google Authenticator or
-  Microsoft Authenticator, with single-use recovery codes.
-- **Read-only**, for a monitoring screen: a second password, set in the settings, gives access to everything
-  on display without any command. This is enforced by the server, not only by the page. The session lasts 30 days and
-  the screen refreshes every 30 s without forcing the agent into real-time mode, to stay within the free plans.
-- **Monitoring view**: a button lets the administrator hide every command without logging out.
+### User accounts and roles
+One account per person, each with their own password, and every action signed in the **activity log**.
+- **Administrator**: everything, including accounts.
+- **Technician**: works on access ports (enable, shut down, restart, description, VLAN, cable test, Wake-on-LAN,
+  ping, device names, patch plan). No console, no settings, no accounts, and never a link to another switch.
+  The server checks every command line by line.
+- **Read-only**: sees everything on display, changes nothing. Ideal for a wall screen (30-day session, refresh every 30 s).
+- **Users** page: create an account with an **invitation link** (valid 48 h, the person chooses their password;
+  sent by e-mail when Resend is set up) or with a password you choose; change the role, require two-factor
+  authentication, send a new-password link, close sessions, disable or delete.
+- **My profile**: name, e-mail, alerts by e-mail, password, **two-factor authentication** (6-digit code from an app
+  such as Google Authenticator or Microsoft Authenticator, with single-use recovery codes), log out other devices, theme.
+- **Monitoring view**: a button hides every command without logging out.
 
 ### Alerts
 - By **e-mail** (Resend) and/or **webhook** (Teams, Slack, Discord, ntfy for your phone, and others).
@@ -222,26 +228,29 @@ Download the ready-to-use agent from the [latest release](https://github.com/eth
    and updates itself from the versions published on GitHub.
 
 ### 4. First settings
-Open the URL of your Vercel project and log in with `DASHBOARD_PASSWORD`. Then, in ⚙ **Réglages** (settings):
-- **enable two-factor authentication**: scan the QR code with an app (Google Authenticator, Microsoft Authenticator, and so on)
-  and keep the recovery codes somewhere safe; each one works only once;
-- set up the alerts (e-mail, webhook, monitored ports, temperature threshold);
-- for a monitoring screen, set a password in **Accès lecture seule** (read-only access) and log the screen in with it.
+Open the URL of your Vercel project and log in with the identifier **`admin`** and `DASHBOARD_PASSWORD`. Then:
+- in **Mon profil** (my profile): enter your name and e-mail, choose your own password and **enable two-factor
+  authentication** (scan the QR code, keep the recovery codes somewhere safe; each one works only once);
+- in **Réglages** (settings): set up the alerts (e-mail, webhook, monitored ports, temperature threshold);
+- in **Utilisateurs** (users): create one account per person, and a read-only account for a monitoring screen.
+
+`DASHBOARD_PASSWORD` stays valid for the `admin` account as a **backup password**: keep it long and secret.
 
 ---
 
 ## Security
 
 ### What is in place
-- Password-protected page; signed session (`HttpOnly`, `Secure`, `SameSite=Strict` cookie);
-  15-minute lockout after 8 failed attempts.
-- **Two-factor authentication** (TOTP) for the administrator account, enabled in ⚙ settings,
-  with single-use recovery codes.
+- One account per person, passwords stored hashed (scrypt, 10 characters minimum); signed session (`HttpOnly`,
+  `Secure`, `SameSite=Strict` cookie); 15-minute lockout after 8 failed attempts.
+- Disabling an account, changing its password or closing its sessions logs it out everywhere immediately.
+- **Two-factor authentication** (TOTP) per account, with single-use recovery codes; an administrator can require it.
+- **Activity log**: logins (and refused attempts), account changes, commands and settings, with who and when.
 - The agent authenticates with `AGENT_TOKEN`. The switch SSH password **never leaves the agent's PC**:
   it is encrypted there by Windows (DPAPI).
-- Read-only access is checked by the server on every request: no command except automatic readings (checked line by line),
-  no settings, no command history, no configuration diff details. Its password is stored hashed (scrypt);
-  changing or disabling it logs out the screens already connected.
+- Roles are checked by the server on every request. Read-only: no command except automatic readings (checked line
+  by line), no command history, no configuration diff details. Technician: only the port commands listed above,
+  checked line by line, never on a link to another switch and never a sensitive command.
 - Every change goes through a window that shows the exact lines sent to the switch.
 - AOS-CX abbreviations ("int 1/1/24", "shu", and so on) are recognized: they cannot bypass the second confirmation.
   Tabs and control characters are refused; typed text (description, name) cannot add a command line.
@@ -257,10 +266,14 @@ Open the URL of your Vercel project and log in with `DASHBOARD_PASSWORD`. Then, 
 - Your data stays in your own Vercel and Supabase accounts: the author of the project has no access to it.
 
 ### Lost phone (two-factor authentication)
-Use one of the recovery codes. If you have none left: open the database in Supabase (from Vercel: **Storage** tab,
+Use one of the recovery codes. If you have none left, another administrator resets it from **Utilisateurs**
+(button **Gérer**). If you are the only administrator: open the database in Supabase (from Vercel: **Storage** tab,
 your database, then **Open in Supabase**), go to the **Table Editor**, open the `mam_kv` table and delete the row
-whose key is `mam:totp`. Two-factor authentication is then disabled: log in with the password
-and enable it again right away with your new phone.
+whose key is `mam:totp:owner`. Log in with `admin` and the password, then enable it again with your new phone.
+
+### Forgotten password
+An administrator sends a new-password link from **Utilisateurs**. For the `admin` account,
+`DASHBOARD_PASSWORD` (Vercel settings) always works as a backup password.
 
 ### Recommendations
 - Choose a **strong, unique** administrator password, different from the switch password.
@@ -269,7 +282,7 @@ and enable it again right away with your new phone.
   (WireGuard, Tailscale) rather than exposed publicly. In Vercel mode the page is, by design, reachable
   from the internet: the password and two-factor authentication are therefore essential. The local mode planned
   in the [roadmap](#roadmap) will allow access restricted to the local network or a VPN.
-- Do not share the URL needlessly; for a display screen, use read-only access.
+- Do not share the URL needlessly; give each person the smallest role that is enough, and a read-only account to a display screen.
 - Download the important configuration backups regularly: the Supabase free plan
   does not back up the database automatically.
 
@@ -310,7 +323,7 @@ Planned next steps, with no set date:
 | `public/js/` | the administration features on the page side, one per file |
 | `public/vendor/` | third-party library served with the page (QR code for two-factor authentication) |
 | `api/` | Vercel functions (Node 24) |
-| `lib/` | database (Supabase, Postgres), authentication and roles (administrator, read-only, two-factor), notifications |
+| `lib/` | database (Supabase, Postgres), accounts, roles (administrator, technician, read-only), two-factor authentication, activity log, notifications |
 | `lib/features/` | the server side of the administration features |
 | `agent/` | the Python agent, its automatic update and its installation as a Windows service |
 | `docs/` | screenshots and presentation video |

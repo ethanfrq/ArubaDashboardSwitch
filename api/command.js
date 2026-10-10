@@ -4,19 +4,23 @@ import { enqueue } from '../lib/queue.js';
 import { wrapCommand } from '../lib/features/index.js';
 import { requireSession } from '../lib/auth.js';
 import { analyze } from '../lib/danger.js';
-import { viewerCommandOk } from '../lib/readonly.js';
+import { viewerCommandOk, techCommandOk, isAutoKind } from '../lib/readonly.js';
+import { audit } from '../lib/users.js';
 
 export default async function handler(req, res) {
   const s = await requireSession(req, res);
   if (!s) return;
   if (req.method !== 'POST') return res.status(405).end();
   const r = store();
-  const admin = s.role === 'admin';
-  const denied = () => res.status(403).json({ error: 'Accès en lecture seule : action réservée à l’administrateur.' });
+  const admin = s.role === 'admin', staff = s.staff;
+  const denied = (msg) => res.status(403).json({ error: msg || (staff ? 'Commande réservée à un administrateur.' : 'Accès en lecture seule : aucune modification possible.') });
+  // Double authentification exigée mais pas encore activée : seuls les relevés automatiques passent.
+  const need2fa = s.need2fa && !isAutoKind(String(req.body?.kind ?? ''));
+  if (need2fa) return res.status(403).json({ error: 'Active d’abord la double authentification dans « Mon profil ».', need2fa: true });
 
   // Réponse à une question oui/non posée par le switch.
   if (req.body?.answer_to) {
-    if (!admin) return denied();
+    if (!staff) return denied();
     const answer = req.body.answer === 'y' ? 'y' : 'n';
     await r.set(K.answer(String(req.body.answer_to)), answer, { ex: 180 });
     await r.set(K.busy, 1, { ex: 90 });
@@ -35,7 +39,9 @@ export default async function handler(req, res) {
   const kind = String(req.body?.kind ?? '').slice(0, 40);
   const state = await r.get(K.state);
   // Lecture seule : uniquement les relevés automatiques du dashboard, vérifiés ligne par ligne.
-  if (!admin && !viewerCommandOk(cmd, kind, state)) return denied();
+  // Technicien : actions sur les ports d'accès (voir techCommandOk).
+  if (s.role === 'viewer' && !viewerCommandOk(cmd, kind, state)) return denied();
+  if (s.role === 'tech' && !techCommandOk(cmd, kind, state)) return denied('Commande réservée à un administrateur : un technicien agit seulement sur les ports d’accès (activer, couper, redémarrer, description, VLAN, test de câble).');
   // Lignes « # » : actions faites par l'agent lui-même (allumer un PC, ping), arguments strictement contrôlés.
   const bad = cmd.split('\n').map((l) => l.trim()).find((l) => l.startsWith('#') && !AGENT_LINE.test(l));
   if (bad) return res.status(400).json({ error: `Action d’agent inconnue : ${bad.slice(0, 60)}` });
@@ -51,6 +57,7 @@ export default async function handler(req, res) {
   }
   // Commande dangereuse : refus tant qu'elle n'a pas été confirmée une seconde fois (jeton à usage unique).
   const reasons = analyze(cmd, state);
+  if (reasons.length && !admin) return denied('Commande sensible : réservée à un administrateur.');
   if (reasons.length) {
     const hash = crypto.createHash('sha256').update(cmd).digest('hex');
     const token = req.body?.danger_token ? String(req.body.danger_token) : null;
@@ -64,8 +71,10 @@ export default async function handler(req, res) {
 
   // Les fonctions d'administration peuvent compléter la commande (ex. point de restauration avant un changement).
   const id = crypto.randomUUID(), label = String(req.body?.label ?? '');
-  const wrapped = admin ? await wrapCommand({ r, id, cmd, kind, label, reasons, state }) : { cmd, meta: null };
-  res.json(await enqueue({ id, cmd: wrapped.cmd, label, kind, meta: wrapped.meta, realtime: admin }));
+  const wrapped = staff ? await wrapCommand({ r, id, cmd, kind, label, reasons, state }) : { cmd, meta: null };
+  const rec = await enqueue({ id, cmd: wrapped.cmd, label, kind, meta: wrapped.meta, realtime: staff, by: s.user.name });
+  if (staff && !isAutoKind(kind)) await audit(s.user, label || 'Commande', label ? cmd.split('\n').find((l) => !/^(configure terminal|end|exit)$/.test(l.trim()))?.slice(0, 120) || '' : cmd.slice(0, 160), req);
+  res.json(rec);
 }
 
 const MAC = '[0-9a-f]{2}(?::[0-9a-f]{2}){5}';

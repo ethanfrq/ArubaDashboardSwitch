@@ -72,16 +72,23 @@ Tout se règle depuis la carte **Administration** et les réglages ⚙ :
 - **Diagnostiquer un port** (étapes claires et conclusion en une phrase) et **« Un appareil ne marche pas ? »**.
 - **Bilan de santé** : configuration non sauvegardée, protections des postes, NTP, communauté SNMP par défaut,
   ports inutilisés, câbles, ports lents ou instables… avec correction en un clic.
-- **Réglages** : nom du site, fuseau horaire, rythme de l’agent, alertes, accès lecture seule, double authentification.
+- **Réglages** : nom du site, fuseau horaire, rythme de l’agent, alertes.
+- **Barre latérale** pour passer du tableau de bord aux outils et aux pages du compte, sur ordinateur comme sur téléphone.
 
-### Deux accès
-- **Administrateur** : tout le dashboard, commandes comprises. Protégé par un mot de passe et, une fois activée,
-  par la **double authentification** : un code à 6 chiffres donné par une appli comme Google Authenticator ou
-  Microsoft Authenticator, avec des codes de secours à usage unique.
-- **Lecture seule**, pour un écran de supervision : un second mot de passe, défini dans les réglages, donne accès à tout
-  l’affichage sans aucune commande. C’est le serveur qui l’impose, pas seulement la page. La session dure 30 jours et
-  l’écran se rafraîchit toutes les 30 s sans forcer l’agent en temps réel, pour rester dans les offres gratuites.
-- **Vue monitoring** : un bouton permet à l’administrateur de masquer toutes les commandes sans se déconnecter.
+### Comptes utilisateurs et rôles
+Un compte par personne, chacun avec son mot de passe, et chaque action signée dans le **journal d’activité**.
+- **Administrateur** : tout, y compris les comptes.
+- **Technicien** : agit sur les ports d’accès (activer, couper, redémarrer, description, VLAN, test de câble,
+  Wake-on-LAN, ping, noms des appareils, plan de brassage). Ni console, ni réglages, ni comptes, et jamais un lien vers
+  un autre switch. Le serveur vérifie chaque commande ligne par ligne.
+- **Lecture seule** : voit tout l’affichage, ne modifie rien. Idéal pour un écran mural (session de 30 jours, rafraîchi toutes les 30 s).
+- Page **Utilisateurs** : créer un compte par **lien d’invitation** (valable 48 h, la personne choisit son mot de passe ;
+  envoyé par e-mail si Resend est configuré) ou avec un mot de passe choisi ; changer le rôle, exiger la double
+  authentification, envoyer un lien de nouveau mot de passe, fermer ses sessions, désactiver ou supprimer.
+- **Mon profil** : nom, e-mail, alertes par e-mail, mot de passe, **double authentification** (code à 6 chiffres d’une
+  appli comme Google Authenticator ou Microsoft Authenticator, avec des codes de secours à usage unique),
+  déconnexion des autres appareils, thème.
+- **Vue monitoring** : un bouton masque toutes les commandes sans se déconnecter.
 
 ### Alertes
 - Par **e-mail** (Resend) et/ou **webhook** (Teams, Slack, Discord, ntfy pour le téléphone…).
@@ -221,26 +228,29 @@ Télécharge l’agent prêt à l’emploi depuis la [dernière version](https:/
    et se met à jour tout seul à partir des versions publiées sur GitHub.
 
 ### 4. Premiers réglages
-Ouvre l’URL de ton projet Vercel et connecte-toi avec `DASHBOARD_PASSWORD`. Puis, dans ⚙ **Réglages** :
-- **active la double authentification** : scanne le QR code avec une appli (Google Authenticator, Microsoft Authenticator…)
-  et range les codes de secours en lieu sûr, chacun ne sert qu’une fois ;
-- règle les alertes (e-mail, webhook, ports surveillés, seuil de température) ;
-- pour un écran de supervision, définis un mot de passe dans **Accès lecture seule** et connecte l’écran avec lui.
+Ouvre l’URL de ton projet Vercel et connecte-toi avec l’identifiant **`admin`** et `DASHBOARD_PASSWORD`. Puis :
+- dans **Mon profil** : indique ton nom et ton e-mail, choisis ton propre mot de passe et **active la double
+  authentification** (scanne le QR code, range les codes de secours en lieu sûr, chacun ne sert qu’une fois) ;
+- dans **Réglages** : règle les alertes (e-mail, webhook, ports surveillés, seuil de température) ;
+- dans **Utilisateurs** : crée un compte par personne, et un compte lecture seule pour un écran de supervision.
+
+`DASHBOARD_PASSWORD` reste valable pour le compte `admin` comme **mot de passe de secours** : garde-le long et secret.
 
 ---
 
 ## Sécurité
 
 ### Ce qui est en place
-- Page protégée par mot de passe ; session signée (cookie `HttpOnly`, `Secure`, `SameSite=Strict`) ;
-  blocage de 15 minutes après 8 essais ratés.
-- **Double authentification** (TOTP) pour le compte administrateur, à activer dans ⚙ Réglages,
-  avec des codes de secours à usage unique.
+- Un compte par personne, mots de passe stockés hachés (scrypt, 10 caractères au moins) ; session signée (cookie
+  `HttpOnly`, `Secure`, `SameSite=Strict`) ; blocage de 15 minutes après 8 essais ratés.
+- Désactiver un compte, changer son mot de passe ou fermer ses sessions le déconnecte partout, tout de suite.
+- **Double authentification** (TOTP) par compte, avec des codes de secours à usage unique ; un administrateur peut l’exiger.
+- **Journal d’activité** : connexions (et tentatives refusées), changements de comptes, commandes et réglages, avec qui et quand.
 - L’agent s’authentifie avec `AGENT_TOKEN`. Le mot de passe SSH du switch **ne quitte jamais le PC de l’agent** :
   il y est chiffré par Windows (DPAPI).
-- Accès lecture seule vérifié par le serveur sur chaque requête : aucune commande hors relevés automatiques (contrôlés ligne par ligne),
-  ni réglages, ni historique des commandes, ni détail des différences de configuration. Son mot de passe est stocké haché (scrypt) ;
-  le changer ou le désactiver déconnecte les écrans déjà connectés.
+- Rôles vérifiés par le serveur sur chaque requête. Lecture seule : aucune commande hors relevés automatiques (contrôlés
+  ligne par ligne), ni historique des commandes, ni détail des différences de configuration. Technicien : seulement les
+  commandes de port listées plus haut, contrôlées ligne par ligne, jamais sur un lien vers un autre switch ni une commande sensible.
 - Toute modification passe par une fenêtre qui affiche les lignes exactes envoyées au switch.
 - Les abréviations AOS-CX (« int 1/1/24 », « shu »…) sont reconnues : elles n’échappent pas à la seconde confirmation.
   Tabulation et caractères de contrôle sont refusés ; un texte saisi (description, nom) ne peut pas ajouter de ligne.
@@ -256,10 +266,14 @@ Ouvre l’URL de ton projet Vercel et connecte-toi avec `DASHBOARD_PASSWORD`. Pu
 - Les données restent dans tes propres comptes Vercel et Supabase : l’auteur du projet n’y a pas accès.
 
 ### Téléphone perdu (double authentification)
-Utilise un des codes de secours. Si tu n’en as plus : ouvre la base dans Supabase (depuis Vercel : onglet **Storage**,
+Utilise un des codes de secours. Si tu n’en as plus, un autre administrateur la réinitialise depuis **Utilisateurs**
+(bouton **Gérer**). Si tu es le seul administrateur : ouvre la base dans Supabase (depuis Vercel : onglet **Storage**,
 ta base, puis **Open in Supabase**), va dans le **Table Editor**, ouvre la table `mam_kv` et supprime la ligne
-dont la clé est `mam:totp`. La double authentification est alors désactivée : connecte-toi avec le mot de passe
-et réactive-la tout de suite avec ton nouveau téléphone.
+dont la clé est `mam:totp:owner`. Connecte-toi avec `admin` et le mot de passe, puis réactive-la avec ton nouveau téléphone.
+
+### Mot de passe oublié
+Un administrateur envoie un lien de nouveau mot de passe depuis **Utilisateurs**. Pour le compte `admin`,
+`DASHBOARD_PASSWORD` (réglages Vercel) fonctionne toujours comme mot de passe de secours.
 
 ### Recommandations
 - Choisis un mot de passe administrateur **solide et unique**, différent de celui du switch.
@@ -268,7 +282,7 @@ et réactive-la tout de suite avec ton nouveau téléphone.
   (WireGuard, Tailscale), plutôt qu’exposée publiquement. En mode Vercel, la page est par construction accessible
   depuis internet : le mot de passe et la double authentification sont donc indispensables. Le mode local prévu
   dans la [feuille de route](#feuille-de-route) permettra un accès limité au réseau local ou au VPN.
-- Ne partage pas l’URL inutilement ; pour un écran d’affichage, utilise l’accès lecture seule.
+- Ne partage pas l’URL inutilement ; donne à chacun le plus petit rôle qui suffit, et un compte lecture seule à un écran d’affichage.
 - Télécharge régulièrement les sauvegardes de configuration importantes : l’offre gratuite de Supabase
   ne sauvegarde pas la base automatiquement.
 
@@ -309,7 +323,7 @@ Prochaines étapes prévues, sans date :
 | `public/js/` | les fonctions d’administration côté page, une par fichier |
 | `public/vendor/` | bibliothèque tierce servie avec la page (QR code de la double authentification) |
 | `api/` | fonctions Vercel (Node 24) |
-| `lib/` | base de données (Supabase, Postgres), authentification et droits (administrateur, lecture seule, double authentification), notifications |
+| `lib/` | base de données (Supabase, Postgres), comptes, rôles (administrateur, technicien, lecture seule), double authentification, journal d’activité, notifications |
 | `lib/features/` | la partie serveur des fonctions d’administration |
 | `agent/` | l’agent Python, sa mise à jour automatique et son installation en service Windows |
 | `docs/` | captures d’écran et vidéo de présentation |

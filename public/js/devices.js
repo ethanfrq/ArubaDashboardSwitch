@@ -237,12 +237,12 @@
     }
     return `${planHtml}<div class="section dev-sec"><h3>Nommer l’appareil</h3>${body}</div>`;
   }
-  HOOK.panel.push((p) => (!p?.port || !S ? '' : canAdmin() ? panelAdmin(p) : panelView(p)));
+  HOOK.panel.push((p) => (!p?.port || !S ? '' : canOperate() ? panelAdmin(p) : panelView(p)));
 
   const pp = $('#ppBody');
   pp.addEventListener('click', (e) => {
     const b = e.target.closest('[data-dev]');
-    if (!b || !canAdmin()) return;
+    if (!b || !canOperate()) return;
     const port = b.dataset.devPort || selected;
     if (b.dataset.dev === 'plan-save' || b.dataset.dev === 'plan-clear') savePlan(b, port, b.dataset.dev === 'plan-clear');
     if (b.dataset.dev === 'name-save') saveName($('#devMac')?.value, $('#devName')?.value ?? '', b);
@@ -366,7 +366,7 @@
       <td title="${esc(hist)}">${pn ? (r.live ? `<span class="status up">Port ${pn}</span>` : `<span class="muted">dernier : port ${pn}</span>`) : dash}${r.ports.length > 1 ? ` <span class="badge">${r.ports.length} ports</span>` : ''}${where ? `<span class="sub">${esc(where)}</span>` : ''}</td>
       <td class="num">${r.first ? esc(fmtDate(r.first, true)) : dash}</td>
       <td class="num">${r.live ? 'maintenant' : r.last ? esc(fmtDate(r.last, true)) : dash}</td>
-      <td class="r">${r.live ? '<button type="button" class="btn small" disabled title="Branché en ce moment : il réapparaîtrait aussitôt">Oublier</button>'
+      <td class="r">${!canAdmin() ? '' : r.live ? '<button type="button" class="btn small" disabled title="Branché en ce moment : il réapparaîtrait aussitôt">Oublier</button>'
         : `<button type="button" class="btn small danger" data-dev-forget="${esc(r.mac)}" title="Retire cet appareil de l’annuaire (et son nom)">Oublier</button>`}</td>
     </tr>`;
   }

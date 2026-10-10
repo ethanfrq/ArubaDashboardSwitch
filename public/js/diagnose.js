@@ -100,7 +100,7 @@
     return typeof out === 'string' ? 'le switch n’a donné aucun résultat' : null;
   }
   function runCable(p) {
-    if (!canAdmin() || !p || p.type !== '1GbT' || !p.enabled) return;
+    if (!canOperate() || !p || p.type !== '1GbT' || !p.enabled) return;
     const n = portNum(p.port), label = `Test câble port ${n}`, opts = { kind: `cable:${p.port}`, ports: [p.port] };
     if (cablePending(p.port)) return toast('Test du câble déjà en cours', { sub: `Port ${n} : résultat dans quelques secondes.` });
     // Sans lien et agent à jour, le test ne coupe rien : envoi direct. Avec un lien, sur un port sensible ou si
@@ -123,7 +123,7 @@
       return `L’agent ${/^\d+\.\d+/.test(String(v ?? '')) ? `v${v}` : 'installé'} ne sait pas encore faire de ping : mets-le à jour (version ${AGENT_LATEST} ou plus).`;
     }
     if (!isIPv4(ip)) return 'Adresse IP inconnue : impossible de tester si l’appareil répond.';
-    if (!canAdmin()) return 'Le ping est réservé à l’administrateur.';
+    if (!canOperate()) return 'Le ping est réservé aux administrateurs et techniciens.';
     return '';
   }
   async function runPing(port, ip) {
@@ -161,7 +161,7 @@
     const p = portOf(port);
     if (!p || !S) return null;
     recordErrors();
-    const admin = canAdmin(), n = portNum(port), st = pState(p), copper = p.type === '1GbT';
+    const admin = canOperate(), n = portNum(port), st = pState(p), copper = p.type === '1GbT';
     const sw = isSwitchLink(p), agentPc = !sw && isAgentPort(port), sens = sw || agentPc;
     const nb = arr(S.lldp).find((l) => l.port === port && l.name);
     const ips = S.ips || {};
@@ -420,7 +420,7 @@
     if (!p) return false;
     DG.on.add(port);
     delete DG.ping[port];
-    if (canAdmin()) {
+    if (canOperate()) {
       if (p.enabled && !p.up && p.type === '1GbT' && p.reason !== 'No XCVR installed' && !guardOf(p) && !sensitive(p) && fresh() && !cableNow(port) && !cablePending(port)) runCable(p);
       if (p.up && !isSwitchLink(p)) {
         const ips = S.ips || {}, mac = arr(S.macs).find((m) => m.port === port && ips[m.mac]?.ip)?.mac;
@@ -435,7 +435,7 @@
     if (a === 'hide') { DG.on.delete(port); delete DG.ping[port]; return renderPanel(true); }
     const p = portOf(port);
     if (!p) return;
-    if (!canAdmin()) return toast(ROLE === 'viewer' ? 'Lecture seule' : 'Vue monitoring', { type: 'warn', sub: 'Action réservée à l’administrateur.' });
+    if (!canOperate()) return toast(ROLE === 'viewer' ? 'Lecture seule' : 'Vue monitoring', { type: 'warn', sub: ROLE === 'viewer' ? 'Ce compte ne peut rien modifier.' : 'Repasse en vue normale pour agir sur le switch.' });
     const n = portNum(port), base = `configure terminal\ninterface ${port}\n`, opt = { ports: [port] };
     const warn = isSwitchLink(p) ? '⚠ Ce port relie un autre switch : tout ce qui passe par lui sera coupé. '
       : isAgentPort(port) ? '⚠ C’est le port du PC de l’agent : le dashboard perdra le contact quelques secondes. ' : '';
@@ -510,7 +510,7 @@
     ADMIN.diagnose(port);
   }
   function openFind() {
-    if (!canAdmin()) return;
+    if (!canOperate()) return;
     if (!DG.dlg) {
       const d = document.createElement('dialog');
       d.className = 'wide diagnose-find';

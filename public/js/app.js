@@ -1,5 +1,5 @@
 // My Aruba Manager : application du dashboard (chargée par index.html avant les extensions de public/js).
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.8.0';
 const AGENT_LATEST = '1.4.0'; // dernière version de l'agent publiée avec ce dashboard
 const verNum = (v) => String(v).split('.').reduce((a, x) => a * 1000 + (Number(x) || 0), 0);
 const $ = (s) => document.querySelector(s);
@@ -49,15 +49,19 @@ function hook(name, ...args) {
   return out;
 }
 function addTool(t) { TOOLS.push(t); renderTools(); }
+// Outils permis au technicien : ceux qui agissent sur les ports d'accès ou les consultent.
+const TECH_TOOLS = new Set(['diagnose', 'wol', 'devices', 'devices-export', 'bulk']);
+const toolAllowed = (t) => canAdmin() || (canOperate() && TECH_TOOLS.has(t.id));
 function renderTools() {
   const box = $('#adminTools'); if (!box) return;
-  $('#sec-admin').hidden = !TOOLS.length;
-  setHTML(box, TOOLS.map((t) => `<button class="btn" type="button" data-tool="${esc(t.id)}" title="${esc(t.title || '')}">${t.icon ? `<span class="ic" aria-hidden="true">${t.icon}</span>` : ''}${esc(t.label)}${t.badge ? `<span class="badge amber">${esc(t.badge)}</span>` : ''}</button>`).join(''));
+  const list = TOOLS.filter(toolAllowed);
+  $('#sec-admin').hidden = !list.length;
+  setHTML(box, list.map((t) => `<button class="btn" type="button" data-tool="${esc(t.id)}" title="${esc(t.title || '')}">${t.icon ? `<span class="ic" aria-hidden="true">${t.icon}</span>` : ''}${esc(t.label)}${t.badge ? `<span class="badge amber">${esc(t.badge)}</span>` : ''}</button>`).join(''));
 }
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-tool]'); if (!b) return;
   const t = TOOLS.find((x) => x.id === b.dataset.tool);
-  if (t && canAdmin()) { try { t.open(); } catch (err) { console.error(err); toast('Erreur', { type: 'error', sub: err.message }); } }
+  if (t && toolAllowed(t)) { try { t.open(); } catch (err) { console.error(err); toast('Erreur', { type: 'error', sub: err.message }); } }
 });
 // Capacités de l'agent (ex. 'wol', 'ping') : certaines actions demandent une version récente.
 const agentHas = (cap) => (S?.agent?.caps || []).includes(cap);
@@ -133,22 +137,28 @@ async function api(path, body) {
   if (!r.ok) { const err = new Error(data.error || `Erreur ${r.status}`); err.status = r.status; err.data = data; throw err; }
   return data;
 }
-// Rôle de la session (donné par le serveur) et vue monitoring choisie par l'administrateur.
-let ROLE = 'admin', MONITOR = false;
+// Rôle du compte (donné par le serveur) et vue monitoring choisie par l'utilisateur.
+//   admin  : tout ; tech (technicien) : actions sur les ports d'accès ; viewer : lecture seule.
+// canAdmin() : gestion complète (réglages, comptes, console, VLAN…) ; canOperate() : agir sur les ports.
+let ROLE = 'admin', MONITOR = false, ME = null;
 try { MONITOR = localStorage.getItem('aruba-view') === 'monitor'; } catch {}
 const canAdmin = () => ROLE === 'admin' && !MONITOR;
+const canOperate = () => (ROLE === 'admin' || ROLE === 'tech') && !MONITOR;
+const ROLE_FR = { admin: 'Administrateur', tech: 'Technicien', viewer: 'Lecture seule' };
 function applyRole() {
-  const ro = !canAdmin();
+  const ro = !canOperate();
   document.body.classList.toggle('readonly', ro);
-  $('#rolePill').hidden = !ro;
-  $('#rolePill').textContent = ROLE === 'viewer' ? 'Lecture seule' : 'Vue monitoring';
-  $('#rolePill').title = ROLE === 'viewer' ? 'Connecté avec le mot de passe lecture seule : aucune commande possible.' : 'Les commandes sont masquées. Repasse en vue admin pour gérer le switch.';
-  $('#viewBtn').hidden = ROLE !== 'admin';
+  document.body.classList.toggle('notadmin', !canAdmin());
+  document.body.classList.toggle('viewer', ROLE === 'viewer');
+  $('#rolePill').hidden = !(ro || ROLE === 'tech');
+  $('#rolePill').textContent = ROLE === 'viewer' ? 'Lecture seule' : MONITOR ? 'Vue monitoring' : 'Technicien';
+  $('#rolePill').title = ROLE === 'viewer' ? 'Compte lecture seule : aucune commande possible.' : MONITOR ? 'Les commandes sont masquées. Repasse en vue normale pour agir sur le switch.' : 'Technicien : actions sur les ports d’accès. Réglages, comptes et console sont réservés aux administrateurs.';
+  $('#viewBtn').hidden = ROLE === 'viewer';
   $('#viewBtn').setAttribute('aria-pressed', String(MONITOR));
-  $('#viewBtn').title = MONITOR ? 'Repasser en vue admin (réafficher les commandes)' : 'Vue monitoring : masquer toutes les commandes';
+  $('#viewBtn').title = MONITOR ? 'Repasser en vue normale (réafficher les commandes)' : 'Vue monitoring : masquer toutes les commandes';
   $('#viewBtn').setAttribute('aria-label', $('#viewBtn').title);
   $('#fpNote').textContent = ro ? 'Clique sur un port pour voir son détail' : 'Clique sur un port pour le gérer · reclique pour le désélectionner';
-  if (ro) document.querySelectorAll('dialog[open]').forEach((d) => d.close());
+  if (ro) document.querySelectorAll('dialog[open]:not(.keep)').forEach((d) => d.close());
   hook('role', ro); renderTools();
   if (S) renderPanel(true);
 }
@@ -166,15 +176,17 @@ $('#loginForm').addEventListener('submit', (e) => {
   busy($('#loginBtn'), async () => {
     const needCode = !$('#codeField').hidden;
     try {
-      const d = await api('/api/login', { password: $('#pw').value, ...(needCode ? { code: $('#code').value } : {}) });
+      const d = await api('/api/login', { login: $('#loginId').value, password: $('#pw').value, ...(needCode ? { code: $('#code').value } : {}) });
       if (d.totp) { $('#codeField').hidden = false; $('#code').value = ''; $('#code').focus(); return; } // mot de passe juste : code demandé
       $('#pw').value = $('#code').value = ''; $('#codeField').hidden = true;
+      try { localStorage.setItem('lastLogin', $('#loginId').value.trim()); } catch {}
       showApp(); loadSettings(); poll(); toast('Connecté', { type: 'success', timeout: 2000 });
-      if (d.recoveryUsed) toast('Code de secours utilisé', { type: 'warn', sub: 'Il ne servira plus. Crée de nouveaux codes de secours dans ⚙ Réglages.', timeout: 12000 });
+      if (d.recoveryUsed) toast('Code de secours utilisé', { type: 'warn', sub: 'Il ne servira plus. Crée de nouveaux codes de secours dans Mon profil.', timeout: 12000 });
     }
     catch (err) {
       $('#loginErr').textContent = err.message;
       if (err.data?.totp) { $('#codeField').hidden = false; $('#code').select(); } else $('#pw').select();
+      $('#loginErr').focus();
     }
   });
 });
@@ -186,8 +198,9 @@ async function poll() {
     const touch = Date.now() - lastTouch > 50000;
     const xv = Object.entries(XV).map(([k, v]) => `${k}:${v}`).join(',');
     const d = await api(`/api/state?lv=${LV}&av=${AV}${xv ? `&xv=${encodeURIComponent(xv)}` : ''}${touch ? '&touch=1' : ''}`);
-    if (d.auth === false) { showLogin(); $('#pw').focus(); return; }
+    if (d.auth === false) { showLogin(); ($('#loginId').value ? $('#pw') : $('#loginId')).focus(); return; }
     if (touch) lastTouch = Date.now();
+    ME = d.me || ME;
     if ((d.role || 'admin') !== ROLE || !document.body.dataset.role) { ROLE = d.role || 'admin'; document.body.dataset.role = ROLE; applyRole(); }
     if ($('#app').hidden) { showApp(); loadSettings(); }
     S = d.state; NOW = d.now;
@@ -584,7 +597,7 @@ function renderSwitch() {
 }
 $('#swInfo').addEventListener('click', (e) => { if (e.target.closest('[data-save]')) $('#unsavedPill').click(); });
 const saveText = (t) => [ADMIN.saveWarning?.(), t].filter(Boolean).join(' '); // avertit pendant un délai d'annulation automatique
-$('#unsavedPill').addEventListener('click', () => canAdmin() && confirmCmd('Sauvegarder la configuration ?', saveText('Les changements en cours deviennent la configuration chargée au démarrage du switch.'), 'write memory', 'Configuration sauvegardée'));
+$('#unsavedPill').addEventListener('click', () => canOperate() && confirmCmd('Sauvegarder la configuration ?', saveText('Les changements en cours deviennent la configuration chargée au démarrage du switch.'), 'write memory', 'Configuration sauvegardée'));
 function renderLogs() {
   const d = DIAG;
   if (!d) return;
@@ -877,7 +890,7 @@ function renderVlans() {
     for (let n = 1; n <= 28; n++) mini += `<i class="${set.has(n) ? 'on' : ''}${n === 25 ? ' gap' : ''}" title="Port ${n}${set.has(n) ? ` · VLAN ${esc(x.id)}` : ''}"></i>`;
     return `<div class="vlan-item">
       <div class="vlan-top"><span class="vid">${esc(x.id)}</span><b>${esc(x.name)}</b><span class="status ${x.up ? 'up' : 'down'}">${x.up ? 'Actif' : 'Inactif'}</span><span class="grow"></span>
-        ${x.id === 1 ? '<span class="note">par défaut</span>' : `<button class="btn icon admin-only" data-vren="${esc(x.id)}" title="Renommer" aria-label="Renommer le VLAN ${esc(x.id)}">${ICON_EDIT}</button><button class="btn icon danger admin-only" data-vdel="${esc(x.id)}" title="Supprimer" aria-label="Supprimer le VLAN ${esc(x.id)}">${ICON_TRASH}</button>`}</div>
+        ${x.id === 1 ? '<span class="note">par défaut</span>' : `<button class="btn icon admin-only manage-only" data-vren="${esc(x.id)}" title="Renommer" aria-label="Renommer le VLAN ${esc(x.id)}">${ICON_EDIT}</button><button class="btn icon danger admin-only manage-only" data-vdel="${esc(x.id)}" title="Supprimer" aria-label="Supprimer le VLAN ${esc(x.id)}">${ICON_TRASH}</button>`}</div>
       <div class="vlan-ports"><span class="mini" aria-hidden="true">${mini}</span><span class="note">${ports.length ? `${ports.length} port${ports.length > 1 ? 's' : ''} · ${esc(ranges(ports).map((r) => r.replace(/1\/1\//g, '')).join(', '))}` : 'aucun port'}</span></div>
     </div>`;
   }).join(''));
@@ -1057,8 +1070,10 @@ function renderPanel(force) {
       ${lldp.length ? `<dt>${p.up ? 'LLDP' : 'Dernier vu (LLDP)'}</dt><dd>${lldp.map((l) => esc(l.name || l.chassis)).join('<br>')}</dd>` : ''}
     </dl>
     <button class="btn small" id="ppHist">Voir l’historique de ce port</button>`);
-  const admin = canAdmin();
-  setHTML($('#ppActions'), `${ROLE === 'viewer' ? '<p class="note">Lecture seule : les actions sont réservées à l’administrateur.</p>' : ''}
+  const techUplink = ROLE === 'tech' && uplink;
+  const admin = canOperate() && !techUplink;
+  setHTML($('#ppActions'), `${ROLE === 'viewer' ? '<p class="note">Lecture seule : aucune action possible sur le switch.</p>' : ''}
+    ${techUplink && !MONITOR ? '<p class="note">Ce port relie un autre switch : seul un administrateur peut agir dessus.</p>' : ''}
     ${admin ? `<div class="section">
       <h3>Actions</h3>
       ${uplink ? '<div class="alert amber" style="margin:0">Ce port relie un autre switch. Le couper ou le changer de VLAN coupe tout ce qui passe par ce lien.</div>' : ''}
@@ -1122,7 +1137,7 @@ function dangerStage(on) {
   $('#cfYes').disabled = on;
 }
 function confirmCmd(title, text, cmd, label, opts = {}) {
-  if (!canAdmin()) return toast(ROLE === 'viewer' ? 'Lecture seule' : 'Vue monitoring', { type: 'warn', sub: ROLE === 'viewer' ? 'Action réservée à l’administrateur.' : 'Repasse en vue admin pour gérer le switch.' });
+  if (!canOperate()) return toast(ROLE === 'viewer' ? 'Lecture seule' : 'Vue monitoring', { type: 'warn', sub: ROLE === 'viewer' ? 'Ce compte ne peut rien modifier.' : 'Repasse en vue normale pour agir sur le switch.' });
   $('#cfTitle').textContent = title; $('#cfText').textContent = text; $('#cfCmd').textContent = cmd;
   pendingConfirm = { cmd, label, ...opts }; dangerStage(false);
   if (!$('#confirm').open) $('#confirm').showModal();
@@ -1232,67 +1247,18 @@ function renderTerm(force) {
 }
 
 // ================================================================ alertes
-let SETTINGS = null, EMAIL_OK = false, watchSel = null, VIEWER = null, viewerOff = false, TOTP = null, CRON = null;
+let SETTINGS = null, EMAIL_OK = false, watchSel = null, CRON = null;
 async function loadSettings() {
   try {
-    const d = await api('/api/settings'); SETTINGS = d.settings; EMAIL_OK = d.emailAvailable; VIEWER = d.viewer || null;
-    TOTP = d.totp || null; CRON = d.cron || null; fillSettings(); renderAlerts();
+    const d = await api('/api/settings'); SETTINGS = d.settings; EMAIL_OK = d.emailAvailable; CRON = d.cron || null;
+    fillSettings(); renderAlerts();
   } catch {}
 }
 function autoWatch() { return (S?.ports || []).filter((p) => isUplink(p) || p.desc).map((p) => p.port); }
-// Double authentification : état, activation (QR code), codes de secours, désactivation.
-function fillTotp() {
-  const on = Boolean(TOTP?.enabled);
-  const since = TOTP?.t ? new Date(TOTP.t * 1000).toLocaleDateString('fr-FR') : '';
-  $('#tfNote').textContent = on ? `Activée depuis le ${since}. Codes de secours restants : ${TOTP.recoveryLeft}.`
-    : 'Désactivée. Recommandé : un code à 6 chiffres d’une application, en plus du mot de passe, pour se connecter en administrateur.';
-  $('#tfOn').hidden = !on; $('#tfStart').hidden = on || !$('#tfSetup').hidden;
-  if (on) $('#tfSetup').hidden = true;
-  const c = $('#alCron'); c.hidden = !(CRON && !CRON.ok);
-  if (!c.hidden) c.textContent = `La vérification toutes les 5 minutes n’a pas pu être programmée dans Supabase (${CRON.error || 'erreur inconnue'}) : alerte « agent hors ligne », actions planifiées et sauvegardes automatiques ne fonctionnent pas. Active les extensions pg_cron et pg_net dans Supabase (Database > Extensions), puis recharge le dashboard.`;
-}
-const loadQr = () => (window.qrcode ? Promise.resolve() : new Promise((ok, ko) => {
-  const sc = document.createElement('script'); sc.src = '/vendor/qrcode.js'; sc.onload = ok; sc.onerror = () => ko(new Error('QR code indisponible')); document.head.append(sc);
-}));
-function showCodes(list) {
-  $('#tfList').textContent = list.join('\n'); $('#tfCodes').hidden = false;
-  $('#tfDownload').onclick = () => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([`My Aruba Manager : codes de secours (${new Date().toLocaleString('fr-FR')})\n\n${list.join('\n')}\n`], { type: 'text/plain' }));
-    a.download = 'my-aruba-manager-codes-de-secours.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  };
-}
-const totpCall = (action, extra = {}) => api('/api/settings', { action, ...extra });
-$('#tfStart').addEventListener('click', (e) => busy(e.currentTarget, async () => {
-  try {
-    const d = await totpCall('totp-start');
-    await loadQr();
-    const qr = window.qrcode(0, 'M'); qr.addData(d.uri); qr.make();
-    $('#tfQr').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); // SVG généré localement, sans donnée tierce
-    $('#tfSecret').textContent = d.secret.replace(/(.{4})/g, '$1 ').trim();
-    $('#tfSetup').hidden = false; $('#tfStart').hidden = true; $('#tfCode').value = ''; $('#tfCode').focus();
-  } catch (err) { toast('Activation impossible', { type: 'error', sub: err.message }); }
-}));
-$('#tfConfirm').addEventListener('click', (e) => busy(e.currentTarget, async () => {
-  try {
-    const d = await totpCall('totp-confirm', { code: $('#tfCode').value });
-    TOTP = d.totp; $('#tfSetup').hidden = true; showCodes(d.recovery); fillTotp();
-    toast('Double authentification activée', { type: 'success', sub: 'Le code de l’application sera demandé à chaque connexion administrateur.' });
-  } catch (err) { toast('Code refusé', { type: 'error', sub: err.message }); $('#tfCode').select(); }
-}));
-$('#tfNew').addEventListener('click', (e) => busy(e.currentTarget, async () => {
-  try { const d = await totpCall('totp-recovery', { code: $('#tfCur').value }); TOTP = d.totp; $('#tfCur').value = ''; showCodes(d.recovery); fillTotp(); }
-  catch (err) { toast('Code refusé', { type: 'error', sub: err.message }); }
-}));
-$('#tfOff').addEventListener('click', (e) => busy(e.currentTarget, async () => {
-  try {
-    const d = await totpCall('totp-disable', { code: $('#tfCur').value }); TOTP = d.totp; $('#tfCur').value = ''; $('#tfCodes').hidden = true; fillTotp();
-    toast('Double authentification désactivée', { type: 'warn', sub: 'Le mot de passe seul suffit de nouveau pour se connecter.' });
-  } catch (err) { toast('Code refusé', { type: 'error', sub: err.message }); }
-}));
 
 function fillSettings() {
-  fillTotp();
+  const c = $('#alCron'); c.hidden = !(CRON && !CRON.ok);
+  if (!c.hidden) c.textContent = `La vérification toutes les 5 minutes n’a pas pu être programmée dans Supabase (${CRON.error || 'erreur inconnue'}) : alerte « agent hors ligne », actions planifiées et sauvegardes automatiques ne fonctionnent pas. Active les extensions pg_cron et pg_net dans Supabase (Database > Extensions), puis recharge le dashboard.`;
   const s = SETTINGS; if (!s) return;
   $('#alEmail').value = s.email || ''; $('#alEmail').disabled = !EMAIL_OK;
   $('#alEmailNote').textContent = EMAIL_OK ? 'Sans domaine vérifié chez Resend, les e-mails partent de onboarding@resend.dev et ne peuvent aller qu’à l’adresse du compte Resend.' : 'E-mail indisponible : l’intégration Resend n’est pas encore activée sur Vercel.';
@@ -1303,11 +1269,6 @@ function fillSettings() {
   $('#alNewDev').checked = Boolean(s.notify.newDevice);
   $('#alSite').value = s.siteName || ''; $('#alTz').value = s.tz || 'Europe/Paris';
   $('#alHot').value = s.agent?.hot ?? 10; $('#alWarm').value = s.agent?.warm ?? 30; $('#alIdleSync').value = s.agent?.idle ?? 60;
-  const vt = VIEWER?.t ? new Date(VIEWER.t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-  $('#alViewerNote').textContent = VIEWER?.enabled
-    ? `Activé (mot de passe défini le ${vt}). Saisis-en un nouveau pour le changer : les écrans déjà connectés seront déconnectés.`
-    : 'Désactivé. Définis un second mot de passe pour connecter un écran qui affiche tout le dashboard sans pouvoir rien modifier.';
-  $('#alViewerOff').hidden = !VIEWER?.enabled; $('#alViewerPw').value = '';
   watchSel = s.watchPorts?.length ? new Set(s.watchPorts) : null; // liste vide = mode Auto, comme l'agent
   renderWatch();
 }
@@ -1333,27 +1294,23 @@ $('#alertForm').addEventListener('submit', (e) => {
         watchPorts: watchSel ? [...watchSel] : null, autoCable: $('#alAutoCable').checked,
         siteName: $('#alSite').value, tz: $('#alTz').value,
         agent: { hot: $('#alHot').value, warm: $('#alWarm').value, idle: $('#alIdleSync').value },
-        viewerPassword: $('#alViewerPw').value, viewerDisable: viewerOff,
         notify: { portDown: $('#alPortDown').checked, temp: $('#alTemp').checked, agentOffline: $('#alAgent').checked, slowLink: $('#alSlow').checked, idleLink: $('#alIdle').checked, newDevice: $('#alNewDev').checked },
       });
-      const newViewer = $('#alViewerPw').value.trim() && !viewerOff;
-      SETTINGS = d.settings; VIEWER = d.viewer || null; fillSettings(); renderAlerts(); $('#alertDialog').close();
-      toast('Réglages enregistrés', { type: 'success', sub: viewerOff ? 'Accès lecture seule désactivé : les écrans connectés sont déconnectés.'
-        : newViewer ? 'Mot de passe lecture seule enregistré. Les écrans déjà connectés devront se reconnecter.' : 'L’agent applique les alertes à sa prochaine mise à jour.' });
+      SETTINGS = d.settings; fillSettings(); renderAlerts(); $('#alertDialog').close();
+      toast('Réglages enregistrés', { type: 'success', sub: 'L’agent applique les alertes à sa prochaine mise à jour.' });
     } catch (err) { if (err.message !== '401') toast('Impossible d’enregistrer', { type: 'error', sub: err.message }); }
-    finally { viewerOff = false; }
   });
 });
 $('#alertTest').addEventListener('click', (e) => busy(e.currentTarget, async () => {
   try { const r = await api('/api/alerts/test', {}); toast('Notification de test envoyée', { type: 'success', sub: `Via : ${r.sent.join(' + ')}` }); setTimeout(poll, 800); }
   catch (err) { if (err.message !== '401') toast('Le test a échoué', { type: 'error', sub: err.message, timeout: 9000 }); }
 }));
-function openAlertSettings() { if (!canAdmin()) return; $('#tfCodes').hidden = $('#tfSetup').hidden = true; loadSettings(); $('#alertDialog').showModal(); }
+function openAlertSettings(e) { e?.preventDefault?.(); if (!canAdmin()) return; loadSettings(); $('#alertDialog').showModal(); }
 $('#settingsBtn').addEventListener('click', openAlertSettings);
 $('#alertSettingsBtn').addEventListener('click', openAlertSettings);
 $('#alClose').addEventListener('click', () => $('#alertDialog').close());
-$('#alViewerOff').addEventListener('click', () => { viewerOff = true; $('#alertForm').requestSubmit(); });
 $('#bellBtn').addEventListener('click', () => {
+  if (window.NAV) NAV.show('dashboard');
   const sec = $('#sec-alertes'); sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
   sec.classList.remove('flash'); void sec.offsetWidth; sec.classList.add('flash');
   try { localStorage.setItem('alertsSeen', String(Date.now() / 1000)); } catch (e) {}
@@ -1364,6 +1321,8 @@ function renderAlerts() {
   const fresh = ALERTS.filter((a) => a.t > seen && a.t > NOW - 86400 && ['critical', 'warning'].includes(a.level)).length;
   $('#bellCount').hidden = !fresh; $('#bellCount').textContent = fresh > 9 ? '9+' : String(fresh);
   $('#bellBtn').title = fresh ? `${fresh} nouvelle(s) alerte(s)` : 'Alertes récentes';
+  $('#bellBtn').setAttribute('aria-label', $('#bellBtn').title);
+  $('#navAlertCount').hidden = !fresh; $('#navAlertCount').textContent = $('#bellCount').textContent;
   $('#alertCount').textContent = ALERTS.length ? `${ALERTS.length}` : '';
   setHTML($('#alertList'), ALERTS.length ? ALERTS.slice(0, 12).map((a) => `<div class="alert-item"><span class="lvl ${esc(a.level)}"></span>
     <div>${esc(a.text)}<div class="ch">${arr(a.sent).length ? `envoyé par ${esc(arr(a.sent).join(' + '))}` : 'non envoyé'}${arr(a.errors).length ? ` · ⚠ ${esc(arr(a.errors).join(' · '))}` : ''}</div></div>
@@ -1442,4 +1401,5 @@ function niceStep(v) { const p = 10 ** Math.floor(Math.log10(v)); const m = v / 
 let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => S && renderChart(), 150); });
 setInterval(() => { if (!document.hidden && chartRange !== '1h' && !$('#app').hidden) loadChart(); }, 5 * 60 * 1000);
 
-poll();
+// Lien d'invitation ou de nouveau mot de passe : account.js affiche le formulaire, pas le dashboard.
+if (new URLSearchParams(location.search).has('invite')) showLogin(); else poll();

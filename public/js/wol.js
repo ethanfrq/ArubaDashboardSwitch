@@ -59,7 +59,7 @@
     return typeof v === 'string' ? v : '';
   }
   const readonlyToast = () => toast(ROLE === 'viewer' ? 'Lecture seule' : 'Vue monitoring',
-    { type: 'warn', sub: ROLE === 'viewer' ? 'Action réservée à l’administrateur.' : 'Repasse en vue admin pour gérer le switch.' });
+    { type: 'warn', sub: ROLE === 'viewer' ? 'Ce compte ne peut rien modifier.' : 'Repasse en vue normale pour agir sur le switch.' });
 
   // ---------------------------------------------------------------- allumer (Wake-on-LAN)
   // Ports à allumer -> { found: [{ port, macs }], missing, uplink, off } (ports triés, sans doublon).
@@ -92,7 +92,7 @@
   }
 
   ADMIN.wake = (ports) => {
-    if (!canAdmin()) return void readonlyToast();
+    if (!canOperate()) return void readonlyToast();
     const r = plan(ports), skipped = skippedText(r);
     if (!r.found.length) return void toast('Rien à allumer', { type: 'warn', sub: skipped ? `${skipped[0].toUpperCase()}${skipped.slice(1)}.` : 'Aucun port choisi.', timeout: 9000 });
     if (!agentHas('wol')) return void toast('Agent à mettre à jour', { type: 'warn', sub: NEED_AGENT, timeout: 10000 });
@@ -163,7 +163,7 @@
     const ip = normIp(input);
     if (!ip) throw Object.assign(new Error('Adresse IP invalide.'), { code: 'ip' });
     if (!agentHas('ping')) throw Object.assign(new Error('Le ping demande l’agent 1.4.0 ou plus (il se met à jour tout seul, quelques minutes).'), { code: 'agent' });
-    if (ROLE !== 'admin') throw Object.assign(new Error('Action réservée à l’administrateur.'), { code: 'role' });
+    if (!canOperate()) throw Object.assign(new Error('Action réservée aux administrateurs et techniciens.'), { code: 'role' });
     const cmd = `#ping ${ip}`, end = Date.now() + PING_MAX;
     let rec = null;
     for (;;) {
@@ -187,7 +187,7 @@
   // ---------------------------------------------------------------- volet d'un port : « Allumer à distance »
   // Port sans lien, désactivé ou sans trafic (PC en veille) dont un appareil est connu ; administrateur seulement.
   HOOK.panel.push((p) => {
-    if (!p?.port || !S || !canAdmin() || isUplink(p)) return '';
+    if (!p?.port || !S || !canOperate() || isUplink(p)) return '';
     if (p.enabled && p.up && pState(p) !== 'idle') return '';
     const macs = macsOf(p.port);
     if (!macs.length) return '';
@@ -249,7 +249,7 @@
   }
   const asleep = (p) => p.enabled && (!p.up || pState(p) === 'idle');
   function openTool() {
-    if (!canAdmin()) return void readonlyToast();
+    if (!canOperate()) return void readonlyToast();
     if (!dlg) {
       dlg = document.createElement('dialog');
       dlg.className = 'wide wol-dlg';

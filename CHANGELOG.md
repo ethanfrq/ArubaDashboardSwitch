@@ -1,5 +1,28 @@
 # Historique des versions
 
+## 1.8.0 (2026-10-10)
+
+### Barre latérale et comptes utilisateurs
+- **Barre latérale** dans le style actuel : supervision (tableau de bord, façade et ports, alertes, débit, journal du
+  switch, VLAN), administration (outils, console, réglages) et compte (utilisateurs, rôles, journal d’activité,
+  mon profil). Sur téléphone, elle se replie derrière un bouton menu.
+- **Un compte par personne** : identifiant (ou e-mail) et mot de passe, plus de mot de passe partagé.
+- **Trois rôles** vérifiés par le serveur : administrateur (tout), **technicien** (ports d’accès : activer, couper,
+  redémarrer, description, VLAN, test de câble, Wake-on-LAN, ping, noms des appareils ; ni console, ni réglages,
+  ni comptes, ni liens vers d’autres switches) et lecture seule.
+- **Utilisateurs** : création par lien d’invitation (48 h, envoyé par e-mail si Resend est configuré) ou avec un mot
+  de passe choisi, changement de rôle, double authentification exigée, lien de nouveau mot de passe, fermeture des
+  sessions, désactivation, suppression ; liste des personnes en ligne.
+- **Mon profil** : nom, e-mail, alertes par e-mail, mot de passe, double authentification, déconnexion des autres
+  appareils, thème clair, sombre ou automatique.
+- **Journal d’activité** : connexions et tentatives refusées, comptes, commandes, réglages, avec export CSV.
+- Le journal des commandes indique qui a lancé chaque commande.
+
+### Passer de la 1.7.0 à la 1.8.0
+Rien à faire : personne n’est déconnecté. Au premier lancement, le compte **`admin`** est créé avec le mot de passe
+`DASHBOARD_PASSWORD` (qui reste valable en secours) et garde sa double authentification ; l’ancien mot de passe lecture
+seule devient le compte **`ecran`**. À la prochaine connexion, saisir l’identifiant `admin` (ou `ecran`).
+
 ## 1.7.0 (2026-10-10) · My Aruba Manager
 
 Le projet s’appelle maintenant **My Aruba Manager** et devient **open source** (licence Apache 2.0).
