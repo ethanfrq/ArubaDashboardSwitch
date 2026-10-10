@@ -1,5 +1,45 @@
 # Historique des versions
 
+## 1.6.0 (2026-10-10) · agent 1.4.0
+
+Tout se gère depuis l’interface : nouvelle carte **Administration**.
+
+### Fonctions d’administration
+- **Annuler une modification** : point de restauration créé sur le switch avant chaque changement, aperçu de ce qui
+  sera annulé, retour en arrière (avec CONFIRMER). Pour un changement sensible, **annulation automatique par le switch**
+  au bout de 5 min si l’on ne confirme pas que tout fonctionne. Nettoyage automatique des anciens points.
+- **Sauvegardes de la configuration** : après chaque changement et toutes les 6 h, historique de 60 versions,
+  comparaison ligne à ligne, téléchargement, secrets masqués ; liste des points de restauration du switch.
+- **Profils de port** modifiables (Poste élève, Imprimante, Borne Wi-Fi, Serveur, Port libre) et **sélection multiple**
+  (Maj+clic, Ctrl+clic ou outil sur mobile) avec barre d’actions groupées.
+- **Annuaire des appareils** (noms, historique des ports, oubli), alerte « nouvel appareil » facultative,
+  **plan de brassage** par port, **export CSV** et **impression**.
+- **Actions planifiées** : couper, rallumer, redémarrer des ports ou allumer des PC à heure fixe, dans le fuseau choisi,
+  par le serveur toutes les 5 min, jamais si l’agent est hors ligne, alerte en cas d’échec.
+- **Diagnostic d’un port**, **« Un appareil ne marche pas ? »** et **bilan de santé** avec corrections en un clic.
+- **Allumer des PC à distance** (Wake-on-LAN) et **ping** depuis le PC de l’agent.
+- Réglages : nom du site, fuseau horaire, rythme de l’agent (120 s au plus).
+
+### Sécurité
+- La seconde confirmation reconnaît maintenant les **abréviations AOS-CX** (« int 1/1/24 » puis « shu », « relo »,
+  « diag cab te »…) qui permettaient de la contourner depuis la console.
+- Tabulation et caractères de contrôle refusés dans les commandes ; textes saisis nettoyés avant d’aller au switch.
+- Protections de poste (BPDU guard, admin-edge, loop-protect) sur un lien vers un autre switch : seconde confirmation.
+- Écrans lecture seule : la configuration complète n’est jamais transmise.
+- Actions de l’agent (« #wol », « #ping ») refusées si l’agent installé ne les connaît pas.
+
+### Corrections
+- File de commandes : une commande mise en file pendant un relevé de l’agent pouvait rester bloquée.
+- Copier la configuration vers un point de restauration n’est plus jugé dangereux ; « no spanning-tree bpdu-guard »
+  sur un port n’est plus pris pour la désactivation du spanning-tree.
+
+### Agent 1.4.0
+- Wake-on-LAN (« #wol ») et ping (« #ping ») faits par l’agent lui-même, sans session SSH.
+- Rythme d’envoi réglable depuis le dashboard.
+- Après un échec de connexion SSH, pause de 15 s au lieu de réessayer sans cesse ; un refus de connexion du switch
+  n’arrête plus l’agent.
+- Mise à jour automatique : rien à faire si l’agent 1.3.0 est installé avec sa tâche de mise à jour.
+
 ## 1.5.0 (2026-10-09) · agent 1.3.0
 
 ### Relevé plus fréquent, sans charger le switch

@@ -63,11 +63,15 @@ La configuration et le mot de passe enregistré sont conservés. Ensuite, tout e
 
 ## Ce que fait l’agent
 - envoie l’état du switch toutes les 10 s quand le dashboard administrateur est ouvert, 30 s pour un écran
-  lecture seule, 60 s sinon ;
+  lecture seule, 60 s sinon (réglable dans ⚙ Réglages, 120 s au plus) ;
 - relève le débit, les appareils et le CPU à chaque envoi, l’état des liens et le journal du switch toutes les 30 s
   (dashboard ouvert), le spanning-tree et la configuration sauvegardée toutes les 2 min, le reste plus rarement ;
 - espace tous ces relevés si le CPU du switch dépasse 60 % (deux fois) ou 80 % (quatre fois) ;
 - relève les commandes du dashboard toutes les 1,5 s juste après une commande, sinon toutes les 5 s ;
-- vérifie sa session SSH avant chaque commande (le switch ferme les sessions restées inutilisées) ;
+- vérifie sa session SSH avant chaque commande (le switch ferme les sessions restées inutilisées), et attend 15 s
+  après un échec de connexion au lieu de réessayer sans cesse ;
+- allume les PC à distance (Wake-on-LAN) et fait des ping à la demande du dashboard : le Wake-on-LAN doit être activé
+  dans le BIOS et sur la carte réseau des PC ;
+- garde un résultat qu’il n’a pas pu remettre au dashboard (réseau coupé) et le renvoie jusqu’à 10 min plus tard ;
 - cherche les IP des appareils du réseau `scan_subnet` toutes les 5 min (table ARP du PC) ;
 - calcule l’historique (5 min, 30 min, 2 h) et détecte les incidents pour les alertes.

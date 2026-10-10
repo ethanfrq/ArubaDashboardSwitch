@@ -12,8 +12,10 @@ export default async function handler(req, res) {
   const [qflag, hot, busy, answer] = await r.mget(...keys);
   const out = { hot: Boolean(hot), busy: Boolean(busy), commands: [] };
   if (qflag) {
-    const items = (await r.lpop(K.queue, 20)) || [];
+    // drapeau effacé avant de vider la file : une commande mise en file pendant le relevé le repose elle-même
     await r.del(K.qflag);
+    const items = (await r.lpop(K.queue, 20)) || [];
+    if ([].concat(items).length === 20) await r.set(K.qflag, 1); // il en reste peut-être
     out.commands = [].concat(items).map((x) => (typeof x === 'string' ? JSON.parse(x) : x));
   }
   if (answer) {

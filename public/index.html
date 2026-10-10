@@ -109,6 +109,10 @@ header.top .spacer { flex: 1; }
 .pill.ok { background: var(--good-soft); color: var(--good); }
 .pill.ko { background: var(--bad-soft); color: var(--bad); }
 .pill.role { background: var(--info-soft); color: var(--info); }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.tools .btn { display: inline-flex; align-items: center; gap: 7px; }
+.tools .btn .ic { font-size: 14px; line-height: 1; }
+.tools .badge { margin-left: 2px; }
 .btn.icon[aria-pressed="true"] { background: var(--info-soft); color: var(--info); border-color: transparent; }
 /* Lecture seule (accès écran de monitoring, ou vue monitoring de l'administrateur) */
 body.readonly .admin-only { display: none !important; }
@@ -425,6 +429,11 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
       <div class="legend" id="fpLegend"></div>
     </section>
 
+    <section class="card span-12 admin-only" id="sec-admin" hidden>
+      <h2>Administration <span class="count" id="adminHint">outils de gestion</span></h2>
+      <div class="tools" id="adminTools"></div>
+    </section>
+
     <section class="card span-8" id="sec-debit">
       <h2>Débit <span class="count" id="chartTitle">total</span>
         <span class="right">
@@ -519,6 +528,7 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
       <label class="check"><input type="checkbox" id="alAgent"> l’agent ne répond plus (5 min)</label>
       <label class="check"><input type="checkbox" id="alSlow"> un port passe à 10 ou 100 Mb/s</label>
       <label class="check"><input type="checkbox" id="alIdle"> un port surveillé n’a plus de trafic depuis 10 min</label>
+      <label class="check"><input type="checkbox" id="alNewDev"> un appareil jamais vu se branche (hors liens vers d’autres switches et ports à plus de 4 appareils)</label>
     </div>
     <div class="field"><span class="label">Ports surveillés <button type="button" class="btn small" id="alAuto" style="margin-left:6px">Auto</button></span>
       <div class="portpick" id="alPorts"></div>
@@ -527,6 +537,18 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
     <div class="field"><span class="label">Accès lecture seule (écran de monitoring)</span>
       <span class="note" id="alViewerNote" style="margin:0 0 6px"></span>
       <div class="row"><input id="alViewerPw" type="text" autocomplete="off" spellcheck="false" maxlength="64" placeholder="nouveau mot de passe, 8 caractères minimum"><button type="button" class="btn danger" id="alViewerOff" hidden>Désactiver</button></div>
+    </div>
+    <div class="field"><span class="label">Site</span>
+      <div class="row"><input id="alSite" type="text" maxlength="60" placeholder="Nom du site, ex. Lycée Bachelor, salle N11" aria-label="Nom du site">
+        <input id="alTz" type="text" maxlength="40" list="tzList" style="max-width:190px" aria-label="Fuseau horaire" title="Fuseau horaire des actions planifiées"></div>
+      <datalist id="tzList"><option value="Europe/Paris"><option value="Europe/Brussels"><option value="Europe/Zurich"><option value="Europe/Luxembourg"><option value="America/Montreal"><option value="Indian/Reunion"><option value="America/Guadeloupe"><option value="America/Martinique"><option value="Pacific/Noumea"><option value="Africa/Casablanca"></datalist>
+      <span class="note">Le fuseau horaire sert aux actions planifiées.</span>
+    </div>
+    <div class="field"><span class="label">Rythme de l’agent (secondes entre deux envois)</span>
+      <div class="row" style="flex-wrap:wrap"><label class="check" style="flex:1 1 140px">dashboard ouvert <input type="number" id="alHot" min="5" max="120" required style="width:70px;padding:3px 6px"></label>
+        <label class="check" style="flex:1 1 140px">écran lecture seule <input type="number" id="alWarm" min="10" max="120" required style="width:70px;padding:3px 6px"></label>
+        <label class="check" style="flex:1 1 140px">personne <input type="number" id="alIdleSync" min="10" max="120" required style="width:70px;padding:3px 6px"></label></div>
+      <span class="note">Plus court = plus réactif, mais plus de requêtes (offres gratuites limitées). 120 s au plus. Appliqué par l’agent 1.4.0 et plus.</span>
     </div>
     <div class="field"><span class="label">Vérifications automatiques</span>
       <label class="check"><input type="checkbox" id="alAutoCable"> tester le câble des ports sans lien jamais testés ou rebranchés, et revérifier les autres toutes les 2 h (ne coupe aucun appareil)</label>
@@ -554,8 +576,8 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
-const APP_VERSION = '1.5.0';
-const AGENT_LATEST = '1.3.0'; // dernière version de l'agent publiée avec ce dashboard
+const APP_VERSION = '1.6.0';
+const AGENT_LATEST = '1.4.0'; // dernière version de l'agent publiée avec ce dashboard
 const verNum = (v) => String(v).split('.').reduce((a, x) => a * 1000 + (Number(x) || 0), 0);
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -583,6 +605,37 @@ const IDLE_AFTER = 120;
 
 let S = null, LOG = [], ALERTS = [], NOW = 0, selected = null, filter = 'all', timer = null, lastTouch = 0;
 let LV = '', AV = ''; // versions du journal et des alertes déjà reçues : le serveur ne les renvoie que si elles changent
+
+// ================================================================ extensions (public/js/*.js)
+// Chaque fonction d'administration vit dans son propre fichier et s'accroche ici :
+//   HOOK.render.push(fn)      après chaque affichage complet
+//   HOOK.faceplate.push(fn)   après chaque affichage de la façade (ex. surligner une sélection)
+//   HOOK.panel.push(fn)       fn(port) -> HTML d'une section ajoutée au volet d'un port
+//   HOOK.portName.push(fn)    fn(port, {name, sub, macs, lldp}) -> {name?, sub?} pour renommer l'appareil d'un port
+//   HOOK.poll.push(fn)        après chaque lecture de l'état (X contient les données des extensions)
+//   HOOK.role.push(fn)        quand on passe en lecture seule ou en vue admin
+//   addTool({ id, label, icon, title, open })   bouton dans la carte Administration
+//   ADMIN.xxx                 fonctions partagées entre extensions (ADMIN.wake, ADMIN.profiles…)
+const HOOK = { render: [], faceplate: [], panel: [], portName: [], poll: [], role: [] };
+const TOOLS = [], X = {}, XV = {}, ADMIN = {};
+function hook(name, ...args) {
+  const out = [];
+  for (const f of HOOK[name]) { try { out.push(f(...args)); } catch (e) { console.error(`extension (${name})`, e); } }
+  return out;
+}
+function addTool(t) { TOOLS.push(t); renderTools(); }
+function renderTools() {
+  const box = $('#adminTools'); if (!box) return;
+  $('#sec-admin').hidden = !TOOLS.length;
+  setHTML(box, TOOLS.map((t) => `<button class="btn" type="button" data-tool="${esc(t.id)}" title="${esc(t.title || '')}">${t.icon ? `<span class="ic" aria-hidden="true">${t.icon}</span>` : ''}${esc(t.label)}${t.badge ? `<span class="badge amber">${esc(t.badge)}</span>` : ''}</button>`).join(''));
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tool]'); if (!b) return;
+  const t = TOOLS.find((x) => x.id === b.dataset.tool);
+  if (t && canAdmin()) { try { t.open(); } catch (err) { console.error(err); toast('Erreur', { type: 'error', sub: err.message }); } }
+});
+// Capacités de l'agent (ex. 'wol', 'ping') : certaines actions demandent une version récente.
+const agentHas = (cap) => (S?.agent?.caps || []).includes(cap);
 const OUT = {}, OUTV = {}, SEEN = {};
 
 const quietFor = (p) => (p.up && p.rx_quiet_since ? Math.max(0, (S.updated || NOW) - p.rx_quiet_since) : 0);
@@ -671,6 +724,7 @@ function applyRole() {
   $('#viewBtn').setAttribute('aria-label', $('#viewBtn').title);
   $('#fpNote').textContent = ro ? 'Clique sur un port pour voir son détail' : 'Clique sur un port pour le gérer · reclique pour le désélectionner';
   if (ro) document.querySelectorAll('dialog[open]').forEach((d) => d.close());
+  hook('role', ro); renderTools();
   if (S) renderPanel(true);
 }
 $('#viewBtn').addEventListener('click', () => {
@@ -678,7 +732,7 @@ $('#viewBtn').addEventListener('click', () => {
   try { localStorage.setItem('aruba-view', MONITOR ? 'monitor' : 'admin'); } catch {}
   applyRole();
 });
-function showLogin() { LV = AV = ''; $('#foot').hidden = true; $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
+function showLogin() { LV = AV = ''; for (const k of Object.keys(XV)) delete XV[k]; $('#foot').hidden = true; $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
 function showApp() { $('#login').hidden = true; $('#app').hidden = false; $('#foot').hidden = false; }
 $('#appVersion').textContent = `v${APP_VERSION}`;
 
@@ -695,7 +749,8 @@ async function poll() {
   clearTimeout(timer);
   try {
     const touch = Date.now() - lastTouch > 50000;
-    const d = await api(`/api/state?lv=${LV}&av=${AV}${touch ? '&touch=1' : ''}`);
+    const xv = Object.entries(XV).map(([k, v]) => `${k}:${v}`).join(',');
+    const d = await api(`/api/state?lv=${LV}&av=${AV}${xv ? `&xv=${encodeURIComponent(xv)}` : ''}${touch ? '&touch=1' : ''}`);
     if (d.auth === false) { showLogin(); $('#pw').focus(); return; }
     if (touch) lastTouch = Date.now();
     if ((d.role || 'admin') !== ROLE || !document.body.dataset.role) { ROLE = d.role || 'admin'; document.body.dataset.role = ROLE; applyRole(); }
@@ -703,7 +758,9 @@ async function poll() {
     S = d.state; NOW = d.now;
     if (d.alerts) { ALERTS = arr(d.alerts); AV = d.av; }
     if (d.log) { trackCommands(arr(d.log)); LV = d.lv; }
+    for (const [k, v] of Object.entries(d.x || {})) { X[k] = v.data; XV[k] = v.v; }
     render();
+    hook('poll', d);
     runVerify(); maybeDiag(); maybeCableCheck();
   } catch (e) { if (e.message === '401') return; }
   const busyNow = LOG.some((c) => ['pending', 'running', 'confirm'].includes(c.status));
@@ -737,7 +794,8 @@ async function fetchOutputs(ids) {
     renderTerm(); if (S) render();
   } catch {}
 }
-function cmdName(c) { return c.label || c.cmd.split('\n')[0]; }
+const ADDED_LINE = /^(copy running-config checkpoint \S+|checkpoint auto \d+)$/;
+function cmdName(c) { return c.label || c.cmd.split('\n').map((l) => l.trim()).find((l) => l && !ADDED_LINE.test(l)) || c.cmd.split('\n')[0]; }
 function onStatus(c) {
   if (isAuto(c)) return;
   if (c.status === 'done' && CONFIG_RE.test(c.cmd)) setTimeout(() => maybeDiag(true), 1500); // rafraîchit « config sauvegardée ? »
@@ -752,7 +810,18 @@ function onStatus(c) {
   }
   if (c.status === 'error') {
     toast(name, { id: c.id, type: 'error', sub: 'Le switch a renvoyé une erreur. Détail dans la console.', timeout: 9000 });
-    setTimeout(() => { const l = (OUT[c.id] || '').split('\n').find((x) => /^\s*%|Invalid|Error/i.test(x)); if (l && TOASTS[c.id]) toast(name, { id: c.id, type: 'error', sub: l.trim(), timeout: 9000 }); }, 1200);
+    setTimeout(() => {
+      // erreur seulement sur les lignes ajoutées par le dashboard (point de restauration, annulation automatique) :
+      // le changement lui-même est appliqué
+      const bad = Object.entries(sections(OUT[c.id])).filter(([, ls]) => ls.some((x) => /^\s*(%\s|Invalid|Error|ERROR)/.test(x)));
+      if (bad.length && bad.every(([h]) => ADDED_LINE.test(h))) {
+        if (TOASTS[c.id]) toast(name, { id: c.id, type: 'warn', sub: 'Appliqué, mais le switch a refusé le point de restauration ou l’annulation automatique.', timeout: 9000 });
+        const exp = expectations(c.cmd); // le changement lui-même est quand même vérifié sur le switch
+        if (exp.length) VERIFY[c.id] = { name, exp, since: c.finished || NOW };
+        return;
+      }
+      const l = (OUT[c.id] || '').split('\n').find((x) => /^\s*%|Invalid|Error/i.test(x)); if (l && TOASTS[c.id]) toast(name, { id: c.id, type: 'error', sub: l.trim(), timeout: 9000 });
+    }, 1200);
   }
 }
 
@@ -1079,7 +1148,8 @@ function renderSwitch() {
   $('#unsavedPill').hidden = !(d && d.saved === false);
 }
 $('#swInfo').addEventListener('click', (e) => { if (e.target.closest('[data-save]')) $('#unsavedPill').click(); });
-$('#unsavedPill').addEventListener('click', () => canAdmin() && confirmCmd('Sauvegarder la configuration ?', 'Les changements en cours deviennent la configuration chargée au démarrage du switch.', 'write memory', 'Configuration sauvegardée'));
+const saveText = (t) => [ADMIN.saveWarning?.(), t].filter(Boolean).join(' '); // avertit pendant un délai d'annulation automatique
+$('#unsavedPill').addEventListener('click', () => canAdmin() && confirmCmd('Sauvegarder la configuration ?', saveText('Les changements en cours deviennent la configuration chargée au démarrage du switch.'), 'write memory', 'Configuration sauvegardée'));
 function renderLogs() {
   const d = DIAG;
   if (!d) return;
@@ -1101,6 +1171,9 @@ function render() {
   $('#subtitle').textContent = $('#subtitle').title = [DIAG?.ip?.replace(/\/\d+$/, '') || S.mgmt_ip, S.model, S.location && `Emplacement ${S.location}`, S.version && `AOS-CX ${S.version}`, S.uptime && `allumé depuis ${S.uptime.replace(/weeks?/, 'sem.').replace(/days?/, 'j').replace(/hours?/, 'h').replace(/minutes?/, 'min')}`].filter(Boolean).join(' · ');
   updateDiag(); updateBcast();
   renderKpis(); renderFaceplate(); renderPorts(); renderChart(); renderPanel(); renderVlans(); renderTerm(); renderAlerts(); fillPortSelect(); renderSwitch(); renderLogs(); ddSyncAll();
+  const site = SETTINGS?.siteName;
+  document.title = site ? `${site} · ${S.hostname || 'Switch'}` : `Switch ${S.hostname || 'Aruba'}`;
+  hook('render');
 }
 
 function renderAgent() {
@@ -1117,8 +1190,10 @@ function renderAgent() {
   const working = !online && age < 600 && LOG.some((c) => c.status === 'running');
   pill.className = 'pill ' + (online ? 'ok' : working ? '' : 'ko');
   pill.lastElementChild.textContent = online ? `Agent en ligne · ${ago(age)}` : working ? 'Agent occupé : commande longue en cours…' : `Agent hors ligne · ${ago(age)}`;
-  pill.title = `${S.agent?.host ? `Agent sur ${S.agent.host}. ` : ''}Envoi toutes les ${every} s (10 s quand le dashboard est ouvert, 30 s pour un écran lecture seule, 60 s sinon).`;
-  $('#termMode').textContent = online && every <= 10 ? 'temps réel : exécution en 1 à 5 s' : 'l’agent passe en temps réel dans moins d’une minute';
+  pill.title = `${S.agent?.host ? `Agent sur ${S.agent.host}. ` : ''}Envoi toutes les ${every} s (${SETTINGS?.agent?.hot ?? 10} s quand le dashboard est ouvert, ${SETTINGS?.agent?.warm ?? 30} s pour un écran lecture seule, ${SETTINGS?.agent?.idle ?? 60} s sinon).`;
+  const hotEvery = SETTINGS?.agent?.hot ?? 10, idleEvery = SETTINGS?.agent?.idle ?? 60;
+  $('#termMode').textContent = online && every <= hotEvery * 2 ? 'temps réel : exécution en 1 à 5 s'
+    : `l’agent passe en temps réel dans ${idleEvery <= 60 ? 'moins d’une minute' : `moins de ${Math.ceil(idleEvery / 60)} min`}`;
 }
 
 function renderKpis() {
@@ -1179,6 +1254,7 @@ function renderFaceplate() {
   for (const [a, b] of [[1, 12], [13, 24]]) { html += '<div class="fp-group">'; for (let n = a; n <= b; n += 2) html += jack(n) + jack(n + 1); html += '</div>'; }
   html += '<div class="fp-group fp-sfp">' + jack(25, 1) + jack(26, 1) + jack(27, 1) + jack(28, 1) + '</div>';
   setHTML($('#faceplate'), html);
+  hook('faceplate');
   const downs = (S.ports || []).filter((p) => pState(p) === 'down').map((p) => cableOf(p.port)).filter(Boolean);
   const cabled = downs.filter((c) => ['open', 'good', 'partial'].includes(c.kind)), faulty = downs.filter((c) => c.kind === 'fault');
   const unknown = (S.ports || []).filter((p) => pState(p) === 'down' && !cableOf(p.port) && cableUnknown(p)).length;
@@ -1252,6 +1328,7 @@ function portInfo(p) {
   if (cab && (cab.kind !== 'empty' || sub)) name = { empty: 'Rien de branché', open: `Câble ${cab.len} m, rien au bout`, good: `Câble ${cab.len} m, appareil éteint`, partial: `Câble ${cab.len} m, paire ouverte`, fault: `Câble en défaut (~${cab.len} m)` }[cab.kind];
   if (unk) { name = 'Câble à vérifier'; sub = [unkText(p, unk), sub].filter(Boolean).join(' · '); }
   const ip = withIp.length ? ips[withIp[0]].ip : '';
+  for (const o of hook('portName', p, { name, sub, macs, lldp })) if (o) { if (o.name !== undefined) name = o.name; if (o.sub !== undefined) sub = o.sub; }
   return { name, sub: [sub, p.desc].filter(Boolean).join(' · '), ip, ipMore: Math.max(0, withIp.length - 1), mac: macs[0] || '', macMore: Math.max(0, macs.length - 1),
     text: [p.port, portNum(p.port), name, sub, p.desc, ...macs, ...withIp.map((m) => ips[m].ip), ...withIp.map((m) => ips[m].name || '')].join(' ').toLowerCase() };
 }
@@ -1476,7 +1553,7 @@ async function maybeCableCheck() {
   if (Date.now() / 1000 - cableAsked < 60) return;
   const tried = {}; // dernier test lancé sur chaque port, toutes pages confondues (le journal est partagé)
   for (const c of LOG) for (const port of cablePorts(c)) tried[port] = Math.max(tried[port] || 0, c.created);
-  const todo = (S.ports || []).filter((p) => pState(p) === 'down' && p.type === '1GbT' && !isUplink(p))
+  const todo = (S.ports || []).filter((p) => pState(p) === 'down' && p.type === '1GbT' && !isUplink(p) && !ADMIN.portGuard?.(p))
     .map((p) => ({ port: p.port, unk: Boolean(cableUnknown(p)), age: S.cables?.[p.port]?.t ? NOW - S.cables[p.port].t : Infinity }))
     .filter((x) => (x.unk || x.age > CABLE_RECHECK) && NOW - (tried[x.port] || 0) > CABLE_RETRY)
     .sort((a, b) => b.unk - a.unk || b.age - a.age)
@@ -1525,7 +1602,7 @@ function renderPanel(force) {
     isSlow(p) && `<div class="alert amber"><b>Lien négocié à ${esc(p.speed)} Mb/s au lieu de 1000.</b><br>Souvent, le PC est simplement en veille (sa carte réseau descend à 10 ou 100 Mb/s). S’il est allumé : câble abîmé, prise murale ou carte réseau ancienne. Lance un test de câble ci-dessous.</div>`,
   ].filter(Boolean).join('');
   setHTML($('#ppTitle'), `Port ${n} <span class="status ${stInfo(p).cls}" style="font-size:12px">${stInfo(p).label}</span>`);
-  if (!$('#ppInfo')) $('#ppBody').innerHTML = '<div id="ppInfo"></div><div id="ppActions"></div>';
+  if (!$('#ppInfo')) $('#ppBody').innerHTML = '<div id="ppInfo"></div><div id="ppActions"></div><div id="ppExt"></div>';
   setHTML($('#ppInfo'), `${alerts}
     <dl>
       <dt>Interface</dt><dd class="mono">${esc(p.port)}</dd>
@@ -1575,6 +1652,10 @@ function renderPanel(force) {
     </div>
     ${admin ? '<p class="note">Les changements s’appliquent tout de suite. Pense à « Sauvegarder la config » pour qu’ils survivent à un redémarrage.</p>' : ''}`);
   enhanceSelects($('#ppActions'));
+  const ext = $('#ppExt'), parts = hook('panel', p);
+  while (ext.children.length < parts.length) ext.appendChild(document.createElement('div'));
+  parts.forEach((h, i) => setHTML(ext.children[i], h || ''));
+  enhanceSelects(ext);
 }
 // Ne touche au DOM que si le contenu a changé (évite de perdre un clic pendant le rafraîchissement).
 function setHTML(el, html) { if (el && el._html !== html) { el.innerHTML = html; el._html = html; } }
@@ -1688,7 +1769,7 @@ const CHIPS = [['show interface brief'], ['show mac-address-table'], ['show lldp
 $('#chips').innerHTML = CHIPS.map(([c, l, cls]) => `<button class="chip ${cls || ''}" data-cmd="${esc(c)}">${esc(l || c)}</button>`).join('');
 $('#chips').addEventListener('click', (e) => {
   const b = e.target.closest('[data-cmd]'); if (!b) return;
-  if (b.dataset.cmd === 'write memory') confirmCmd('Sauvegarder la configuration ?', 'La configuration actuelle devient celle chargée au démarrage du switch.', 'write memory', 'Configuration sauvegardée');
+  if (b.dataset.cmd === 'write memory') confirmCmd('Sauvegarder la configuration ?', saveText('La configuration actuelle devient celle chargée au démarrage du switch.'), 'write memory', 'Configuration sauvegardée');
   else busy(b, () => send(b.dataset.cmd).catch(() => {}));
 });
 
@@ -1724,12 +1805,15 @@ function fillSettings() {
   $('#alPortDown').checked = s.notify.portDown; $('#alTemp').checked = s.notify.temp; $('#alAgent').checked = s.notify.agentOffline;
   $('#alSlow').checked = s.notify.slowLink; $('#alIdle').checked = s.notify.idleLink; $('#alTempMax').value = s.tempMax;
   $('#alAutoCable').checked = s.autoCable !== false;
+  $('#alNewDev').checked = Boolean(s.notify.newDevice);
+  $('#alSite').value = s.siteName || ''; $('#alTz').value = s.tz || 'Europe/Paris';
+  $('#alHot').value = s.agent?.hot ?? 10; $('#alWarm').value = s.agent?.warm ?? 30; $('#alIdleSync').value = s.agent?.idle ?? 60;
   const vt = VIEWER?.t ? new Date(VIEWER.t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
   $('#alViewerNote').textContent = VIEWER?.enabled
     ? `Activé (mot de passe défini le ${vt}). Saisis-en un nouveau pour le changer : les écrans déjà connectés seront déconnectés.`
     : 'Désactivé. Définis un second mot de passe pour connecter un écran qui affiche tout le dashboard sans pouvoir rien modifier.';
   $('#alViewerOff').hidden = !VIEWER?.enabled; $('#alViewerPw').value = '';
-  watchSel = s.watchPorts ? new Set(s.watchPorts) : null;
+  watchSel = s.watchPorts?.length ? new Set(s.watchPorts) : null; // liste vide = mode Auto, comme l'agent
   renderWatch();
 }
 function renderWatch() {
@@ -1752,8 +1836,10 @@ $('#alertForm').addEventListener('submit', (e) => {
       const d = await api('/api/settings', {
         email: $('#alEmail').value, webhook: $('#alHook').value, tempMax: $('#alTempMax').value,
         watchPorts: watchSel ? [...watchSel] : null, autoCable: $('#alAutoCable').checked,
+        siteName: $('#alSite').value, tz: $('#alTz').value,
+        agent: { hot: $('#alHot').value, warm: $('#alWarm').value, idle: $('#alIdleSync').value },
         viewerPassword: $('#alViewerPw').value, viewerDisable: viewerOff,
-        notify: { portDown: $('#alPortDown').checked, temp: $('#alTemp').checked, agentOffline: $('#alAgent').checked, slowLink: $('#alSlow').checked, idleLink: $('#alIdle').checked },
+        notify: { portDown: $('#alPortDown').checked, temp: $('#alTemp').checked, agentOffline: $('#alAgent').checked, slowLink: $('#alSlow').checked, idleLink: $('#alIdle').checked, newDevice: $('#alNewDev').checked },
       });
       const newViewer = $('#alViewerPw').value.trim() && !viewerOff;
       SETTINGS = d.settings; VIEWER = d.viewer || null; fillSettings(); renderAlerts(); $('#alertDialog').close();
@@ -1863,5 +1949,15 @@ setInterval(() => { if (!document.hidden && chartRange !== '1h' && !$('#app').hi
 
 poll();
 </script>
+<!-- Fonctions d'administration : chacune dans son fichier (public/js), branchées sur les points d'accroche ci-dessus. -->
+<script src="/js/undo.js?v=1.6.0"></script>
+<script src="/js/backup.js?v=1.6.0"></script>
+<script src="/js/profiles.js?v=1.6.0"></script>
+<script src="/js/bulk.js?v=1.6.0"></script>
+<script src="/js/devices.js?v=1.6.0"></script>
+<script src="/js/schedule.js?v=1.6.0"></script>
+<script src="/js/diagnose.js?v=1.6.0"></script>
+<script src="/js/health.js?v=1.6.0"></script>
+<script src="/js/wol.js?v=1.6.0"></script>
 </body>
 </html>

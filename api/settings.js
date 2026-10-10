@@ -1,5 +1,6 @@
 import { redis, K, getSettings, DEFAULT_SETTINGS } from '../lib/redis.js';
 import { requireSession, hashPassword, safeEqual } from '../lib/auth.js';
+import { findAction } from '../lib/features/index.js';
 
 const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 
@@ -16,6 +17,20 @@ export default async function handler(req, res) {
   }
   if (req.method !== 'POST') return res.status(405).end();
   const b = req.body || {};
+  // Actions des fonctions d'administration (annuaire, profils, planification…) : { action: 'nom', ... }.
+  if (b.action) {
+    const fn = findAction(String(b.action));
+    if (!fn) return res.status(400).json({ error: 'Action inconnue.' });
+    try {
+      const [state, settings] = await Promise.all([r.get(K.state), getSettings()]);
+      return res.json(await fn({ r, body: b, state, settings }) ?? { ok: true });
+    } catch (e) {
+      if (e.expose) return res.status(e.status || 400).json({ error: e.message, ...(e.data || {}) }); // ex. jeton CONFIRMER
+      console.error('action', b.action, e);
+      return res.status(500).json({ error: 'Erreur interne pendant l’action.' });
+    }
+  }
+  const cur = await getSettings();
   const viewerPw = String(b.viewerPassword ?? '').trim();
   if (viewerPw && viewerPw.length < 8) return res.status(400).json({ error: 'Le mot de passe lecture seule doit faire au moins 8 caractères.' });
   if (viewerPw && safeEqual(viewerPw, String(process.env.DASHBOARD_PASSWORD || '').trim())) {
@@ -33,6 +48,13 @@ export default async function handler(req, res) {
     tempMax: Math.min(95, Math.max(40, Number(b.tempMax) || DEFAULT_SETTINGS.tempMax)),
     notify: Object.fromEntries(Object.keys(DEFAULT_SETTINGS.notify).map((k) => [k, Boolean(b.notify?.[k])])),
     autoCable: b.autoCable === undefined ? DEFAULT_SETTINGS.autoCable : Boolean(b.autoCable),
+    siteName: b.siteName === undefined ? cur.siteName : String(b.siteName).normalize('NFC').replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60),
+    tz: b.tz === undefined ? cur.tz : validTz(String(b.tz).trim()) ? String(b.tz).trim() : cur.tz,
+    agent: Object.fromEntries(Object.entries(DEFAULT_SETTINGS.agent).map(([k, d]) => {
+      // champ vide : on garde la valeur actuelle ; 120 s au plus pour rester sous les seuils « agent hors ligne »
+      const raw = b.agent?.[k], v = raw === '' || raw == null ? Number(cur.agent?.[k] ?? d) : Number(raw);
+      return [k, Math.round(Math.min(120, Math.max(k === 'hot' ? 5 : 10, Number.isFinite(v) ? v : d)))];
+    })),
   };
   await r.set(K.settings, settings);
   await r.incr(K.sver); // l'agent récupère les nouveaux réglages à sa prochaine synchro
@@ -44,4 +66,8 @@ export default async function handler(req, res) {
     await r.set(K.viewer, viewer);
   }
   res.json({ ok: true, settings, viewer: { enabled: Boolean(viewer), t: viewer?.t || null } });
+}
+
+function validTz(tz) {
+  try { new Intl.DateTimeFormat('fr-FR', { timeZone: tz }); return Boolean(tz); } catch { return false; }
 }

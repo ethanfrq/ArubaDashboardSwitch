@@ -3,19 +3,21 @@
 
 Lit l'état du switch (SSH, ou console série pour les tests), l'envoie au dashboard,
 exécute les commandes demandées, calcule l'historique, repère les IP des appareils
-et signale les incidents (alertes).
+et signale les incidents (alertes). Fait aussi lui-même quelques actions demandées par le
+dashboard (lignes « # » : allumer un PC par Wake-on-LAN, ping).
 
     python agent.py                 # fonctionnement normal
     python agent.py --set-password  # enregistre le mot de passe SSH du switch (chiffré)
     python agent.py --once          # un relevé affiché en JSON, sans rien envoyer
 """
-import argparse, base64, getpass, hashlib, ipaddress, json, logging, os, queue, re, socket, subprocess
-import sys, threading, time, urllib.error, urllib.request
+import argparse, base64, contextlib, getpass, hashlib, ipaddress, json, logging, math, os, queue, re, socket
+import subprocess, sys, threading, time, urllib.error, urllib.request
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-AGENT_VERSION = "1.3.0"
+AGENT_VERSION = "1.4.0"
 HERE = Path(__file__).resolve().parent
 CFG = json.loads((HERE / "agent_config.json").read_text(encoding="utf-8"))
 SECRET = HERE / "agent_secret.bin"
@@ -24,14 +26,25 @@ HEARTBEAT = HERE / "agent_etat.json"     # lu par mise_a_jour.py pour vérifier 
 UPDATE_STATUS = HERE / "mise_a_jour.json"  # écrit par mise_a_jour.py, affiché dans le dashboard
 IS_WIN = os.name == "nt"
 
+# Rythme d'envoi par défaut ; le dashboard le règle (Réglages, « Rythme de l'agent »), voir sync_periods().
 IDLE_SYNC = CFG.get("idle_sync", 60)   # personne sur le dashboard : envoi toutes les 60 s
 WARM_SYNC = CFG.get("warm_sync", 30)   # écran lecture seule ouvert : toutes les 30 s
 HOT_SYNC = CFG.get("hot_sync", 10)     # dashboard administrateur ouvert : toutes les 10 s
+# Jamais plus de 2 min entre deux envois, relevé compris et même switch chargé : le serveur juge l'agent hors ligne
+# après 3 min (actions planifiées et sauvegardes sautées) et alerte par e-mail après 5 min.
+SYNC_MAX, SYNC_REST = 120, 5           # écart maximal entre deux envois, pause minimale entre deux relevés (s)
+SYNC_LIMITS = {"hot": (5, SYNC_MAX), "warm": (10, SYNC_MAX), "idle": (10, SYNC_MAX)}  # bornes (s) des valeurs réglées
 POLL_BUSY, POLL_EVERY = 1.5, 5         # commandes : toutes les 1,5 s juste après une commande, sinon 5 s
 SCAN_EVERY = 300                       # recherche des IP toutes les 5 min
 HISTORY_SPAN = 3600                    # débit en direct : la dernière heure
 IDLE_ALERT_AFTER = 600                 # lien sans trafic : alerte après 10 min
 SESSION_CHECK = 120                    # session de commandes inutilisée depuis 2 min : vérifiée avant usage
+CONNECT_PAUSE = 15                     # connexion SSH des commandes en échec : pas de nouvel essai avant 15 s
+LINK_PAUSE = (5, 60)                   # liaison perdue : nouvel essai après 5 s, puis 10, 20, 40 et 60 s au plus
+AUTH_PAUSE = 300                       # mot de passe SSH refusé : 5 min sans aucun essai (verrouillage du compte)
+CAPS = ["wol", "ping"]                 # actions faites par l'agent lui-même (lignes « # »), annoncées au dashboard
+WOL_PORTS, WOL_REPEAT, WOL_MAX = (9, 7), 3, 64   # Wake-on-LAN : ports UDP, envois de chaque paquet, adresses par ligne
+PING_COUNT, PING_TIMEOUT, PING_LINES = 4, 20, 12  # ping : paquets, durée max (s), lignes de sortie gardées
 
 # Fréquence de chaque relevé (secondes) : (dashboard ouvert, écran lecture seule, personne).
 # Le débit, les appareils et le CPU sont relevés à chaque envoi ; le reste change moins souvent et est espacé
@@ -63,6 +76,24 @@ log = logging.getLogger("agent")
 
 class NotLoggedIn(Exception):
     pass
+
+
+class SwitchUnreachable(ConnectionError):
+    """Connexion SSH des commandes impossible (ou pause de quelques secondes après un échec)."""
+
+
+def link_errors():
+    """Erreurs de liaison avec le switch, y compris celles de paramiko (ex. « Error reading SSH protocol banner »)."""
+    pm = sys.modules.get("paramiko")
+    ssh = getattr(pm, "SSHException", None) if pm else None
+    return (OSError, ConnectionError, EOFError) + ((ssh,) if ssh else ())
+
+
+def auth_refused(e):
+    """Vrai si le switch a refusé l'identification SSH (paramiko.AuthenticationException et ses variantes)."""
+    pm = sys.modules.get("paramiko")
+    auth = getattr(pm, "AuthenticationException", None) if pm else None
+    return isinstance(auth, type) and isinstance(e, auth)
 
 
 # ================================================================ mot de passe
@@ -97,12 +128,16 @@ def store_password(pw):
         os.chmod(SECRET, 0o600)
 
 
+def read_secret():
+    raw = SECRET.read_bytes()
+    return (_dpapi(raw, False) if IS_WIN else base64.b64decode(raw)).decode()
+
+
 def load_password():
     if CFG.get("switch_password"):
         return CFG["switch_password"]
     if SECRET.exists():
-        raw = SECRET.read_bytes()
-        return (_dpapi(raw, False) if IS_WIN else base64.b64decode(raw)).decode()
+        return read_secret()
     if sys.stdin and sys.stdin.isatty():
         return getpass.getpass(f"Mot de passe SSH de {CFG['switch_user']}@{CFG['switch_host']} : ")
     raise SystemExit("Aucun mot de passe enregistré : lance « python agent.py --set-password ».")
@@ -179,16 +214,20 @@ class SSHTransport(_Base):
         import paramiko  # pip install paramiko
         self.c = paramiko.SSHClient()
         self.c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.c.connect(host, username=user, password=password, timeout=10,
-                       look_for_keys=False, allow_agent=False)
-        self.c.get_transport().set_keepalive(30)
-        self.ch = self.c.invoke_shell(width=400, height=1000)
-        self.ch.settimeout(0.2)
-        time.sleep(1.5)
-        self._drain()
-        self._send("\r")
-        self._read_until_prompt("", 10)
-        self.run("no page", 5)
+        try:
+            self.c.connect(host, username=user, password=password, timeout=10,
+                           look_for_keys=False, allow_agent=False)
+            self.c.get_transport().set_keepalive(30)
+            self.ch = self.c.invoke_shell(width=400, height=1000)
+            self.ch.settimeout(0.2)
+            time.sleep(1.5)
+            self._drain()
+            self._send("\r")
+            self._read_until_prompt("", 10)
+            self.run("no page", 5)
+        except BaseException:
+            self.c.close()  # connexion à moitié ouverte : fermée proprement avant de signaler l'échec
+            raise
 
     def alive(self):
         tr = self.c.get_transport()
@@ -215,6 +254,18 @@ class SSHTransport(_Base):
 
 
 PASSWORD = None
+
+
+def reload_password():
+    """Relit le mot de passe enregistré après un refus : un « --set-password » fait pendant la pause sert dès
+    l'essai suivant, sans redémarrer l'agent."""
+    global PASSWORD
+    if CFG.get("transport") == "console" or CFG.get("switch_password") or not SECRET.exists():
+        return
+    try:
+        PASSWORD = read_secret()
+    except Exception as e:  # noqa: BLE001
+        log.warning("Mot de passe enregistré illisible : %s", e)
 
 
 def connect():
@@ -643,6 +694,166 @@ def api(path, payload):
         return json.loads(r.read() or b"{}")
 
 
+# ================================================================ actions de l'agent (lignes « # »)
+# Une ligne de commande qui commence par « # » n'est jamais envoyée au switch : l'agent la fait lui-même.
+#   #wol <mac> [<mac> …]   allume des PC (Wake-on-LAN), 1 à 64 adresses aa:bb:cc:dd:ee:ff
+#   #ping <ipv4>           ping depuis le PC de l'agent ; dernière ligne « Résultat : 4/4 réponses, 1 ms en moyenne »
+
+MAC_RE = re.compile(r"^[0-9a-f]{2}(?::[0-9a-f]{2}){5}$", re.I)
+UNKNOWN_ACTION = "% Action d'agent inconnue"
+PING_SUMMARY = (
+    re.compile(r"(\d+)\s+packets?\s+transmitted,\s+(\d+)\s+(?:packets?\s+)?received", re.I),          # Linux, macOS
+    re.compile(r"(?:Sent|envoy\S*)\s*=\s*(\d+)\s*,\s*(?:Received|re\S{1,2}us)\s*=\s*(\d+)", re.I),  # Windows (EN, FR)
+)
+PING_AVG = (
+    re.compile(r"(?:rtt|round-trip)\s+min/avg/max(?:/\w+)?\s*=\s*[\d.]+/([\d.]+)/", re.I),  # Linux, macOS
+    re.compile(r"(?:Average|Moyenne)\s*=\s*(\d+(?:[.,]\d+)?)\s*ms", re.I),                    # Windows
+)
+PING_TIME = re.compile(r"(?:time|temps)\s*[=<]\s*(\d+(?:[.,]\d+)?)\s*ms", re.I)
+PING_REPLY = re.compile(r"\bttl\s*[=:]\s*\d+", re.I)  # vraie réponse (Windows compte aussi « hôte inaccessible »)
+
+
+def is_agent_line(line):
+    return line.lstrip().startswith("#")
+
+
+def magic_packet(mac):
+    """Paquet magique Wake-on-LAN : 6 octets FF puis 16 fois l'adresse MAC."""
+    return b"\xff" * 6 + bytes.fromhex(mac.replace(":", "")) * 16
+
+
+def wol_targets():
+    """Adresses de diffusion : générale, et celle du réseau des PC (scan_subnet) quand il est connu."""
+    out = ["255.255.255.255"]
+    try:
+        net = ipaddress.ip_network(str(CFG.get("scan_subnet") or ""), strict=False)
+        if net.version == 4 and net.prefixlen <= 30 and str(net.broadcast_address) not in out:
+            out.append(str(net.broadcast_address))
+    except ValueError:
+        pass
+    return out
+
+
+def wake_on_lan(macs):
+    """Diffuse le paquet magique de chaque adresse (UDP, ports 9 et 7, 3 fois). Renvoie (lignes, réussite)."""
+    sent, err = {m: 0 for m in macs}, {}
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    except OSError as e:
+        return [f"% Wake-on-LAN impossible : {e}"], False
+    try:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        dests = [(ip, port) for ip in wol_targets() for port in WOL_PORTS]
+        for rep in range(WOL_REPEAT):
+            for mac in macs:
+                pkt = magic_packet(mac)
+                for d in dests:
+                    try:
+                        s.sendto(pkt, d)
+                        sent[mac] += 1
+                    except OSError as e:
+                        err[mac] = e
+            if rep < WOL_REPEAT - 1:
+                time.sleep(0.1)
+    except OSError as e:
+        return [f"% Wake-on-LAN impossible : {e}"], False
+    finally:
+        s.close()
+    return ([f"Wake-on-LAN envoyé à {m}" if sent[m] else f"% Wake-on-LAN impossible vers {m} : {err.get(m)}" for m in macs],
+            all(sent.values()))
+
+
+def valid_ipv4(text):
+    """Adresse IPv4 d'un appareil, normalisée (ni multicast, ni diffusion, ni 0.0.0.0) ; sinon None."""
+    try:
+        ip = ipaddress.IPv4Address(str(text))
+    except ValueError:
+        return None
+    if ip.is_multicast or ip.is_unspecified or int(ip) == 0xFFFFFFFF:
+        return None
+    return str(ip)
+
+
+def console_text(raw):
+    """Sortie d'un programme en texte : UTF-8, sinon page de code de la console Windows (cp850 en français)."""
+    encs = ["utf-8"]
+    if IS_WIN:
+        try:
+            import ctypes
+            encs.append(f"cp{ctypes.windll.kernel32.GetOEMCP()}")
+        except Exception:  # noqa: BLE001
+            pass
+    for enc in encs:
+        try:
+            return raw.decode(enc)
+        except (LookupError, UnicodeDecodeError):
+            pass
+    return raw.decode("cp1252", errors="replace")
+
+
+def parse_ping(text):
+    """Sortie d'un ping (Windows en français ou en anglais, Linux, macOS) -> (envoyés, reçus, moyenne en ms ou None).
+    Seules les vraies réponses comptent : Windows compte « Impossible de joindre l'hôte » comme une réponse."""
+    sent = received = avg = None
+    for rx in PING_SUMMARY:
+        m = rx.search(text)
+        if m:
+            sent, received = int(m[1]), int(m[2])
+            break
+    replies = len(PING_REPLY.findall(text))
+    received = replies if received is None else min(received, replies)
+    if sent is None:
+        sent = max(PING_COUNT, received)
+    if received:
+        for rx in PING_AVG:
+            m = rx.search(text)
+            if m:
+                avg = float(m[1].replace(",", "."))
+                break
+        if avg is None:
+            times = [float(x.replace(",", ".")) for x in PING_TIME.findall(text)]
+            avg = sum(times) / len(times) if times else None
+    return sent, received, avg
+
+
+def ping_result(sent, received, avg):
+    """Ligne lue par le dashboard : « Résultat : 4/4 réponses, 0.5 ms en moyenne » (ou « Résultat : 0/4 réponses »)."""
+    if received and avg is not None:
+        ms = f"{avg:.1f}".rstrip("0").rstrip(".")
+        return f"Résultat : {received}/{sent} réponses, {ms} ms en moyenne"
+    return f"Résultat : {received}/{sent} réponses"
+
+
+def ping(ip):
+    """Ping système (liste d'arguments, jamais de shell), 20 s au plus. Renvoie (lignes, réussite)."""
+    if IS_WIN:
+        args = ["ping", "-n", str(PING_COUNT), "-w", "1000", ip]
+    else:  # délai de réponse : en secondes sous Linux, en millisecondes sous macOS
+        args = ["ping", "-c", str(PING_COUNT), "-W", "1000" if sys.platform == "darwin" else "1", ip]
+    try:
+        p = subprocess.run(args, capture_output=True, timeout=PING_TIMEOUT, creationflags=0x08000000 if IS_WIN else 0)
+    except subprocess.TimeoutExpired:
+        return [f"% Ping interrompu : toujours en cours après {PING_TIMEOUT} s", ping_result(PING_COUNT, 0, None)], False
+    except OSError as e:
+        return [f"% Ping impossible sur ce PC : {e}"], False
+    text = console_text((p.stdout or b"") + (p.stderr or b""))
+    lines = [l.strip() for l in text.replace("\r", "").split("\n") if l.strip()]
+    return lines[:PING_LINES] + [ping_result(*parse_ping(text))], True
+
+
+def agent_action(line):
+    """Ligne « # » d'une commande, faite par l'agent lui-même. Renvoie (lignes de sortie, réussite)."""
+    words = line.split()
+    name, args = (words[0].lower(), words[1:]) if words else ("", [])
+    if name == "#wol" and 1 <= len(args) <= WOL_MAX and all(MAC_RE.match(a) for a in args):
+        return wake_on_lan(list(dict.fromkeys(a.lower() for a in args)))
+    if name == "#ping" and len(args) == 1:
+        ip = valid_ipv4(args[0])
+        if ip:
+            return ping(ip)
+    return [UNKNOWN_ACTION], False
+
+
 # ================================================================ commandes
 
 CONFIG_LINE = re.compile(r"^(conf|interface|vlan|no |shutdown|description|name|write|copy|checkpoint)", re.I)
@@ -655,6 +866,8 @@ class Commander(threading.Thread):
     def __init__(self, agent):
         super().__init__(daemon=True)
         self.agent, self.q, self.t, self.busy = agent, queue.Queue(), None, False
+        self.down_until, self.down_err = 0.0, ""  # dernier échec de connexion SSH : pause avant un nouvel essai
+        self.pending, self.pending_try = [], 0.0   # résultats pas encore remis au dashboard (réseau coupé)
 
     def reset(self):
         try:
@@ -662,6 +875,10 @@ class Commander(threading.Thread):
         except Exception:  # noqa: BLE001
             pass
         self.t = None
+
+    def hold(self, pause, why):
+        """Aucune connexion des commandes avant « pause » secondes (aussi décidé par la boucle principale)."""
+        self.down_until, self.down_err = max(self.down_until, time.time() + pause), why
 
     def usable(self):
         """Le switch ferme une session SSH restée inutilisée : on la vérifie avant de s'en servir."""
@@ -681,22 +898,60 @@ class Commander(threading.Thread):
             log.info("Session de commandes expirée : reconnexion au switch.")
             self.reset()
         if self.t is None:
-            self.t = connect()
+            wait = self.down_until - time.time()
+            if wait > 0:  # échec récent : on ne réessaie pas tout de suite, pour ne pas marteler le switch
+                raise SwitchUnreachable(f"connexion SSH au switch impossible ({self.down_err}). "
+                                        f"Nouvel essai possible dans {math.ceil(wait)} s.")
+            try:
+                self.t = connect()
+            except Exception as e:  # noqa: BLE001  (bannière SSH illisible, connexion refusée, mot de passe…)
+                self.reset()
+                auth = auth_refused(e)  # mot de passe refusé : pause longue, pour ne pas faire verrouiller le compte
+                pause = AUTH_PAUSE if auth else CONNECT_PAUSE
+                self.hold(pause, "mot de passe SSH refusé par le switch" if auth else (str(e) or type(e).__name__)[:200])
+                log.warning("Commandes : connexion au switch impossible (%s), pas de nouvel essai avant %d s.",
+                            self.down_err, pause)
+                raise SwitchUnreachable(f"connexion SSH au switch impossible ({self.down_err}).") from e
+            self.down_until = 0.0
         return self.t, threading.Lock()
+
+    def post_result(self, payload):
+        """Remet un résultat au dashboard ; s'il est injoignable (ex. un changement sensible a coupé le réseau du PC),
+        le résultat est gardé et renvoyé plus tard, jusqu'à 10 min, au lieu d'être perdu."""
+        try:
+            api("/api/agent/result", payload)
+        except Exception as e:  # noqa: BLE001
+            log.warning("Résultat %s non remis (%s) : nouvel essai plus tard.", payload["id"][:8], e)
+            self.pending = (self.pending + [(time.time(), payload)])[-20:]
+
+    def flush_pending(self):
+        if not self.pending or time.time() - self.pending_try < 15:
+            return
+        self.pending_try = time.time()
+        self.pending = [x for x in self.pending if time.time() - x[0] < 600]
+        while self.pending:
+            try:
+                api("/api/agent/result", self.pending[0][1])
+            except Exception:  # noqa: BLE001
+                return  # toujours injoignable : nouvel essai dans 15 s
+            log.info("Résultat %s remis avec retard.", self.pending.pop(0)[1]["id"][:8])
 
     def run(self):
         while True:
             try:
+                self.flush_pending()
                 if self.agent.hot():
                     r = api("/api/agent/poll", {})
                     self.busy = bool(r.get("busy"))
+                    if not r.get("hot"):  # plus personne sur le dashboard : la file est relevée à chaque envoi
+                        self.agent.hot_until = 0
                     for c in r.get("commands", []):
                         self.q.put(c)
                 while not self.q.empty():
                     self.execute(self.q.get())
             except Exception as e:  # noqa: BLE001
                 log.warning("Commandes : %s", e)
-                if isinstance(e, (OSError, ConnectionError, EOFError)):
+                if isinstance(e, link_errors()):
                     self.reset()
                 time.sleep(3)
             time.sleep((POLL_BUSY if self.busy else POLL_EVERY) if self.agent.hot() else 1)
@@ -715,11 +970,12 @@ class Commander(threading.Thread):
     def execute(self, c):
         log.info("Commande %s : %r", c["id"][:8], c["cmd"][:80])
         lines = [l.rstrip() for l in c["cmd"].replace("\r", "").split("\n") if l.strip()]
+        st = {"out": [], "ok": True, "i": 0}  # sortie, réussite, prochaine ligne à exécuter
         for attempt in (1, 2):
-            out, ok, retry = self._execute(c, lines, attempt)
-            if not retry:
+            if not self._execute(c, lines, attempt, st):
                 break
             log.info("Commande %s : session coupée avant l'envoi, nouvel essai.", c["id"][:8])
+        out, ok = st["out"], st["ok"]
         if any(CONFIG_LINE.match(l.strip()) for l in lines):
             self.agent.col.force.update(("saved", "links", "vlans", "stp"))  # refléter le changement tout de suite
         found = parse_cables(out)
@@ -731,18 +987,33 @@ class Commander(threading.Thread):
                 CABLES.write_text(json.dumps(self.agent.cables), encoding="utf-8")
             except OSError:
                 pass
-        api("/api/agent/result", {"id": c["id"], "status": "done" if ok else "error", "output": "\n".join(out).strip()})
-        self.agent.wake.set()  # relevé immédiat pour refléter le changement
+        self.post_result({"id": c["id"], "status": "done" if ok else "error", "output": "\n".join(out).strip()})
+        if not all(is_agent_line(l) for l in lines):
+            self.agent.wake.set()  # relevé immédiat pour refléter le changement (inutile après un ping ou un réveil)
 
-    def _execute(self, c, lines, attempt):
-        """Renvoie (sortie, réussite, à_réessayer). On ne réessaie que si rien n'a pu être envoyé au switch."""
-        out, ok, last, t, sent = [], True, "", None, 0
-        try:
-            t, lock = self.transport()
-            sent = t.sends
-            with lock:
-                i, tested = 0, False
-                while i < len(lines):
+    def _execute(self, c, lines, attempt, st):
+        """Exécute les lignes à partir de st["i"] en complétant st["out"] et st["ok"]. Renvoie vrai s'il faut réessayer :
+        on ne réessaie que si rien n'a pu être envoyé au switch. Les lignes « # » sont faites par l'agent lui-même,
+        sans ouvrir de session SSH, et ne sont jamais refaites lors du nouvel essai."""
+        out, last, t, sent, tested = st["out"], "", None, 0, False
+        with contextlib.ExitStack() as held:
+            try:
+                while st["i"] < len(lines):
+                    i = st["i"]
+                    if is_agent_line(lines[i]):
+                        try:
+                            body, good = agent_action(lines[i].strip())
+                        except Exception as e:  # noqa: BLE001  (jamais refaite, même en cas d'imprévu)
+                            body, good = [f"% Action de l'agent en échec : {e}"], False
+                        out.append("» " + lines[i])
+                        out.extend(body)
+                        st["ok"] = st["ok"] and good
+                        st["i"] = i + 1
+                        continue
+                    if t is None:  # session ouverte à la première ligne destinée au switch
+                        t, lock = self.transport()
+                        held.enter_context(lock)
+                        sent = t.sends
                     body, last = t.run(lines[i], 90)
                     tested = tested or "cable-diagnostic test" in lines[i]
                     for _ in range(8):  # test de câble : le résultat arrive quelques secondes plus tard
@@ -753,7 +1024,7 @@ class Commander(threading.Thread):
                         body, last = t.run(lines[i], 30)
                     out.append("» " + lines[i])
                     out.extend(body)
-                    ok = ok and not any(ERROR_LINE.match(l) for l in body)
+                    st["ok"] = st["ok"] and not any(ERROR_LINE.match(l) for l in body)
                     if CONFIRM.search(last):
                         question = last.strip()
                         nxt = lines[i + 1].strip().lower() if i + 1 < len(lines) else ""
@@ -771,29 +1042,44 @@ class Commander(threading.Thread):
                                 out.append(f"{question} {ans}")
                         body, last = t.run(ans, 180)
                         out.extend(body)
-                        ok = ok and not any(ERROR_LINE.match(l) for l in body)
-                    i += 1
-                if "(config" in last:  # ne jamais laisser la session en mode configuration
+                        st["ok"] = st["ok"] and not any(ERROR_LINE.match(l) for l in body)
+                    st["i"] = i + 1
+                if t is not None and "(config" in last:  # ne jamais laisser la session en mode configuration
                     t.run("end", 10)
-        except NotLoggedIn:
-            out.append("Session console non connectée sur le switch.")
-            ok = False
-        except Exception as e:  # noqa: BLE001
-            self.reset()
-            if attempt == 1 and (t is None or t.sends == sent):
-                return out, False, True
-            out.append(f"Erreur : {e}")
-            ok = False
-        return out, ok, False
+            except NotLoggedIn:
+                out.append("Session console non connectée sur le switch.")
+                st["ok"] = False
+            except Exception as e:  # noqa: BLE001
+                self.reset()
+                if attempt == 1 and not isinstance(e, SwitchUnreachable) and (t is None or t.sends == sent):
+                    return True
+                out.append(f"Erreur : {e}")
+                st["ok"] = False
+        return False
 
 
 # ================================================================ boucle principale
+
+def sync_periods(settings):
+    """Secondes entre deux envois selon le mode (hot, warm, idle) : réglées depuis le dashboard (réglages « agent »),
+    sinon celles du fichier de configuration ; bornées (dashboard ouvert 5 à 120 s, sinon 10 à 120 s)."""
+    conf = settings.get("agent") if isinstance(settings, dict) else None
+    conf = conf if isinstance(conf, dict) else {}
+    out = {}
+    for mode, default, fallback in (("hot", HOT_SYNC, 10), ("warm", WARM_SYNC, 30), ("idle", IDLE_SYNC, 60)):
+        lo, hi = SYNC_LIMITS[mode]
+        v = next((x for x in (num(conf.get(mode)), num(default), fallback) if x is not None and math.isfinite(x)))
+        out[mode] = int(round(min(hi, max(lo, v))))
+    return out
+
 
 class Agent:
     def __init__(self):
         self.col, self.t, self.tlock = Collector(), None, threading.Lock()
         self.settings, self.sver, self.hot_until, self.warm_until = {}, None, 0, 0
         self.ips, self.last_scan, self.wake = {}, 0, threading.Event()
+        self.fails = 0  # échecs de liaison consécutifs avec le switch
+        self.spans = deque(maxlen=10)  # durée (relevé et envoi) des 10 derniers tours de boucle
         try:
             self.cables = json.loads(CABLES.read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -806,9 +1092,30 @@ class Agent:
     def mode(self):
         return "hot" if self.hot() else "warm" if time.time() < self.warm_until else "idle"
 
-    def interval(self):
-        base = {"hot": HOT_SYNC, "warm": WARM_SYNC}.get(self.mode(), IDLE_SYNC)
-        return base * (2 if self.col.cpu >= 80 else 1)  # switch très chargé : on espace
+    def interval(self, mode=None):
+        """Secondes entre deux envois : rythme réglé, doublé si le switch est très chargé, 120 s au plus."""
+        base = sync_periods(self.settings)[mode or self.mode()]
+        return min(SYNC_MAX, base * (2 if self.col.cpu >= 80 else 1))
+
+    def pause(self, started):
+        """Attente après un envoi : le rythme, mais jamais plus de SYNC_MAX entre deux envois, relevés lents compris
+        (on retranche le plus long des derniers tours : le prochain relevé peut être plus lourd que celui-ci), et au
+        moins SYNC_REST pour laisser souffler le switch."""
+        self.spans.append(time.time() - started)
+        return min(self.interval(), max(SYNC_REST, SYNC_MAX - max(self.spans)))
+
+    def link_pause(self, e, auth):
+        """Attente avant de retenter le switch : de plus en plus longue si l'échec se répète ; 5 min si le mot de passe
+        est refusé, et les commandes attendent aussi (aucun des deux fils ne relance le switch pendant ce temps)."""
+        self.fails += 1
+        if auth:
+            log.error("Mot de passe SSH refusé par le switch : enregistre le bon avec « python agent.py --set-password ». "
+                      "Nouvel essai dans %d min.", AUTH_PAUSE // 60)
+            self.commander.hold(AUTH_PAUSE, "mot de passe SSH refusé par le switch")
+            return AUTH_PAUSE
+        pause = min(LINK_PAUSE[1], LINK_PAUSE[0] * 2 ** min(self.fails - 1, 10))
+        log.warning("Liaison switch perdue : %s. Nouvel essai dans %d s.", e, pause)
+        return pause
 
     def ensure_transport(self):
         if self.t is None:
@@ -826,10 +1133,13 @@ class Agent:
     def run(self):
         self.commander.start()
         while True:
+            started = time.time()
             try:
-                started = time.time()
                 with self.tlock:
                     state = self.col.collect(self.ensure_transport(), self.settings, self.mode())
+                if self.fails:  # liaison revenue : les commandes peuvent de nouveau se connecter sans attendre
+                    log.info("Liaison switch rétablie.")
+                    self.fails, self.commander.down_until = 0, 0.0
                 took = time.time() - started
                 if took > 15:
                     log.info("Relevé lent : %.0f s (CPU du switch %.0f %%).", took, self.col.cpu)
@@ -842,7 +1152,7 @@ class Agent:
                     state["mgmt_ip"] = CFG.get("switch_host")
                 state["agent"] = {"version": AGENT_VERSION, "host": socket.gethostname(),
                                   "scan": CFG.get("scan_subnet"), "sync": self.interval(), "took": round(took, 1),
-                                  "maj": read_update_status()}
+                                  "maj": read_update_status(), "caps": CAPS}
                 samples, events = self.col.take()
                 diag = self.col.diag_payload()
                 r = api("/api/agent/sync", {"state": state, "samples": samples, "events": events, "sver": self.sver,
@@ -852,8 +1162,9 @@ class Agent:
                     self.col.diag_sent = (diag["h"], time.time())
                 if "settings" in r:
                     self.settings, self.sver = r["settings"] or {}, r.get("sver")
-                self.hot_until = time.time() + 75 if r.get("hot") else 0
-                self.warm_until = time.time() + 75 if r.get("warm") else 0
+                # mode valable jusqu'au prochain envoi (au moins 75 s), même si le rythme réglé est lent
+                self.hot_until = time.time() + max(75, self.interval("hot") + 15) if r.get("hot") else 0
+                self.warm_until = time.time() + max(75, self.interval("warm") + 15) if r.get("warm") else 0
                 for c in r.get("commands", []):
                     self.commander.q.put(c)
             except NotLoggedIn:
@@ -867,18 +1178,20 @@ class Agent:
                 log.warning("Dashboard : HTTP %s %r", e.code, e.read()[:200])
             except (urllib.error.URLError, TimeoutError) as e:
                 log.warning("Dashboard injoignable : %s", e)
-            except (OSError, ConnectionError, EOFError) as e:
-                log.warning("Liaison switch perdue : %s. Reconnexion…", e)
+            except link_errors() as e:  # bannière SSH illisible, mot de passe refusé… : on réessaie, l'agent ne s'arrête pas
                 try:
                     self.t and self.t.close()
                 except Exception:  # noqa: BLE001
                     pass
                 self.t = None
                 heartbeat()
-                time.sleep(5)
+                auth = auth_refused(e)
+                time.sleep(self.link_pause(e, auth))
+                if auth:
+                    reload_password()
                 continue
             heartbeat()  # la boucle tourne (même sans internet ou sans switch) ; un bug, lui, l'arrête avant
-            self.wake.wait(self.interval())
+            self.wake.wait(self.pause(started))
             self.wake.clear()
 
 

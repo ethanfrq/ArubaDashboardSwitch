@@ -48,6 +48,29 @@ Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé
 - **Console** : n’importe quelle commande CLI ; les questions oui/non du switch s’affichent sous forme de boutons.
 - Sauvegarde de la configuration en un clic.
 
+### Administration sans toucher au code
+Tout se règle depuis la carte **Administration** et les réglages ⚙ :
+- **Annuler une modification** : avant chaque changement, le dashboard crée un point de restauration sur le switch.
+  On voit ce qui sera annulé, puis on revient en arrière en un clic (avec CONFIRMER). Pour un changement sensible
+  (IP de gestion, lien vers un autre switch…), le switch **annule tout seul au bout de 5 min** si l’on ne confirme pas
+  que tout fonctionne : impossible de s’enfermer dehors.
+- **Sauvegardes de la configuration** : copie automatique après chaque changement et toutes les 6 h, historique,
+  comparaison ligne à ligne entre deux versions, téléchargement (secrets masqués), retour à un point du switch.
+- **Profils de port** (Poste élève, Imprimante, Borne Wi-Fi, Serveur, Port libre, modifiables) : VLAN, description,
+  protections (BPDU guard, admin-edge, loop-protect) et état appliqués en un clic.
+- **Sélection multiple** : Maj+clic ou Ctrl+clic sur les ports (ou l’outil sur mobile), puis une barre d’actions :
+  activer, couper, redémarrer, VLAN, description avec numéro automatique, profil, allumer, tester les câbles.
+- **Annuaire des appareils** : nommer un PC une fois, son nom le suit sur tous les ports ; historique des ports,
+  alerte « nouvel appareil » (facultative). **Plan de brassage** (prise murale, salle, note) par port,
+  **export CSV** et **impression** du plan.
+- **Actions planifiées** : couper, rallumer ou redémarrer des ports, allumer les PC à heure fixe, exécutées par le
+  serveur même dashboard fermé (jamais si l’agent est hors ligne ; 8 ports ou plus confirmés avec CONFIRMER).
+- **Allumer des PC à distance** (Wake-on-LAN) et **ping** depuis le PC de l’agent (agent 1.4.0).
+- **Diagnostiquer un port** (étapes claires et conclusion en une phrase) et **« Un appareil ne marche pas ? »**.
+- **Bilan de santé** : configuration non sauvegardée, protections des postes, NTP, communauté SNMP par défaut,
+  ports inutilisés, câbles, ports lents ou instables… avec correction en un clic.
+- **Réglages** : nom du site, fuseau horaire, rythme de l’agent, alertes, accès lecture seule.
+
 ### Deux accès
 - **Administrateur** : tout le dashboard, commandes comprises.
 - **Lecture seule**, pour un écran de supervision : un second mot de passe, défini dans les réglages, donne accès à tout
@@ -175,6 +198,9 @@ Pour un écran de supervision, définis un mot de passe dans ⚙ > **Accès lect
   ni réglages, ni historique des commandes, ni détail des différences de configuration. Son mot de passe est stocké haché (scrypt) ;
   le changer ou le désactiver déconnecte les écrans déjà connectés.
 - Toute modification passe par une fenêtre qui affiche les lignes exactes envoyées au switch.
+- Les abréviations AOS-CX (« int 1/1/24 », « shu »…) sont reconnues : elles n’échappent pas à la seconde confirmation.
+  Tabulation et caractères de contrôle sont refusés ; un texte saisi (description, nom) ne peut pas ajouter de ligne.
+- Les actions automatiques (planifications, nettoyage, sauvegardes) n’exécutent jamais une commande jugée sensible.
 - Les commandes dangereuses (redémarrage, effacement, comptes, IP de gestion, liens vers d’autres switches,
   port du PC de l’agent…) exigent une **seconde confirmation imposée par le serveur** :
   jeton à usage unique valable 2 minutes et saisie du mot CONFIRMER.
@@ -193,7 +219,9 @@ Pour un écran de supervision, définis un mot de passe dans ⚙ > **Accès lect
 |---|---|
 | `public/index.html` | l’interface (une seule page, sans framework ni dépendance) |
 | `api/` | fonctions Vercel (Node 24) |
+| `public/js/` | les fonctions d’administration, une par fichier, branchées sur la page |
 | `lib/` | Redis, authentification et droits (admin, lecture seule), notifications |
+| `lib/features/` | la partie serveur des fonctions d’administration |
 | `agent/` | l’agent Python et son installation en service Windows |
 | `scripts/` | création de la vérification planifiée QStash |
 

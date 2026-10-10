@@ -1,6 +1,8 @@
 import { redis, K, HIST, getSettings } from '../../lib/redis.js';
 import { requireAgent } from '../../lib/auth.js';
 import { notify } from '../../lib/notify.js';
+import { run, syncKeys } from '../../lib/features/index.js';
+import * as backup from '../../lib/features/backup.js';
 
 // L'agent envoie l'état du switch ; on lui renvoie les commandes, les réglages et le mode (temps réel ou non).
 export default async function handler(req, res) {
@@ -14,14 +16,18 @@ export default async function handler(req, res) {
   const writes = [r.set(K.state, state)];
   // Relevé détaillé : l'agent ne l'envoie que lorsqu'il a changé (ou toutes les 10 min).
   if (diag && typeof diag.out === 'string') {
-    writes.push(r.set(K.diag, { h: String(diag.h || '').slice(0, 40), t: Number(diag.t) || 0, out: diag.out.slice(0, 60000) }));
+    // la section « checkpoint diff » peut montrer un mot de passe ou une clé modifiés : masqués comme les sauvegardes
+    writes.push(r.set(K.diag, { h: String(diag.h || '').slice(0, 40), t: Number(diag.t) || 0, out: (typeof backup.maskOutput === 'function' ? backup.maskOutput(diag.out) : diag.out).slice(0, 60000) }));
   }
-  const [[hot, qflag, curVer, offline, warm]] = await Promise.all([r.mget(K.hot, K.qflag, K.sver, K.offline, K.warm), ...writes]);
+  const extra = syncKeys(); // clés lues pour les fonctions d'administration, dans la même commande
+  const [[hot, qflag, curVer, offline, warm, ...extraVals]] = await Promise.all([r.mget(K.hot, K.qflag, K.sver, K.offline, K.warm, ...extra), ...writes]);
   const out = { hot: Boolean(hot), warm: Boolean(warm), commands: [] };
 
   if (qflag) {
-    const items = (await r.lpop(K.queue, 20)) || [];
+    // drapeau effacé avant de vider la file : une commande mise en file pendant le relevé le repose elle-même
     await r.del(K.qflag);
+    const items = (await r.lpop(K.queue, 20)) || [];
+    if ([].concat(items).length === 20) await r.set(K.qflag, 1); // il en reste peut-être
     out.commands = [].concat(items).map((x) => (typeof x === 'string' ? JSON.parse(x) : x));
   }
   if (String(curVer ?? 0) !== String(sver ?? '')) {
@@ -39,10 +45,13 @@ export default async function handler(req, res) {
     await r.del(K.offline);
     evs.push({ type: 'agent_online', level: 'ok', text: `L'agent est de nouveau en ligne (${state.agent?.host || 'PC'}).` });
   }
+  let settingsP = null;
+  const settings = () => (settingsP ||= out.settings ? Promise.resolve(out.settings) : getSettings());
+  await run('onSync', { r, state, vals: Object.fromEntries(extra.map((k, i) => [k, extraVals[i]])), events: evs, settings });
   if (evs.length) {
-    const settings = out.settings || (await getSettings());
-    const allowed = evs.filter((e) => e.type !== 'agent_online' || settings.notify.agentOffline);
-    if (allowed.length) await notify(allowed, settings, { host: state.hostname });
+    const st = await settings();
+    const allowed = evs.filter((e) => e.type !== 'agent_online' || st.notify.agentOffline);
+    if (allowed.length) await notify(allowed, st, { host: state.hostname });
   }
   res.json(out);
 }
