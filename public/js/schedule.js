@@ -196,7 +196,8 @@
     const run = arr(LOG).find((c) => c?.kind === 'sched' && c.meta?.sched === s.id && ['pending', 'running', 'confirm'].includes(c.status));
     if (run) return '<div class="sched-last run"><span class="spinner" style="width:9px;height:9px;border-width:1.5px"></span> En cours d’exécution par l’agent…</div>';
     if (!s.last) return '<div class="sched-last">Jamais exécutée pour l’instant.</div>';
-    const cls = { ok: 'ok', error: 'bad', skipped: 'warn', late: 'warn', queued: 'run' }[s.lastStatus] || '';
+    const CLS = { ok: 'ok', error: 'bad', skipped: 'warn', late: 'warn', queued: 'run' };
+    const cls = Object.hasOwn(CLS, s.lastStatus) ? CLS[s.lastStatus] : ''; // valeur du serveur : jamais une clé héritée dans la classe
     return `<div class="sched-last ${cls}">Dernière fois ${esc(ago(nowS() - Number(s.last)))} : ${esc(s.lastResult || '-')}</div>`;
   }
   // Heure passée depuis plus de 15 min sans aucune trace d'exécution : le passage toutes les 5 min ne tourne pas ?

@@ -49,7 +49,8 @@ dialog pre.undo-diff { margin: 0; max-height: 260px; }
   // Un point resté « en cours » alors que la commande est terminée n'a pas pu être créé.
   function statusOf(e) {
     if (e.status === 'failed' && e.undone) return 'undone';
-    if (e.status !== 'pending') return STATUS[e.status] ? e.status : 'pending';
+    // statut venu du serveur : jamais une clé héritée (« constructor »…), qui casserait l'affichage de la liste
+    if (e.status !== 'pending') return Object.hasOwn(STATUS, e.status) ? e.status : 'pending';
     const c = LOG.find((x) => x.id === e.id);
     return c && ended(c) && serverNow() - (Number(c.finished) || serverNow()) > 15 ? 'lost' : 'pending';
   }

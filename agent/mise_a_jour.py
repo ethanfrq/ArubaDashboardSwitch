@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Mise à jour automatique de l'agent depuis GitHub.
+"""Mise à jour automatique de l'agent depuis GitHub (My Aruba Manager).
 
-Compare chaque fichier du dossier « agent » du dépôt avec celui du PC et télécharge ceux qui ont changé.
+Compare chaque fichier du dossier « agent » de la DERNIÈRE VERSION PUBLIÉE (release GitHub) avec celui du PC et
+télécharge ceux qui ont changé. Un simple envoi sur la branche principale ne s'installe donc jamais tout seul :
+seule une version publiée volontairement par le mainteneur arrive sur le PC (qui détient l'accès au switch).
 Lancé toutes les 5 minutes par la tâche planifiée « ArubaDashboardMiseAJour » (voir installer_service.py).
 
     python mise_a_jour.py              # vérifie et met à jour si besoin
@@ -14,7 +16,8 @@ Sécurité :
 - chaque fichier téléchargé est vérifié par son empreinte Git avant d'être utilisé ;
 - les scripts Python sont compilés avant remplacement, l'ancienne version est gardée dans « .sauvegarde » ;
 - si le nouvel agent ne redémarre pas correctement, l'ancienne version est remise automatiquement
-  et la version fautive n'est plus retentée tant que le dépôt ne change pas.
+  et la version fautive n'est plus retentée tant qu'une nouvelle version n'est pas publiée.
+Pour suivre la branche principale (développement uniquement) : "update_channel": "main" dans agent_config.json.
 """
 import base64, hashlib, json, logging, os, py_compile, re, shutil, subprocess, sys, time
 import urllib.error, urllib.request
@@ -43,6 +46,7 @@ def config():
     except (OSError, ValueError):
         cfg = {}
     return {"repo": cfg.get("update_repo", "ethanfrq/ArubaDashboardSwitch"),
+            "channel": cfg.get("update_channel", "releases"),  # « releases » (par défaut) ou « main »
             "branch": cfg.get("update_branch", "main"),
             "folder": cfg.get("update_folder", "agent"),
             "enabled": cfg.get("auto_update", True)}
@@ -96,18 +100,31 @@ def git_blob_sha(data):
 
 
 def remote_files(cfg, state, force):
-    """Fichiers du dossier sur GitHub : ({nom: empreinte}, commit). Si le dépôt n'a pas bougé depuis la dernière
-    vérification (réponse 304, non décomptée par GitHub), on réutilise la liste gardée en mémoire."""
+    """Fichiers du dossier sur GitHub : ({nom: empreinte}, version). Par défaut, la dernière release publiée (ni
+    brouillon ni préversion) ; avec "update_channel": "main", la branche principale. Si rien n'a bougé depuis la
+    dernière vérification (réponse 304, non décomptée par GitHub), on réutilise la liste gardée en mémoire."""
     cached = state.get("files")
-    branch, ref = github(f"/repos/{cfg['repo']}/branches/{cfg['branch']}", None if force or not cached else state.get("etag"))
-    if branch is None:
-        return cached, state.get("commit")
-    commit = branch["commit"]["sha"]
+    etag = None if force or not cached or state.get("channel") != cfg["channel"] else state.get("etag")
+    if cfg["channel"] == "main":
+        branch, ref = github(f"/repos/{cfg['repo']}/branches/{cfg['branch']}", etag)
+        if branch is None:
+            return cached, state.get("commit")
+        commit = branch["commit"]["sha"]
+    else:
+        try:
+            rel, ref = github(f"/repos/{cfg['repo']}/releases/latest", etag)
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                raise RuntimeError(f"aucune version publiée sur github.com/{cfg['repo']}/releases") from None
+            raise
+        if rel is None:
+            return cached, state.get("commit")
+        commit = rel["tag_name"]  # étiquette de la version publiée, ex. v1.7.0
     listing, _ = github(f"/repos/{cfg['repo']}/contents/{cfg['folder']}?ref={commit}")
     files = {f["name"]: f["sha"] for f in listing
              if f["type"] == "file" and re.fullmatch(r"[\w.-]+", f["name"]) and not f["name"].startswith(".")
              and f["name"] not in LOCAL_ONLY}
-    state.update(etag=ref, files=files, commit=commit)
+    state.update(etag=ref, files=files, commit=commit, channel=cfg["channel"])
     return files, commit
 
 
@@ -204,7 +221,7 @@ def apply(cfg, files, names, commit, state):
     restart_agent()
     state["refused"] = {n: files[n] for n in names}  # ces versions de fichiers ne seront plus retentées
     report(False, f"La version {version} ne démarre pas correctement : version précédente remise en place. "
-                  f"Elle sera retentée à la prochaine modification du dépôt.", commit)
+                  f"Elle sera retentée à la prochaine version publiée.", commit)
 
 
 def run(check_only=False, force=False):

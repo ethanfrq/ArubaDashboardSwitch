@@ -11,5 +11,5 @@
   "warm_sync": 30,
   "auto_update": true,
   "update_repo": "ethanfrq/ArubaDashboardSwitch",
-  "update_branch": "main"
+  "update_channel": "releases"
 }

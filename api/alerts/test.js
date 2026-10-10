@@ -1,4 +1,4 @@
-import { getSettings } from '../../lib/redis.js';
+import { getSettings } from '../../lib/db.js';
 import { requireSession } from '../../lib/auth.js';
 import { notify } from '../../lib/notify.js';
 

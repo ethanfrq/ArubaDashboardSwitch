@@ -1,9 +1,9 @@
 {
-  "name": "aruba-dashboard-switch",
-  "version": "1.6.0",
-  "description": "Dashboard web pour superviser et piloter un switch Aruba CX (AOS-CX) via un agent local et Vercel.",
+  "name": "my-aruba-manager",
+  "version": "1.7.0",
+  "description": "My Aruba Manager : dashboard web pour superviser et piloter un switch Aruba CX (AOS-CX) via un agent local, Vercel et Supabase. Projet indépendant, non affilié à HPE.",
   "author": "Ethan (https://github.com/ethanfrq)",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "homepage": "https://github.com/ethanfrq/ArubaDashboardSwitch#readme",
@@ -21,13 +21,13 @@
     "dashboard",
     "network",
     "monitoring",
-    "vercel"
+    "vercel",
+    "supabase"
   ],
   "engines": {
     "node": "24.x"
   },
   "dependencies": {
-    "@upstash/qstash": "^2.8.0",
-    "@upstash/redis": "^1.35.0"
+    "postgres": "^3.4.9"
   }
 }

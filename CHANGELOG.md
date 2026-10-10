@@ -1,5 +1,47 @@
 # Historique des versions
 
+## 1.7.0 (2026-10-10) · My Aruba Manager
+
+Le projet s’appelle maintenant **My Aruba Manager** et devient **open source** (licence Apache 2.0).
+Projet indépendant, sans lien avec HPE ni Aruba Networks.
+
+### Base de données plus simple : Supabase
+- Upstash Redis et QStash sont remplacés par **une seule base Supabase** (Postgres, offre gratuite), ajoutée en un clic
+  depuis l’onglet **Storage** du projet Vercel. Les tables sont créées toutes seules au premier lancement.
+- La vérification toutes les 5 min (agent hors ligne, actions planifiées, alertes) est programmée automatiquement dans
+  Supabase (pg_cron) : plus de planification QStash à créer. Son état s’affiche dans ⚙ Réglages en cas de problème.
+- Tables protégées : l’API publique de Supabase n’y a aucun accès, seul le serveur du dashboard lit et écrit.
+- Fonctions Vercel à Paris (cdg1), près de la base.
+
+### Sécurité
+- **Double authentification** pour l’administrateur (application d’authentification, code à 6 chiffres) avec
+  8 codes de secours à usage unique, à activer dans ⚙ Réglages.
+- **Politique de sécurité du contenu (CSP)** stricte : aucun script en ligne n’est exécuté par la page. Le code de
+  l’application est sorti de `index.html` (`public/js/app.js`), les boutons Oui / Non des questions du switch n’ont plus
+  de code dans le HTML.
+- Injections corrigées dans l’affichage : valeurs CPU et mémoire, compteurs d’erreurs, numéros de VLAN, statut des
+  commandes et canaux d’alerte venant de l’agent sont échappés. Un statut inattendu ne casse plus la fenêtre
+  « Annuler une modification ». Essai d’injection automatisé sur environ 150 champs : aucun constat.
+- Les secrets (mots de passe, communautés SNMP) sont masqués **avant** d’être enregistrés, y compris dans les relevés
+  de diagnostic.
+- En-têtes de sécurité ajoutés (HSTS, Permissions-Policy, Cross-Origin-Opener-Policy).
+- L’agent ne se met plus à jour qu’à partir des **versions publiées** (releases GitHub), jamais depuis la branche
+  principale. `"update_channel": "main"` reste possible pour un PC de test.
+
+### Documentation
+- README en anglais et en français, avec la vidéo de présentation.
+- Licence Apache 2.0 (`LICENSE`, `NOTICE`) et bibliothèques tierces listées (`THIRD-PARTY-NOTICES.md`).
+
+### Passer de la 1.6.0 à la 1.7.0
+1. Dans le projet Vercel, onglet **Storage** : ajouter **Supabase** (offre gratuite, région Paris).
+2. Facultatif, pour garder réglages, historique, sauvegardes et annuaire : depuis le dossier du projet,
+   `vercel env pull .env.migration --environment=production --yes`, puis
+   `node --env-file=.env.migration scripts/migrate-from-upstash.mjs`, puis supprimer `.env.migration`.
+   Sans cette étape, le dashboard repart de zéro (le mot de passe administrateur, lui, ne change pas).
+3. Redéployer, ouvrir le dashboard et vérifier qu’aucune alerte « vérification automatique » n’apparaît dans ⚙ Réglages.
+4. Supprimer la planification QStash, puis retirer Upstash et QStash du projet Vercel.
+5. Agent : rien à faire. Le programme de mise à jour du PC installe cette version, puis ne suit plus que les releases.
+
 ## 1.6.0 (2026-10-10) · agent 1.4.0
 
 Tout se gère depuis l’interface : nouvelle carte **Administration**.

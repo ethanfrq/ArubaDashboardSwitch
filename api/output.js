@@ -1,4 +1,4 @@
-import { redis, K } from '../lib/redis.js';
+import { store, K } from '../lib/db.js';
 import { requireSession } from '../lib/auth.js';
 import { isAutoKind, redactOutput } from '../lib/readonly.js';
 import { findRead } from '../lib/features/index.js';
@@ -6,7 +6,7 @@ import { findRead } from '../lib/features/index.js';
 export default async function handler(req, res) {
   const s = await requireSession(req, res);
   if (!s) return;
-  const r = redis();
+  const r = store();
   // Lectures des fonctions d'administration : ?part=nom (chaque module vérifie lui-même le rôle).
   if (req.query.part) {
     const fn = findRead(String(req.query.part));

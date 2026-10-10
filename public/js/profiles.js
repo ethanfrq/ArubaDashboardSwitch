@@ -340,7 +340,7 @@
     const vl = arr(S?.vlans);
     const vopts = ['<option value="">Ne pas changer</option>',
       ...vl.map((v) => `<option value="${esc(v.id)}"${draft.vlan === Number(v.id) ? ' selected' : ''}>VLAN ${esc(v.id)} · ${esc(v.name)}</option>`)];
-    if (draft.vlan != null && !vl.some((v) => Number(v.id) === draft.vlan)) vopts.push(`<option value="${draft.vlan}" selected>VLAN ${draft.vlan} (absent du switch)</option>`);
+    if (draft.vlan != null && !vl.some((v) => Number(v.id) === draft.vlan)) vopts.push(`<option value="${esc(draft.vlan)}" selected>VLAN ${esc(draft.vlan)} (absent du switch)</option>`);
     dlg.innerHTML = `<h3 id="profTitle">${editId ? 'Modifier le profil' : 'Nouveau profil'}</h3>
       <div class="field"><label for="pfName">Nom</label><input id="pfName" type="text" maxlength="40" data-pf-in="name" value="${esc(draft.name)}" placeholder="ex. Poste professeur" autocomplete="off"></div>
       <div class="field"><label for="pfVlan">VLAN (mode access)</label><select id="pfVlan" data-pf-in="vlan">${vopts.join('')}</select></div>

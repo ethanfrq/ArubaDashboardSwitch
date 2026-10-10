@@ -1,23 +1,35 @@
-import { redis, K, getSettings, DEFAULT_SETTINGS } from '../lib/redis.js';
+import { store, K, getSettings, DEFAULT_SETTINGS } from '../lib/db.js';
 import { requireSession, hashPassword, safeEqual } from '../lib/auth.js';
 import { findAction } from '../lib/features/index.js';
+import { getTotp, totpInfo, totpAction } from '../lib/totp.js';
 
 const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 
 export default async function handler(req, res) {
   const s = await requireSession(req, res, { admin: req.method !== 'GET' });
   if (!s) return;
-  const r = redis();
+  const r = store();
   if (req.method === 'GET') {
     const settings = await getSettings();
     // Lecture seule : les destinataires des alertes ne sont pas dévoilés.
     if (s.role !== 'admin') return res.json({ settings: { ...settings, email: settings.email ? '-' : '', webhook: settings.webhook ? '-' : '' } });
-    const viewer = await r.get(K.viewer);
-    return res.json({ settings, emailAvailable: Boolean(process.env.RESEND_API_KEY), viewer: { enabled: Boolean(viewer), t: viewer?.t || null } });
+    const [viewer, totp, cron] = await Promise.all([r.get(K.viewer), getTotp(), r.get('mam:cron')]);
+    return res.json({ settings, emailAvailable: Boolean(process.env.RESEND_API_KEY), viewer: { enabled: Boolean(viewer), t: viewer?.t || null },
+      totp: totpInfo(totp), cron: cron && { ok: cron.ok, error: cron.error || null, t: cron.t } });
   }
   if (req.method !== 'POST') return res.status(405).end();
   const b = req.body || {};
   // Actions des fonctions d'administration (annuaire, profils, planification…) : { action: 'nom', ... }.
+  // Double authentification : activation, désactivation, nouveaux codes de secours.
+  if (/^totp-(start|confirm|disable|recovery)$/.test(String(b.action || ''))) {
+    try {
+      return res.json(await totpAction(String(b.action), b, req.headers.host));
+    } catch (e) {
+      if (e.expose) return res.status(e.status || 400).json({ error: e.message });
+      console.error('totp', e);
+      return res.status(500).json({ error: 'Erreur interne.' });
+    }
+  }
   if (b.action) {
     const fn = findAction(String(b.action));
     if (!fn) return res.status(400).json({ error: 'Action inconnue.' });

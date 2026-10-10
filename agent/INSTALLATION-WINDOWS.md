@@ -1,10 +1,13 @@
-# Installation de l’agent sur le PC Windows
+# Installation de l’agent My Aruba Manager sur le PC Windows
+
+*English version : [INSTALL-WINDOWS.md](INSTALL-WINDOWS.md)*
 
 Le PC doit rester allumé, être sur le même réseau que le switch, pouvoir le joindre en SSH et avoir accès à internet.
 
 ## 1. Préparer
 1. Installer Python 3 depuis https://www.python.org/downloads/ (cocher « Add python.exe to PATH »).
-2. Décompresser l’agent dans un dossier, par exemple `C:\aruba-agent`.
+2. Télécharger l’agent depuis la [dernière version](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest)
+   (fichier `aruba-agent-x.y.z.zip`) et le décompresser dans un dossier, par exemple `C:\aruba-agent`.
 3. Dans une invite de commandes ouverte dans ce dossier : `pip install -r requirements.txt`
 4. Copier `agent_config.example.json` en `agent_config.json` et le compléter :
 
@@ -15,7 +18,7 @@ Le PC doit rester allumé, être sur le même réseau que le switch, pouvoir le 
    | `dashboard_url` | URL de ton dashboard Vercel |
    | `agent_token` | valeur de la variable `AGENT_TOKEN` définie sur Vercel |
    | `scan_subnet` | réseau à scanner pour trouver les IP des appareils, par exemple `192.168.1.0/24` |
-   | `auto_update` | `true` : mise à jour automatique depuis GitHub (voir plus bas), `false` pour la couper |
+   | `auto_update` | `true` : mise à jour automatique à partir des versions publiées sur GitHub (voir plus bas), `false` pour la couper |
 
    Laisse `switch_password` vide : le mot de passe est demandé à l’installation et enregistré chiffré.
    Ne publie jamais `agent_config.json` : il contient le jeton de l’agent.
@@ -38,23 +41,33 @@ Vérifier : `python installer_service.py status`. Redémarrer : `python installe
 Pour un fonctionnement 24 h/24, règle la mise en veille du PC sur « Jamais ».
 
 ## Mise à jour automatique
-Toutes les 5 minutes (et au démarrage du PC), `mise_a_jour.py` compare chaque fichier du dossier `agent`
-du dépôt GitHub avec celui du PC et télécharge ceux qui ont changé. Il n’y a rien d’autre à faire.
-- Seuls les fichiers du dépôt sont touchés : `agent_config.json`, `agent_secret.bin` et les journaux ne le sont jamais.
-- Chaque fichier est vérifié par son empreinte Git, et les scripts Python sont compilés avant d’être installés.
+L’agent ne se met à jour **qu’à partir des versions publiées** sur la page
+[Releases](https://github.com/ethanfrq/ArubaDashboardSwitch/releases) du dépôt GitHub.
+Toutes les 5 minutes (et au démarrage du PC), `mise_a_jour.py` regarde si une nouvelle version a été publiée ;
+si c’est le cas, il télécharge les fichiers de l’agent de cette version et installe ceux qui ont changé.
+Le code en cours de développement, envoyé sur la branche principale sans nouvelle version publiée, n’est jamais installé.
+Il n’y a rien d’autre à faire.
+- Seuls les fichiers de l’agent sont touchés : `agent_config.json`, `agent_secret.bin` et les journaux ne le sont jamais.
+- Les fichiers téléchargés sont vérifiés, et les scripts Python sont compilés avant d’être installés.
 - L’ancienne version est gardée dans `.sauvegarde`. Si le nouvel agent ne redémarre pas correctement,
-  elle est remise en place automatiquement et la version fautive n’est plus retentée tant que le dépôt ne change pas.
+  elle est remise en place automatiquement et la version fautive n’est plus retentée tant qu’une nouvelle version n’est pas publiée.
 - Le résultat de la dernière vérification s’affiche en bas du dashboard (« mise à jour auto ✓ »).
-- Mettre à jour tout de suite : clic droit sur `mettre-a-jour.bat`, « Exécuter en tant qu’administrateur ».
+- Vérifier tout de suite (et réinstaller les deux tâches) : clic droit sur `mettre-a-jour.bat`, « Exécuter en tant qu’administrateur ».
 
-Comme le PC exécute automatiquement ce qui est publié sur GitHub, protège le compte GitHub
-(double authentification) et ne publie sur la branche `main` que des versions testées.
+Pour valider chaque version toi-même avant de l’installer, mets `auto_update` à `false` dans `agent_config.json`,
+puis lance `mettre-a-jour.bat` quand tu le décides.
+
+Pour un PC de test qui doit suivre le code en développement (branche principale), ajoute `"update_channel": "main"`
+dans `agent_config.json`. À ne pas faire sur le PC relié au switch en service.
+
+Si tu publies ta propre version de l’agent, souviens-toi que les PC installent automatiquement ce qui est publié en release :
+protège le compte GitHub (double authentification) et ne publie que des versions testées.
 
 ## Passer d’une ancienne version (avant 1.3.0)
 Une seule fois, dans PowerShell ouvert en administrateur dans le dossier de l’agent :
 
 ```powershell
-Invoke-WebRequest https://raw.githubusercontent.com/ethanfrq/ArubaDashboardSwitch/main/agent/mise_a_jour.py -OutFile mise_a_jour.py
+Invoke-WebRequest https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest/download/mise_a_jour.py -OutFile mise_a_jour.py
 python mise_a_jour.py --installer
 ```
 

@@ -1,7 +1,8 @@
-import { redis, K } from '../lib/redis.js';
+import { store, K } from '../lib/db.js';
 import { readSession } from '../lib/auth.js';
 import { isAutoKind } from '../lib/readonly.js';
 import { stateExtras } from '../lib/features/index.js';
+import { ensureCron } from '../lib/store.js';
 
 // Une seule lecture groupée (MGET) par rafraîchissement. Le journal des commandes, les alertes et les données
 // des fonctions d'administration ne sont renvoyés que s'ils ont changé depuis la dernière lecture de la page.
@@ -11,7 +12,8 @@ export default async function handler(req, res) {
   const s = readSession(req);
   if (!s) return res.json({ auth: false });
   const admin = s.role === 'admin';
-  const r = redis();
+  const r = store();
+  await ensureCron();
   const extras = stateExtras().filter((x) => admin || x.viewer);
   const keys = [K.state, K.hot, K.warm, K.ver(K.log), K.ver(K.alerts), ...extras.map((x) => K.ver(x.key))];
   if (!admin) keys.push(K.viewer);

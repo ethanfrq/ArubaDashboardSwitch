@@ -1,245 +1,347 @@
-# Aruba Dashboard Switch
+# My Aruba Manager
 
-**Superviser et piloter un switch Aruba CX depuis n’importe où, dans le navigateur, sans ouvrir un seul port sur le réseau.**
+**Monitor and manage an HPE Aruba Networking CX switch from anywhere, in your browser, without opening a single port on your network.**
 
-Un tableau de bord web moderne pour les switches **HPE Aruba Networking CX** (AOS-CX) : façade en direct, débits et historique,
-appareils connectés avec leur IP, VLANs, test de câble, console de commandes et alertes.
-Hébergé gratuitement sur Vercel, alimenté par un petit agent Python installé sur un PC du réseau.
+A web dashboard for **HPE Aruba Networking CX** switches (AOS-CX): live front panel, throughput and history,
+connected devices with their IP addresses, VLANs, cable tests, command console, alerts and administration tools.
+Built for schools, networking courses (such as the French BTS SIO, BTS CIEL and IUT programs) and small organizations.
+The user interface is in French.
+It runs on the free plans of Vercel and Supabase and relies on a small Python agent installed on a PC of the local network.
 
 [![Version](https://img.shields.io/github/v/release/ethanfrq/ArubaDashboardSwitch?label=version)](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest)
-[![Licence](https://img.shields.io/badge/licence-tous%20droits%20r%C3%A9serv%C3%A9s-lightgrey)](LICENSE)
-[![AOS-CX](https://img.shields.io/badge/Aruba%20CX-AOS--CX%2010.x-ff8300)](#compatibilité-et-limites)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+[![HPE Aruba Networking CX](https://img.shields.io/badge/HPE%20Aruba%20Networking%20CX-AOS--CX%2010.x-ff8300)](#compatibility-and-limits)
 
-[![Déployer sur Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch&env=DASHBOARD_PASSWORD,SESSION_SECRET,AGENT_TOKEN&envDescription=Mot%20de%20passe%20du%20dashboard%2C%20cl%C3%A9%20de%20session%20et%20jeton%20de%20l%27agent&project-name=aruba-dashboard)
+**Version française : [README.fr.md](README.fr.md)**
 
-> Créé par **Ethan** ([@ethanfrq](https://github.com/ethanfrq)).
+> Created by **Ethan** ([@ethanfrq](https://github.com/ethanfrq)). Compatible with HPE Aruba Networking CX.
+>
+> Independent project, not affiliated with or endorsed by HPE.
+> Aruba, HPE Aruba Networking and AOS-CX are trademarks of Hewlett Packard Enterprise.
+
+[![Presentation video (30 s)](docs/video/apercu.jpg)](docs/video/my-aruba-manager.mp4)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch&env=DASHBOARD_PASSWORD,SESSION_SECRET,AGENT_TOKEN&envDescription=Dashboard%20password%2C%20session%20key%20and%20agent%20token&project-name=my-aruba-manager)
+
+---
+
+## Features
+
+### Monitoring
+- **Live front panel**: every port with its state, negotiated speed and throughput. Slow ports (10/100 Mb/s),
+  links to other switches and ports that are "connected but without traffic" are highlighted.
+- **Cables detected without a link**: a scan of the free ports shows whether a cable is plugged in, its length and whether it is faulty.
+- **Verified "free" ports**: a port without a link is only shown as free when a recent cable test confirms it.
+  Ports never tested, or plugged and unplugged since the last test, are marked "to be checked" and tested
+  automatically in small batches; the others are checked again every 2 hours (can be turned off in the settings).
+- **Throughput and history**: the last hour live, then 24 hours, 7 days and 30 days, in total or port by port.
+- **Ports and devices**: a single table (name, IP, MAC, throughput, errors) with search and sorting.
+- **Switch health**: CPU, memory, temperatures, uptime, IP, MAC, serial number, firmware.
+- **Unsaved configuration** shown in the top bar, with one-click save.
+- **Spanning tree**: root switch, blocked ports (network loop), abnormal broadcast traffic.
+- **History of each port**: since when it has been up or down, number of link drops, unstable ports.
+- **Switch log**: the latest events, translated into plain French (links, logins, spanning tree).
+- **Frequent polling without overloading the switch**: link state and log every 30 s, spanning tree and
+  saved configuration every 2 min; commands whose output rarely changes are spaced out, and everything slows down
+  when the switch CPU rises.
+
+### Management
+- Enable, disable or restart a port, change its description.
+- **VLANs**: create, rename, delete, assign ports.
+- **Cable test** (TDR): length and state of each pair, with a plain-language verdict.
+- **Console**: any CLI command; yes/no questions from the switch are shown as buttons.
+- One-click configuration save.
+
+### Administration without touching the code
+Everything is set from the **Administration** card and the ⚙ settings:
+- **Undo a change**: before each change, the dashboard creates a restore point on the switch.
+  You see what will be undone, then roll back in one click (by typing CONFIRMER). For a sensitive change
+  (management IP, link to another switch, and so on), the switch **rolls back on its own after 5 minutes** unless you confirm
+  that everything still works: you cannot lock yourself out.
+- **Configuration backups**: automatic copy after each change and every 6 hours, history,
+  line-by-line comparison between two versions, download (secrets masked), return to a switch restore point.
+- **Port profiles** (student PC, printer, Wi-Fi access point, server, unused port; all editable): VLAN, description,
+  protections (BPDU guard, admin-edge, loop-protect) and state applied in one click.
+- **Multiple selection**: Shift+click or Ctrl+click on ports (or the selection tool on mobile), then an action bar:
+  enable, shut down, restart, VLAN, description with automatic numbering, profile, power on, test cables.
+- **Device directory**: name a PC once and its name follows it on every port; port history,
+  optional "new device" alert. **Patch plan** (wall socket, room, note) for each port,
+  **CSV export** and **printing** of the plan.
+- **Scheduled actions**: shut down, re-enable or restart ports, power on PCs at a set time, carried out
+  even when the dashboard is closed (never while the agent is offline; 8 ports or more must be confirmed with CONFIRMER).
+- **Power on PCs remotely** (Wake-on-LAN) and **ping** from the agent's PC.
+- **Port diagnosis** (clear steps and a one-sentence conclusion) and a **"device not working?"** troubleshooting guide.
+- **Health check**: unsaved configuration, protections on user ports, NTP, default SNMP community,
+  unused ports, cables, slow or unstable ports, and more, with one-click fixes.
+- **Settings**: site name, time zone, agent pace, alerts, read-only access, two-factor authentication.
+
+### Two access levels
+- **Administrator**: the whole dashboard, commands included. Protected by a password and, once enabled,
+  by **two-factor authentication**: a 6-digit code from an app such as Google Authenticator or
+  Microsoft Authenticator, with single-use recovery codes.
+- **Read-only**, for a monitoring screen: a second password, set in the settings, gives access to everything
+  on display without any command. This is enforced by the server, not only by the page. The session lasts 30 days and
+  the screen refreshes every 30 s without forcing the agent into real-time mode, to stay within the free plans.
+- **Monitoring view**: a button lets the administrator hide every command without logging out.
+
+### Alerts
+- By **e-mail** (Resend) and/or **webhook** (Teams, Slack, Discord, ntfy for your phone, and others).
+- Monitored port going down or coming back, temperature too high, agent stopped, slow link, link without traffic,
+  new device (optional), failed scheduled action.
+
+### Comfort
+- Light and dark mode, loading indicators and notifications for every action.
+- Mandatory confirmation, showing the exact lines sent to the switch, before any change.
+- **Check after each change**: the dashboard verifies in the next switch reading that the change
+  was actually applied (port enabled or shut down, VLAN, description, VLAN created or deleted, configuration saved) and warns you otherwise.
+
+---
+
+## Screenshots
+
+*All screenshots show the French interface with demo data (fictitious names, IP and MAC addresses).*
+
+**Overview**: indicators, switch front panel, throughput and alerts, in light or dark mode.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/captures/apercu-sombre.png">
-  <img alt="Aperçu du dashboard : indicateurs, façade du switch, débit et alertes" src="docs/captures/apercu-clair.png">
+  <img alt="Dashboard overview: indicators, switch front panel, throughput and alerts" src="docs/captures/apercu-clair.png">
 </picture>
 
----
+**Live front panel**: active ports (green), no traffic (amber), cable plugged in without a link (blue, with its length), faulty cable (red),
+cable state to be checked (amber outline).
 
-## Fonctionnalités
+![Switch front panel](docs/captures/facade.png)
 
-### Supervision
-- **Façade en direct** : chaque port avec son état, sa vitesse négociée et son débit. Les ports lents (10/100 Mb/s),
-  les liens vers d’autres switches et les ports « branchés mais sans trafic » sont signalés.
-- **Câbles détectés sans lien** : un scan des ports libres indique s’il y a un câble, sa longueur et s’il est en défaut.
-- **Ports « libres » vérifiés** : un port sans lien n’est affiché libre que si un test de câble récent le confirme.
-  Les ports jamais testés, ou branchés et débranchés depuis le dernier test, passent « à vérifier » et sont testés
-  automatiquement par petits lots ; les autres sont revérifiés toutes les 2 h (désactivable dans les réglages).
-- **Débits et historique** : la dernière heure en direct, puis 24 h, 7 jours et 30 jours, au total ou port par port.
-- **Ports et appareils** : un tableau unique (nom, IP, MAC, débit, erreurs) avec recherche et tri.
-- **Santé du switch** : CPU, mémoire, températures, temps de fonctionnement, IP, MAC, numéro de série, firmware.
-- **Configuration non sauvegardée** signalée dans la barre du haut, avec sauvegarde en un clic.
-- **Spanning-tree** : switch racine, ports bloqués (boucle réseau), trafic broadcast anormal.
-- **Historique de chaque port** : depuis quand il est branché ou coupé, nombre de coupures, ports instables.
-- **Journal du switch** : les derniers événements traduits en français (liens, connexions, spanning-tree).
-- **Relevé fréquent sans charger le switch** : état des liens et journal toutes les 30 s, spanning-tree et
-  configuration sauvegardée toutes les 2 min ; les commandes peu changeantes sont espacées et tout ralentit
-  si le CPU du switch monte. Au total, moins de commandes envoyées au switch qu’avec les versions précédentes.
+**Ports and devices**: a single table with name, IP, MAC, throughput and errors, with search and sorting.
 
-### Gestion
-- Activer, désactiver ou redémarrer un port, changer sa description.
-- **VLANs** : créer, renommer, supprimer, affecter des ports.
-- **Test de câble** (TDR) : longueur et état de chaque paire, avec un verdict en clair.
-- **Console** : n’importe quelle commande CLI ; les questions oui/non du switch s’affichent sous forme de boutons.
-- Sauvegarde de la configuration en un clic.
+![Ports and devices table](docs/captures/ports-appareils.png)
 
-### Administration sans toucher au code
-Tout se règle depuis la carte **Administration** et les réglages ⚙ :
-- **Annuler une modification** : avant chaque changement, le dashboard crée un point de restauration sur le switch.
-  On voit ce qui sera annulé, puis on revient en arrière en un clic (avec CONFIRMER). Pour un changement sensible
-  (IP de gestion, lien vers un autre switch…), le switch **annule tout seul au bout de 5 min** si l’on ne confirme pas
-  que tout fonctionne : impossible de s’enfermer dehors.
-- **Sauvegardes de la configuration** : copie automatique après chaque changement et toutes les 6 h, historique,
-  comparaison ligne à ligne entre deux versions, téléchargement (secrets masqués), retour à un point du switch.
-- **Profils de port** (Poste élève, Imprimante, Borne Wi-Fi, Serveur, Port libre, modifiables) : VLAN, description,
-  protections (BPDU guard, admin-edge, loop-protect) et état appliqués en un clic.
-- **Sélection multiple** : Maj+clic ou Ctrl+clic sur les ports (ou l’outil sur mobile), puis une barre d’actions :
-  activer, couper, redémarrer, VLAN, description avec numéro automatique, profil, allumer, tester les câbles.
-- **Annuaire des appareils** : nommer un PC une fois, son nom le suit sur tous les ports ; historique des ports,
-  alerte « nouvel appareil » (facultative). **Plan de brassage** (prise murale, salle, note) par port,
-  **export CSV** et **impression** du plan.
-- **Actions planifiées** : couper, rallumer ou redémarrer des ports, allumer les PC à heure fixe, exécutées par le
-  serveur même dashboard fermé (jamais si l’agent est hors ligne ; 8 ports ou plus confirmés avec CONFIRMER).
-- **Allumer des PC à distance** (Wake-on-LAN) et **ping** depuis le PC de l’agent (agent 1.4.0).
-- **Diagnostiquer un port** (étapes claires et conclusion en une phrase) et **« Un appareil ne marche pas ? »**.
-- **Bilan de santé** : configuration non sauvegardée, protections des postes, NTP, communauté SNMP par défaut,
-  ports inutilisés, câbles, ports lents ou instables… avec correction en un clic.
-- **Réglages** : nom du site, fuseau horaire, rythme de l’agent, alertes, accès lecture seule.
+**Port details**: information, actions (enable, restart, description, VLAN) and pair-by-pair cable test.
 
-### Deux accès
-- **Administrateur** : tout le dashboard, commandes comprises.
-- **Lecture seule**, pour un écran de supervision : un second mot de passe, défini dans les réglages, donne accès à tout
-  l’affichage sans aucune commande. C’est le serveur qui l’impose, pas seulement la page. La session dure 30 jours et
-  l’écran se rafraîchit toutes les 30 s sans forcer l’agent en temps réel, pour rester dans les offres gratuites.
-- **Vue monitoring** : un bouton permet à l’administrateur de masquer toutes les commandes sans se déconnecter.
+![Port detail panel with cable test](docs/captures/port-detail.png)
 
-### Alertes
-- Par **e-mail** (Resend) et/ou **webhook** (Teams, Slack, Discord, ntfy pour le téléphone…).
-- Port surveillé qui tombe ou revient, température trop haute, agent arrêté, lien lent, lien sans trafic.
+**History**: total or per-port throughput over 1 hour, 24 hours, 7 days or 30 days.
 
-### Confort
-- Mode clair / sombre, indicateurs de chargement et notifications sur chaque action.
-- Confirmation obligatoire, avec les lignes exactes envoyées au switch, avant toute modification.
-- **Vérification après chaque modification** : le dashboard contrôle dans l’état suivant du switch que le changement
-  est bien appliqué (port activé ou coupé, VLAN, description, VLAN créé ou supprimé, configuration sauvegardée) et prévient sinon.
+![Throughput history over 24 hours](docs/captures/historique.png)
+
+**VLANs and console**: each VLAN with its mini front panel, and a console that runs any switch command.
+
+![VLAN card and management console](docs/captures/vlan-console.png)
+
+**Settings**: e-mail and/or webhook alerts, monitored ports, temperature threshold, automatic cable checks.
+
+![Alert settings](docs/captures/alertes.png)
 
 ---
 
-## Captures d’écran
-
-*Toutes les captures utilisent des données de démonstration (noms, adresses IP et MAC fictifs).*
-
-**Façade en direct** : ports actifs (vert), sans trafic (ambre), câble branché sans lien (bleu, avec sa longueur), câble en défaut (rouge),
-état du câble à vérifier (contour ambre).
-
-![Façade du switch](docs/captures/facade.png)
-
-**Ports et appareils** : un tableau unique avec nom, IP, MAC, débits et erreurs, recherche et tri.
-
-![Tableau des ports et appareils](docs/captures/ports-appareils.png)
-
-**Détail d’un port** : informations, actions (activer, redémarrer, description, VLAN) et test de câble paire par paire.
-
-![Panneau de détail d’un port avec test de câble](docs/captures/port-detail.png)
-
-**Historique** : débit total ou par port sur 1 h, 24 h, 7 jours ou 30 jours.
-
-![Historique du débit sur 24 heures](docs/captures/historique.png)
-
-**VLAN et console** : chaque VLAN avec sa mini-façade, et une console qui exécute n’importe quelle commande du switch.
-
-![Carte VLAN et console de gestion](docs/captures/vlan-console.png)
-
-**Réglages** : alertes par e-mail et/ou webhook, ports surveillés, seuil de température, vérification automatique des câbles.
-
-![Réglages des alertes](docs/captures/alertes.png)
-
----
-
-## Comment ça marche
+## How it works
 
 ```
-┌──────────┐   SSH    ┌───────────────────────┐   HTTPS (sortant)   ┌──────────────────────┐
-│  Switch  │ ◄──────► │  Agent Python         │ ──────────────────► │  Vercel              │ ◄── navigateur
-│ Aruba CX │          │  (PC du réseau local) │ ◄────────────────── │  page + API          │
-└──────────┘          └───────────────────────┘     commandes       └──────────┬───────────┘
-                                                                     Upstash Redis · QStash · Resend
+┌──────────┐   SSH    ┌───────────────────┐ HTTPS (outbound) ┌──────────────────┐
+│  Switch  │ ◄──────► │  Python agent     │ ───────────────► │  Vercel          │ ◄── browser
+│ Aruba CX │          │  (PC on the LAN)  │ ◄─────────────── │  page + API      │
+└──────────┘          └───────────────────┘     commands     └─────────┬────────┘
+                                                                       ▲
+                                                                       │ data
+                                                                       ▼
+                                                          ┌─────────────────────────┐
+                                                          │  Supabase (Postgres)    │
+                                                          │  5-min job (pg_cron)    │
+                                                          └─────────────────────────┘
 ```
 
-Le switch a une adresse privée, Vercel ne peut donc pas le joindre. Un **agent** installé sur un PC du réseau
-lit le switch en SSH, envoie l’état au dashboard et exécute les commandes demandées.
-**C’est toujours l’agent qui contacte Vercel, jamais l’inverse** : aucun port à ouvrir, aucun VPN.
+The switch has a private address, so Vercel cannot reach it. An **agent** installed on a PC of the local network
+reads the switch over SSH, sends its state to the dashboard and runs the requested commands.
+**The agent always contacts Vercel, never the other way around**: no port to open on your network.
 
-Pour rester dans les offres gratuites, l’agent envoie l’état toutes les **60 s** quand personne ne regarde,
-**30 s** pour un écran lecture seule et **10 s** quand le dashboard administrateur est ouvert. Il relève alors les
-commandes toutes les **5 s** (**1,5 s** juste après une commande). La page relit l’état juste après chaque envoi de
-l’agent, et ne recharge le journal des commandes, les alertes et le relevé détaillé que lorsqu’ils ont changé.
+Vercel hosts the page and the API. The data (switch state, history, settings, command log,
+configuration backups, device directory) is stored in a **Supabase** database (Postgres)
+attached to the Vercel project. The tables are created automatically on first launch, and the check that runs
+every 5 minutes (agent offline, scheduled actions, backups) is scheduled automatically
+in Supabase with pg_cron. E-mail alerts go through Resend (optional).
 
-L’agent **se met à jour tout seul** : toutes les 5 minutes, il compare ses fichiers avec le dossier `agent` de ce dépôt
-et installe ce qui a changé, avec retour automatique à l’ancienne version si la nouvelle ne démarre pas.
+To stay within the free plans, the agent sends the state every **60 s** when nobody is watching,
+every **30 s** for a read-only screen and every **10 s** while the administrator dashboard is open. It then fetches
+commands every **5 s** (**1.5 s** right after a command). The page reloads the state right after each upload from
+the agent, and only reloads the command log, the alerts and the detailed reading when they have changed.
+
+The agent **updates itself, only from published versions** (the
+[Releases](https://github.com/ethanfrq/ArubaDashboardSwitch/releases) page of this repository): code that is still
+in development is never installed. If an update fails, the previous version is restored automatically.
 
 ---
 
 ## Installation
 
-### Ce qu’il faut
-- Un switch **Aruba CX** avec une IP de gestion et le SSH activé (`ssh server vrf default`).
-- Un **PC allumé en permanence** sur le même réseau que le switch, avec accès à internet
-  (Windows recommandé, macOS et Linux fonctionnent aussi).
-- Un compte **Vercel** (offre gratuite suffisante).
+### What you need
+- An **HPE Aruba Networking CX** switch with a management IP and SSH enabled (`ssh server vrf default`).
+- A **PC that stays on** in the same network as the switch, with internet access.
+  Windows is recommended: the agent installs there as a service, and the step-by-step guide is written for it.
+  The agent also runs on macOS and Linux.
+- A **Vercel** account (free Hobby plan). The **Supabase** database (free plan) is added to it in one click.
+  Nothing else to sign up for.
 
-### 1. Déployer le dashboard
-1. Clique sur **Déployer sur Vercel** ci-dessus et renseigne les trois variables demandées :
+### 1. Deploy the dashboard
+1. Click **Deploy with Vercel** above. Vercel copies the project into your GitHub (or GitLab, Bitbucket) account,
+   then asks for these three variables:
 
-   | Variable | Rôle | Exemple pour la générer |
+   | Variable | Purpose | How to generate it |
    |---|---|---|
-   | `DASHBOARD_PASSWORD` | mot de passe de la page | un mot de passe solide et unique |
-   | `SESSION_SECRET` | clé de signature des sessions | `openssl rand -base64 32` |
-   | `AGENT_TOKEN` | jeton partagé avec l’agent | `openssl rand -hex 32` |
+   | `DASHBOARD_PASSWORD` | administrator password for the page | a strong, unique password |
+   | `SESSION_SECRET` | key used to sign sessions | `openssl rand -base64 32` |
+   | `AGENT_TOKEN` | token shared with the agent | `openssl rand -hex 32` |
 
-2. Dans le projet Vercel, onglet **Storage / Integrations**, ajoute **Upstash for Redis** et **Upstash QStash**
-   (et **Resend** si tu veux les alertes par e-mail), puis redéploie.
-3. Active la vérification « agent hors ligne » (toutes les 5 minutes) :
-   ```bash
-   vercel env pull .env.local
-   DASHBOARD_URL=https://ton-projet.vercel.app node --env-file=.env.local scripts/setup-qstash.mjs
-   ```
+2. Let the first deployment finish: the dashboard will only be complete once the database is added (step 2).
 
-Variables facultatives : `ALERT_FROM` (expéditeur des e-mails, ex. `Switch <alertes@mon-domaine.fr>`)
-et `DASHBOARD_URL` (lien inclus dans les alertes).
+### 2. Add the Supabase database
+1. In the Vercel project, open the **Storage** tab and choose **Supabase** (Vercel Marketplace) with the free plan.
+2. Choose the **Paris (cdg1)** region to keep the data in Europe, then connect the database to the project.
+   The Supabase connection variables are added to the project automatically: there is nothing to copy.
+3. Recommended: make sure the Vercel functions run in the same region
+   (**Settings > Functions > Function Region**: Paris, cdg1).
+4. **Redeploy** the project (**Deployments** tab, ⋯ menu of the latest deployment, **Redeploy**)
+   so that it picks up the new variables.
 
-### 2. Installer l’agent
-Télécharge l’agent prêt à l’emploi depuis la [dernière version](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest)
-(fichier `aruba-agent-x.y.z.zip`). Tout est expliqué pas à pas dans [`agent/INSTALLATION-WINDOWS.md`](agent/INSTALLATION-WINDOWS.md). En résumé :
-1. Python 3 puis `pip install -r requirements.txt` (dans le dossier de l’agent).
-2. Copier le dossier `agent` sur le PC et créer `agent_config.json` à partir de `agent_config.example.json`
-   (IP du switch, URL du dashboard, `AGENT_TOKEN`, réseau à scanner pour trouver les IP).
-3. Test : `demarrer-agent.bat`, puis installation en service avec `installer-service.bat` (en administrateur).
-   L’agent démarre alors avec Windows, sans fenêtre, redémarre tout seul en cas d’erreur
-   et se met à jour tout seul depuis GitHub (vérification toutes les 5 minutes).
+On first launch, the dashboard creates its tables and schedules the 5-minute check in Supabase.
+There is no script to run.
 
-### 3. C’est prêt
-Ouvre l’URL de ton projet Vercel, connecte-toi, puis règle les alertes avec l’icône ⚙.
-Pour un écran de supervision, définis un mot de passe dans ⚙ > **Accès lecture seule** et connecte l’écran avec lui.
+**E-mail alerts (optional)**: add **Resend** from the Vercel Marketplace, then redeploy.
+Optional variables: `ALERT_FROM` (e-mail sender, for example `Switch <alerts@my-domain.com>`)
+and `DASHBOARD_URL` (link included in the alerts). Webhook alerts need no additional service.
+
+### 3. Install the agent
+Download the ready-to-use agent from the [latest release](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest)
+(file `aruba-agent-x.y.z.zip`). Everything is explained step by step in [`agent/INSTALL-WINDOWS.md`](agent/INSTALL-WINDOWS.md)
+(in French: [`agent/INSTALLATION-WINDOWS.md`](agent/INSTALLATION-WINDOWS.md)). In short:
+1. Python 3, then `pip install -r requirements.txt` in the agent's folder.
+2. Create `agent_config.json` from `agent_config.example.json`
+   (switch IP, dashboard URL, `AGENT_TOKEN`, network to scan to find device IP addresses).
+3. Test with `demarrer-agent.bat`, then install it as a service with `installer-service.bat` (as administrator).
+   The agent then starts with Windows, without a window, restarts by itself after an error
+   and updates itself from the versions published on GitHub.
+
+### 4. First settings
+Open the URL of your Vercel project and log in with `DASHBOARD_PASSWORD`. Then, in ⚙ **Réglages** (settings):
+- **enable two-factor authentication**: scan the QR code with an app (Google Authenticator, Microsoft Authenticator, and so on)
+  and keep the recovery codes somewhere safe; each one works only once;
+- set up the alerts (e-mail, webhook, monitored ports, temperature threshold);
+- for a monitoring screen, set a password in **Accès lecture seule** (read-only access) and log the screen in with it.
 
 ---
 
-## Sécurité
-- Page protégée par mot de passe ; session signée (cookie `HttpOnly`, `Secure`, `SameSite=Strict`) ;
-  blocage de 15 minutes après 8 essais ratés.
-- L’agent s’authentifie avec `AGENT_TOKEN` ; la vérification planifiée avec la signature QStash.
-- Le mot de passe SSH du switch **ne quitte jamais le PC de l’agent** : il y est chiffré par Windows (DPAPI).
-- Accès lecture seule vérifié par le serveur sur chaque requête : aucune commande hors relevés automatiques (contrôlés ligne par ligne),
-  ni réglages, ni historique des commandes, ni détail des différences de configuration. Son mot de passe est stocké haché (scrypt) ;
-  le changer ou le désactiver déconnecte les écrans déjà connectés.
-- Toute modification passe par une fenêtre qui affiche les lignes exactes envoyées au switch.
-- Les abréviations AOS-CX (« int 1/1/24 », « shu »…) sont reconnues : elles n’échappent pas à la seconde confirmation.
-  Tabulation et caractères de contrôle sont refusés ; un texte saisi (description, nom) ne peut pas ajouter de ligne.
-- Les actions automatiques (planifications, nettoyage, sauvegardes) n’exécutent jamais une commande jugée sensible.
-- Les commandes dangereuses (redémarrage, effacement, comptes, IP de gestion, liens vers d’autres switches,
-  port du PC de l’agent…) exigent une **seconde confirmation imposée par le serveur** :
-  jeton à usage unique valable 2 minutes et saisie du mot CONFIRMER.
-- Aucun secret n’est versionné (`.env*`, `agent_config.json` et `agent_secret.bin` sont exclus).
+## Security
 
-> Le dashboard donne un accès administrateur au switch depuis internet : choisis un mot de passe solide,
-> différent de celui du switch, et ne partage pas l’URL inutilement.
+### What is in place
+- Password-protected page; signed session (`HttpOnly`, `Secure`, `SameSite=Strict` cookie);
+  15-minute lockout after 8 failed attempts.
+- **Two-factor authentication** (TOTP) for the administrator account, enabled in ⚙ settings,
+  with single-use recovery codes.
+- The agent authenticates with `AGENT_TOKEN`. The switch SSH password **never leaves the agent's PC**:
+  it is encrypted there by Windows (DPAPI).
+- Read-only access is checked by the server on every request: no command except automatic readings (checked line by line),
+  no settings, no command history, no configuration diff details. Its password is stored hashed (scrypt);
+  changing or disabling it logs out the screens already connected.
+- Every change goes through a window that shows the exact lines sent to the switch.
+- AOS-CX abbreviations ("int 1/1/24", "shu", and so on) are recognized: they cannot bypass the second confirmation.
+  Tabs and control characters are refused; typed text (description, name) cannot add a command line.
+- Automatic actions (schedules, cleanup, backups) never run a command considered sensitive.
+- Dangerous commands (reboot, erase, accounts, management IP, links to other switches,
+  port of the agent's PC, and so on) require a **second confirmation enforced by the server**:
+  a single-use token valid for 2 minutes and typing the word CONFIRMER.
+- **Hardened web page**: strict Content-Security-Policy (no inline scripts) and systematic escaping of data
+  coming from the network (device names announced over LLDP or DNS, descriptions, switch log), so that crafted text
+  cannot run in the page. The page cannot be displayed inside a frame on another site.
+- The agent only updates from **published versions** (GitHub releases), never from work in progress.
+- No secret is committed (`.env*`, `agent_config.json` and `agent_secret.bin` are excluded).
+- Your data stays in your own Vercel and Supabase accounts: the author of the project has no access to it.
 
-## Compatibilité et limites
-- Testé sur un **Aruba CX 6000 24G 4SFP** (AOS-CX 10.15). La façade est pensée pour les modèles 24 ports + 4 SFP.
-- Offre Vercel gratuite : 12 fonctions maximum par déploiement (le projet les utilise toutes).
-- Un agent par switch.
+### Lost phone (two-factor authentication)
+Use one of the recovery codes. If you have none left: open the database in Supabase (from Vercel: **Storage** tab,
+your database, then **Open in Supabase**), go to the **Table Editor**, open the `mam_kv` table and delete the row
+whose key is `mam:totp`. Two-factor authentication is then disabled: log in with the password
+and enable it again right away with your new phone.
 
-## Structure du projet
-| Dossier | Contenu |
+### Recommendations
+- Choose a **strong, unique** administrator password, different from the switch password.
+- **Enable two-factor authentication** at the first login.
+- Ideally, the management interface of network equipment should only be reachable **through a VPN**
+  (WireGuard, Tailscale) rather than exposed publicly. In Vercel mode the page is, by design, reachable
+  from the internet: the password and two-factor authentication are therefore essential. The local mode planned
+  in the [roadmap](#roadmap) will allow access restricted to the local network or a VPN.
+- Do not share the URL needlessly; for a display screen, use read-only access.
+- Download the important configuration backups regularly: the Supabase free plan
+  does not back up the database automatically.
+
+### Limits of the Vercel mode
+- **Vercel's Hobby plan is limited to personal, non-commercial use.** A company or a paid service
+  needs a paid Vercel plan (or can wait for the local mode planned in the roadmap).
+- The free plans of Vercel and Supabase **do not come with a GDPR data processing agreement**.
+  The dashboard stores IP and MAC addresses, device names and the action log, which may be
+  personal data. **For a school or an organization, have this choice approved by the person in charge**
+  (head of the school, IT manager, data protection officer) before going live.
+
+---
+
+## Compatibility and limits
+- Tested on an **HPE Aruba Networking CX 6000 24G 4SFP** (AOS-CX 10.15). The front panel is designed for
+  24-port + 4 SFP models. Other CX models may work but have not been tested.
+- The switch is read through the CLI over SSH: parsing the output may depend on the firmware version.
+- One switch per dashboard, one agent per switch.
+- User interface in French only.
+- Vercel free plan: at most 12 functions per deployment; the project is designed to stay within this limit.
+- Supabase free plan:
+  - 500 MB of database and 5 GB of outbound bandwidth per month;
+  - the project is paused after 7 days without activity. The agent writes continuously, so this only happens
+    if the agent's PC stays off for a week. The project can then be resumed from the Supabase dashboard;
+  - no automatic database backup.
+
+## Roadmap
+Planned next steps, with no set date:
+- **All-in-one local mode**: the agent becomes the server (page and API on the local PC), SQLite database,
+  no cloud account, Docker image. Access from the local network or through a VPN.
+- **Reading the switch through the AOS-CX REST API** instead of the CLI over SSH.
+- **Several switches** in the same dashboard.
+
+## Project structure
+| Folder | Contents |
 |---|---|
-| `public/index.html` | l’interface (une seule page, sans framework ni dépendance) |
-| `api/` | fonctions Vercel (Node 24) |
-| `public/js/` | les fonctions d’administration, une par fichier, branchées sur la page |
-| `lib/` | Redis, authentification et droits (admin, lecture seule), notifications |
-| `lib/features/` | la partie serveur des fonctions d’administration |
-| `agent/` | l’agent Python et son installation en service Windows |
-| `scripts/` | création de la vérification planifiée QStash |
+| `public/index.html` | the user interface (a single page, no framework) |
+| `public/js/` | the administration features on the page side, one per file |
+| `public/vendor/` | third-party library served with the page (QR code for two-factor authentication) |
+| `api/` | Vercel functions (Node 24) |
+| `lib/` | database (Supabase, Postgres), authentication and roles (administrator, read-only, two-factor), notifications |
+| `lib/features/` | the server side of the administration features |
+| `agent/` | the Python agent, its automatic update and its installation as a Windows service |
+| `docs/` | screenshots and presentation video |
 
 ---
 
-## Auteur
-Conçu et développé par **Ethan** ([@ethanfrq](https://github.com/ethanfrq)).
+## Author
+Designed and developed by **Ethan** ([@ethanfrq](https://github.com/ethanfrq)).
 
-Une idée, un bug, une question ? Ouvre une [issue](https://github.com/ethanfrq/ArubaDashboardSwitch/issues).
+## Contributing
+[Issues](https://github.com/ethanfrq/ArubaDashboardSwitch/issues) and
+[pull requests](https://github.com/ethanfrq/ArubaDashboardSwitch/pulls) are welcome: bugs, ideas,
+questions, support for another CX switch model, and more.
+- For a bug or another switch model, give the model, the AOS-CX version and the agent version.
+  Remove IP and MAC addresses, names and secrets from what you share.
+- For a significant change, please open an issue first to discuss it.
+- By submitting a contribution, you agree that it is licensed under the Apache License 2.0 (section 5 of the license).
 
-## Versions
-Les nouveautés de chaque version sont dans [`CHANGELOG.md`](CHANGELOG.md) et sur la page [Releases](https://github.com/ethanfrq/ArubaDashboardSwitch/releases).
+## Releases
+What changed in each version is listed in [`CHANGELOG.md`](CHANGELOG.md) (in French) and on the [Releases](https://github.com/ethanfrq/ArubaDashboardSwitch/releases) page.
 
-## Licence
-© 2026 Ethan ([@ethanfrq](https://github.com/ethanfrq)). Tous droits réservés. Voir [`LICENSE`](LICENSE).
+## License
+My Aruba Manager is licensed under the **Apache License 2.0**: see [`LICENSE`](LICENSE).
+You may use, modify and redistribute it, including commercially, provided that you include the license,
+keep the copyright notices and the [`NOTICE`](NOTICE) file, and state which files you changed.
+The license grants no rights to names or trademarks.
 
-Les composants libres utilisés (Upstash, paramiko…) restent sous leur propre licence :
-voir [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+Third-party components (postgres, qrcode-generator, paramiko, and others) remain under their own licenses:
+see [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
-*Aruba, HPE Aruba Networking et AOS-CX sont des marques de Hewlett Packard Enterprise.
-Ce projet est indépendant et n’est ni affilié à HPE ni approuvé par HPE.*
+## Trademarks
+Aruba, HPE Aruba Networking and AOS-CX are trademarks of Hewlett Packard Enterprise.
+My Aruba Manager is an independent project, not affiliated with or endorsed by HPE;
+these names are only used to indicate compatibility.

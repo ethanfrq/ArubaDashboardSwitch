@@ -1,11 +1,11 @@
-import { redis, K } from '../../lib/redis.js';
+import { store, K } from '../../lib/db.js';
 import { requireAgent } from '../../lib/auth.js';
 
 // Relevé rapide des commandes quand le dashboard est ouvert (1,5 s juste après une commande, sinon 5 s)
 // et des réponses oui/non.
 export default async function handler(req, res) {
   if (!requireAgent(req, res)) return;
-  const r = redis();
+  const r = store();
   const waiting = req.body?.waiting ? String(req.body.waiting) : null;
   const keys = [K.qflag, K.hot, K.busy];
   if (waiting) keys.push(K.answer(waiting));

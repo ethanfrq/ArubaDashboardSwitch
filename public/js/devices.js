@@ -215,7 +215,7 @@
       <h3>Plan de brassage</h3>
       <div class="dev-grid">
         <div class="field"><label for="devJack">Prise murale</label><input id="devJack" type="text" maxlength="${LIMITS.jack}" value="${pv('jack')}" placeholder="ex. B12" autocomplete="off"${dirty(dr.plan.jack)}></div>
-        <div class="field"><label for="devRoom">Salle</label><input id="devRoom" type="text" maxlength="${LIMITS.room}" value="${pv('room')}" placeholder="ex. N11" autocomplete="off"${dirty(dr.plan.room)}></div>
+        <div class="field"><label for="devRoom">Salle</label><input id="devRoom" type="text" maxlength="${LIMITS.room}" value="${pv('room')}" placeholder="ex. 101" autocomplete="off"${dirty(dr.plan.room)}></div>
       </div>
       <div class="field"><label for="devNote">Note</label><input id="devNote" type="text" maxlength="${LIMITS.note}" value="${pv('note')}" placeholder="ex. bureau du professeur, sous la fenêtre" autocomplete="off"${dirty(dr.plan.note)}></div>
       <div class="row"><button class="btn" type="button" data-dev="plan-save" data-dev-port="${port}">Enregistrer</button>${saved ? `<button class="btn small" type="button" data-dev="plan-clear" data-dev-port="${port}">Effacer</button>` : ''}</div>

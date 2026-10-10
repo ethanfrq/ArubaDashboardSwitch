@@ -1,10 +1,11 @@
-import { redis, K } from '../lib/redis.js';
+import { store, K } from '../lib/db.js';
 import { safeEqual, setSession, checkPassword } from '../lib/auth.js';
+import { getTotp, consumeCode } from '../lib/totp.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const ip = (req.headers['x-forwarded-for'] || 'inconnu').split(',')[0].trim();
-  const r = redis();
+  const r = store();
   const tries = await r.incr(K.tries(ip));
   if (tries === 1) await r.expire(K.tries(ip), 900);
   if (tries > 8) return res.status(429).json({ error: 'Trop de tentatives, réessaie dans 15 minutes.' });
@@ -19,11 +20,20 @@ export default async function handler(req, res) {
     const viewer = given ? await r.get(K.viewer) : null;
     if (viewer && checkPassword(given, viewer)) { role = 'viewer'; ver = viewer.v; }
   }
-  if (!role) {
-    const left = 8 - tries;
-    return res.status(401).json({ error: `Mot de passe incorrect${left <= 3 ? ` (encore ${left} essai${left > 1 ? 's' : ''} avant blocage 15 min)` : ''}.` });
+  const left = 8 - tries, more = left <= 3 ? ` (encore ${left} essai${left > 1 ? 's' : ''} avant blocage 15 min)` : '';
+  if (!role) return res.status(401).json({ error: `Mot de passe incorrect${more}.` });
+  // Double authentification de l'administrateur : le mot de passe seul ne suffit pas.
+  if (role === 'admin') {
+    const totp = await getTotp();
+    if (totp) {
+      const code = String(req.body?.code ?? '').trim();
+      if (!code) return res.json({ totp: true }); // la page demande alors le code (le mot de passe est juste)
+      const how = await consumeCode(totp, code);
+      if (!how) return res.status(401).json({ totp: true, error: `Code incorrect${more}.` });
+      if (how === 'recovery') res.setHeader('X-Recovery-Used', '1');
+    }
   }
   await r.del(K.tries(ip));
   setSession(res, role, ver);
-  res.json({ ok: true, role });
+  res.json({ ok: true, role, recoveryUsed: res.getHeader('X-Recovery-Used') === '1' });
 }

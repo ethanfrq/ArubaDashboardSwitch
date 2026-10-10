@@ -1,7 +1,8 @@
-import { redis, K, HIST, getSettings } from '../../lib/redis.js';
+import { store, K, HIST, getSettings } from '../../lib/db.js';
 import { requireAgent } from '../../lib/auth.js';
 import { notify } from '../../lib/notify.js';
 import { run, syncKeys } from '../../lib/features/index.js';
+import { ensureCron } from '../../lib/store.js';
 import * as backup from '../../lib/features/backup.js';
 
 // L'agent envoie l'état du switch ; on lui renvoie les commandes, les réglages et le mode (temps réel ou non).
@@ -11,7 +12,8 @@ export default async function handler(req, res) {
   const { state, samples = {}, events = [], sver = null, diag = null } = req.body || {};
   if (!state || typeof state !== 'object') return res.status(400).json({ error: 'state manquant' });
 
-  const r = redis();
+  const r = store();
+  await ensureCron(); // une fois par instance : vérification toutes les 5 min programmée dans Supabase
   state.received = Date.now() / 1000;
   const writes = [r.set(K.state, state)];
   // Relevé détaillé : l'agent ne l'envoie que lorsqu'il a changé (ou toutes les 10 min).

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { redis, K, upsert, LOG_MAX } from '../lib/redis.js';
+import { store, K, upsert, LOG_MAX } from '../lib/db.js';
 import { enqueue } from '../lib/queue.js';
 import { wrapCommand } from '../lib/features/index.js';
 import { requireSession } from '../lib/auth.js';
@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   const s = await requireSession(req, res);
   if (!s) return;
   if (req.method !== 'POST') return res.status(405).end();
-  const r = redis();
+  const r = store();
   const admin = s.role === 'admin';
   const denied = () => res.status(403).json({ error: 'Accès en lecture seule : action réservée à l’administrateur.' });
 

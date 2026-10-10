@@ -1,30 +1,24 @@
-import { Receiver } from '@upstash/qstash';
-import { redis, K, mergeSettings } from '../../lib/redis.js';
+import crypto from 'node:crypto';
+import { store, K, mergeSettings } from '../../lib/db.js';
+import { cronSecret, ensureCron } from '../../lib/store.js';
 import { notify } from '../../lib/notify.js';
 import { enqueue } from '../../lib/queue.js';
 import { run, cronKeys } from '../../lib/features/index.js';
 
 const OFFLINE_AFTER = 300; // s sans nouvelles de l'agent
 
-async function rawBody(req) {
-  const chunks = [];
-  for await (const c of req) chunks.push(c);
-  return Buffer.concat(chunks).toString('utf8');
-}
-
-// Appelé toutes les 5 min par une planification QStash : détecte un agent arrêté, puis laisse les fonctions
-// d'administration faire leur travail périodique (actions planifiées, sauvegardes de configuration…).
+// Appelé toutes les 5 min par Supabase (pg_cron, programmé tout seul au premier lancement) avec un secret dérivé de
+// SESSION_SECRET : détecte un agent arrêté, puis laisse les fonctions d'administration faire leur travail périodique
+// (actions planifiées, sauvegardes de configuration…).
 export default async function handler(req, res) {
-  const receiver = new Receiver({
-    currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY,
-    nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY,
-  });
-  try {
-    await receiver.verify({ signature: req.headers['upstash-signature'] || '', body: await rawBody(req) });
-  } catch {
-    return res.status(401).json({ error: 'Signature QStash invalide' });
+  const given = String(req.headers['x-cron-secret'] || '');
+  const want = cronSecret();
+  if (!process.env.SESSION_SECRET || given.length !== want.length || !crypto.timingSafeEqual(Buffer.from(given), Buffer.from(want))) {
+    return res.status(401).json({ error: 'Secret de planification invalide' });
   }
-  const r = redis();
+  ensureCron(); // reprogramme si l'adresse du dashboard a changé
+  const r = store();
+  await r.purgeExpired(); // ménage des valeurs expirées (jetons, verrous…)
   const extra = cronKeys();
   const [state, offline, rawSettings, ...extraVals] = await r.mget(K.state, K.offline, K.settings, ...extra);
   const settings = mergeSettings(rawSettings);

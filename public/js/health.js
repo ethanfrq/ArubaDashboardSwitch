@@ -350,7 +350,7 @@
     const c = currentCfg();
     const btn = (label) => (admin ? ` <button class="btn small" type="button" data-health-act="readcfg">${label}</button>` : '');
     if (HL.asked) return '<span class="spinner"></span> Lecture de la configuration du switch en cours…';
-    if (c) return `${HL.askFail ? '<span class="warn">La lecture n’a rien donné : réessaie.</span> ' : ''}Configuration lue le ${when(c.t)} (${c.src === 'direct' ? 'lecture directe' : 'dernière sauvegarde'}).${NOW - c.t > 86400 ? ' Elle date un peu : relis-la pour un bilan à jour.' : ''}${btn('Relire la configuration')}`;
+    if (c) return `${HL.askFail ? '<span class="warn">La lecture n’a rien donné : réessaie.</span> ' : ''}Configuration lue le ${esc(when(c.t))} (${c.src === 'direct' ? 'lecture directe' : 'dernière sauvegarde'}).${NOW - c.t > 86400 ? ' Elle date un peu : relis-la pour un bilan à jour.' : ''}${btn('Relire la configuration')}`;
     if (HL.state === 'loading') return '<span class="spinner"></span> Lecture de la dernière sauvegarde…';
     const why = HL.askFail ? 'La lecture n’a rien donné : réessaie.' : HL.state === 'error' ? `Sauvegarde illisible (${esc(HL.err)}).` : 'La configuration du switch n’a pas encore été lue.';
     return `<span class="warn">${why}</span> Les vérifications qui en dépendent restent « inconnu ».${btn('Lire la configuration du switch')}`;

@@ -1,6 +1,7 @@
 """Installe l'agent comme service Windows (tâches planifiées SYSTEM) :
 - ArubaDashboardAgent : l'agent, au démarrage du PC, relancé en cas d'erreur ;
-- ArubaDashboardMiseAJour : mise à jour automatique depuis GitHub, au démarrage puis toutes les 5 minutes.
+- ArubaDashboardMiseAJour : mise à jour automatique (versions publiées sur GitHub), au démarrage puis toutes les 5 minutes.
+Les noms des tâches restent ceux des premières versions : les PC déjà installés gardent les mêmes.
 
     python installer_service.py install | uninstall | status | restart | taches
 """
@@ -32,11 +33,11 @@ HEAD = """<?xml version="1.0" encoding="UTF-16"?>
 </Task>
 """
 
-AGENT = dict(desc="Agent du dashboard switch Aruba (envoie l'etat du switch au dashboard Vercel)",
+AGENT = dict(desc="Agent My Aruba Manager (envoie l'etat du switch au dashboard)",
              triggers="<BootTrigger><Enabled>true</Enabled><Delay>PT30S</Delay></BootTrigger>",
              limit="PT0S", restart="<RestartOnFailure><Interval>PT1M</Interval><Count>999</Count></RestartOnFailure>",
              script="agent.py")
-UPDATE = dict(desc="Mise a jour automatique de l'agent du dashboard switch Aruba depuis GitHub",
+UPDATE = dict(desc="Mise a jour automatique de l'agent My Aruba Manager (versions publiees sur GitHub)",
               triggers="<BootTrigger><Enabled>true</Enabled><Delay>PT2M</Delay></BootTrigger>"
                        "<TimeTrigger><Repetition><Interval>PT5M</Interval><StopAtDurationEnd>false</StopAtDurationEnd></Repetition>"
                        "<StartBoundary>2026-01-01T00:00:00</StartBoundary><Enabled>true</Enabled></TimeTrigger>",
@@ -75,7 +76,7 @@ def install():
     tasks()
     sch("/Run", "/TN", TASK)
     print("\nService installé et démarré. Journal : " + str(HERE / "agent.log"))
-    print("Mise à jour automatique depuis GitHub : toutes les 5 minutes. Journal : " + str(HERE / "mise_a_jour.log"))
+    print("Mise à jour automatique (versions publiées sur GitHub) : toutes les 5 minutes. Journal : " + str(HERE / "mise_a_jour.log"))
 
 
 def uninstall():
