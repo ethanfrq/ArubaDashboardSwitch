@@ -1133,7 +1133,7 @@ class Agent:
     def run(self):
         self.commander.start()
         while True:
-            started = time.time()
+            started, step = time.time(), "switch"  # étape en cours, pour un message d'erreur juste
             try:
                 with self.tlock:
                     state = self.col.collect(self.ensure_transport(), self.settings, self.mode())
@@ -1155,6 +1155,7 @@ class Agent:
                                   "maj": read_update_status(), "caps": CAPS}
                 samples, events = self.col.take()
                 diag = self.col.diag_payload()
+                step = "dashboard"
                 r = api("/api/agent/sync", {"state": state, "samples": samples, "events": events, "sver": self.sver,
                                             **({"diag": diag} if diag else {})})
                 self.col.ack(samples, events)
@@ -1177,22 +1178,31 @@ class Agent:
             except urllib.error.HTTPError as e:
                 log.warning("Dashboard : HTTP %s %r", e.code, e.read()[:200])
             except (urllib.error.URLError, TimeoutError) as e:
-                log.warning("Dashboard injoignable : %s", e)
+                if step == "dashboard" or isinstance(e, urllib.error.URLError):
+                    log.warning("Dashboard injoignable : %s", e)
+                else:  # délai dépassé en lisant le switch : liaison perdue, pas un problème d'internet
+                    log.warning("Switch injoignable : %s", e)
+                    self.link_lost(e)
+                    continue
             except link_errors() as e:  # bannière SSH illisible, mot de passe refusé… : on réessaie, l'agent ne s'arrête pas
-                try:
-                    self.t and self.t.close()
-                except Exception:  # noqa: BLE001
-                    pass
-                self.t = None
-                heartbeat()
-                auth = auth_refused(e)
-                time.sleep(self.link_pause(e, auth))
-                if auth:
-                    reload_password()
+                self.link_lost(e)
                 continue
             heartbeat()  # la boucle tourne (même sans internet ou sans switch) ; un bug, lui, l'arrête avant
             self.wake.wait(self.pause(started))
             self.wake.clear()
+
+    def link_lost(self, e):
+        """Liaison avec le switch perdue : on ferme la session et on attend avant de réessayer."""
+        try:
+            self.t and self.t.close()
+        except Exception:  # noqa: BLE001
+            pass
+        self.t = None
+        heartbeat()
+        auth = auth_refused(e)
+        time.sleep(self.link_pause(e, auth))
+        if auth:
+            reload_password()
 
 
 def heartbeat():
