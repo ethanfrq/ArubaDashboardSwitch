@@ -418,7 +418,7 @@ def compact_diag(key, lines):
 
 
 def fmt_mac(v):
-    """« ec50aa-8b9100 » -> « ec:50:aa:8b:91:00 »."""
+    """« 0200.00aa.bbcc » ou « 02-00-00-AA-BB-CC » -> « 02:00:00:aa:bb:cc »."""
     hexa = re.sub(r"[^0-9a-f]", "", (v or "").lower())
     return ":".join(hexa[i:i + 2] for i in range(0, 12, 2)) if len(hexa) == 12 else None
 

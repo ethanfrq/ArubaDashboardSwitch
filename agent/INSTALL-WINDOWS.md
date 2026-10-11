@@ -88,7 +88,14 @@ If you publish your own version of the agent, remember that the PCs automaticall
 protect the GitHub account (two-factor authentication) and only publish tested versions.
 
 ## Upgrading from an old version (before 1.3.0)
-Once, in PowerShell opened as administrator in the agent's folder:
+The dashboard says so with the box "L’agent installé sur le PC est ancien : mets-le à jour" (the agent installed on
+the PC is old: update it), above the switch log, and the bottom of the page shows "agent : version antérieure à 1.3.0".
+Do it once, on the PC where the agent is installed; the configuration and the stored password are kept.
+
+1. Open PowerShell **as administrator**: Start menu, type `PowerShell`, right-click "Windows PowerShell",
+   "Run as administrator", then "Yes" when Windows asks for permission.
+2. Go to the agent's folder: type `cd C:\aruba-agent` (or the folder where the agent is installed), then Enter.
+3. Copy the two lines below, paste them into the PowerShell window (right-click), then Enter:
 
 ```powershell
 Invoke-WebRequest https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest/download/mise_a_jour.py -OutFile mise_a_jour.py
@@ -96,7 +103,8 @@ python mise_a_jour.py --installer
 ```
 
 The script downloads the new version, restarts the agent, checks that it works and then installs both tasks.
-The configuration and the stored password are kept. After that, everything is automatic.
+A few minutes later, the bottom of the dashboard shows the agent's version number (for example "agent v1.4.0") and the
+box disappears. After that, everything is automatic.
 
 ## What the agent does
 - sends the switch state every 10 s while the administrator dashboard is open, every 30 s for a read-only

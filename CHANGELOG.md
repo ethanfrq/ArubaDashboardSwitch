@@ -1,5 +1,84 @@
 # Historique des versions
 
+## 1.9.2 (2026-10-11)
+
+### Journal du switch et carte Switch : plus de « Chargement » sans fin
+- Le journal du switch ne reste plus sur « Chargement du journal… » quand aucun relevé n’aboutit. Il dit maintenant où
+  en est le relevé : en attente de l’agent ; premier relevé en attente (avec l’heure du prochain essai) ; relevé en
+  cours ; agent qui ne répond plus (« vérifie que le PC est allumé », le relevé partira à son retour) ; relevé
+  impossible, avec la cause en clair (par exemple « le switch a refusé ou coupé la connexion SSH de l’agent »), le
+  message réel en détail technique (« Erreur : Error reading SSH protocol banner »), ce qui manque sans relevé, la date
+  du dernier essai, le nombre d’échecs de suite et le prochain essai ; relevés que l’agent n’a jamais exécutés
+  (« 2 relevés en attente depuis… », sans les compter comme des échecs) ; aucun événement ; puis les événements. La
+  carte Switch donne les mêmes informations sous ses valeurs.
+- Agent d’avant 1.3.0 (sans relevé intégré ni mise à jour automatique) dont les relevés échouent : un encadré
+  « L’agent installé sur le PC est ancien : mets-le à jour » s’affiche au-dessus du journal du switch, avec une ligne
+  dans la carte Switch. Son lien mène tout droit à la marche à suivre (`agent/INSTALLATION-WINDOWS.md`, « Passer d’une
+  ancienne version »). Rien de tel pour un agent 1.3.0 ou plus récent, qui se met à jour tout seul, ni quand l’agent ne
+  répond plus. Le bas de page dit « version antérieure à 1.3.0 » (et non plus « antérieure à 1.0.0 ») pour un agent
+  qui n’envoie pas encore son numéro de version ; « v1.4.0 disponible » y mène à la même marche à suivre.
+- Agent 1.3.0 ou plus récent (il fait lui-même le relevé) : un essai raté du bouton **Actualiser** disparaît dès que
+  l’agent a refait son relevé ; d’ici là, la carte Switch annonce le nouvel essai « au prochain relevé de l’agent ».
+
+### Relevés ratés espacés
+- Un relevé automatique raté n’est plus relancé toutes les minutes : nouvel essai après 1, 2, 5, 10, puis 15 minutes au
+  plus, et retour au rythme normal dès qu’un relevé réussit. L’attente se calcule d’après le journal des commandes :
+  une page rechargée, ou une autre page ouverte, ne relance pas tout de suite. Le switch ne reçoit plus une connexion
+  SSH par minute, et ces échecs ne remplissent plus le journal des commandes (80 entrées) au point d’en chasser les
+  vraies commandes.
+- Bouton **Actualiser** de la carte Switch : essai immédiat, même pendant l’attente.
+- Agent muet (aucune nouvelle depuis 90 s) : plus aucun relevé automatique n’est mis en file ; il part à son retour, au
+  lieu de s’empiler pour être exécuté plusieurs fois d’un coup.
+- Vérification automatique des câbles : après des lots ratés à la suite, même attente croissante avant le lot suivant
+  (les sauvegardes planifiées attendaient déjà 1 h, puis davantage, après un échec).
+
+### Page Console
+- Nouvelle page **Console** dans la barre latérale (adresse `#console`), réservée à l’administrateur : en-tête avec le
+  nom du switch et l’état de l’agent, commandes rapides, grande zone de sortie à la hauteur de l’écran, champ de saisie
+  en bas (Entrée envoie, Maj+Entrée passe à la ligne). L’entrée « Console » du menu ouvre cette page ; la petite
+  console reste sur le tableau de bord, avec un lien **Ouvrir en grand** (le bouton Retour du navigateur ramène
+  ensuite à la carte).
+- Les deux consoles partagent les mêmes commandes et sorties et se mettent à jour ensemble ; une commande envoyée
+  depuis l’une apparaît aussitôt dans l’autre. Mêmes confirmations : commande de configuration, seconde confirmation
+  (CONFIRMER) pour une commande sensible, boutons Oui et Non quand le switch pose une question.
+- Historique des commandes tapées : flèches haut et bas dans le champ vide, en début de saisie, ou sur une commande
+  rappelée. Gardé en mémoire seulement, et oublié à la déconnexion, comme les saisies en cours.
+- **Afficher les relevés automatiques** (décochée par défaut, mémorisée dans ce navigateur) : les relevés du dashboard
+  ne noient plus la sortie.
+- **Copier** sur chaque sortie ; **Vider l’affichage** retire les commandes terminées de la page seulement (rien n’est
+  effacé du switch ni du journal, tout revient au rechargement).
+- La sortie ne défile toute seule que si l’on est déjà en bas : une sortie plus ancienne se lit sans être interrompue.
+- Sur téléphone : la console s’arrête au bas de l’écran, champ de saisie compris ; **Sauvegarder la config** passe en
+  tête des commandes rapides, qui tiennent sur une ligne qui défile (bord estompé tant qu’il en reste à voir) ; la case
+  et le bouton **Vider** tiennent sur une ligne ; l’aide ne parle plus de Maj+Entrée ni des flèches sur un écran
+  tactile.
+- Accessibilité : la sortie n’est plus relue en entier par le lecteur d’écran ; une ligne courte est annoncée quand une
+  commande se termine (« show vlan : terminé, 6 lignes »). Champ et boutons nommés, focus sur le titre à l’ouverture,
+  dans le champ après une confirmation, dans la sortie après une réponse Oui ou Non ; cibles de 44 px sur téléphone ;
+  rien ne déborde à 375 px.
+
+### Corrections
+- Console, question du switch en thème clair : le bouton **Non** était écrit en jaune sur fond blanc, presque
+  illisible ; il prend la couleur normale du texte.
+- Console du tableau de bord : le champ garde une bordure orange bien visible au focus (elle restait gris foncé), le
+  focus reste dans la console après une réponse Oui ou Non, et la touche Entrée du clavier tactile affiche « Envoyer ».
+- Téléphone : boutons **Actualiser** (carte Switch) et **Ouvrir en grand** de 44 px de haut.
+- Agent : dans un commentaire de `agent.py`, l’exemple d’adresse MAC est remplacé par une adresse fictive (la version de l’agent reste 1.4.0).
+
+### Documentation
+- `agent/INSTALLATION-WINDOWS.md` et `agent/INSTALL-WINDOWS.md`, « Passer d’une ancienne version (avant 1.3.0) » :
+  étapes pas à pas (ouvrir PowerShell en administrateur, aller dans le dossier de l’agent, coller les deux lignes) et
+  comment voir que c’est fait.
+- Guide (FR et EN), « Mettre à jour », L’agent : que faire quand le dashboard signale un agent installé avant la 1.3.0.
+- Guide (FR et EN) : la page Console (où la trouver, à quoi elle sert, relevés automatiques masqués par défaut), avec
+  la capture `docs/captures/console.png` ; dans le dépannage, « Le journal du switch dit que l’agent est ancien ».
+- README : la page Console.
+
+### Passer de la 1.9.1 à la 1.9.2
+Rien à faire côté dashboard. **Agent** : si le journal du switch affiche « L’agent installé sur le PC est ancien :
+mets-le à jour », suis le lien de l’encadré (`agent/INSTALLATION-WINDOWS.md`, « Passer d’une ancienne version ») et
+mets à jour l’agent du PC une fois ; il se met ensuite à jour tout seul.
+
 ## 1.9.1 (2026-10-11)
 
 ### Réglages : une vraie page

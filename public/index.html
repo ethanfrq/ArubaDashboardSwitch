@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>My Aruba Manager</title>
-<script src="/js/theme.js?v=1.9.1"></script>
+<script src="/js/theme.js?v=1.9.2"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ff8300'/%3E%3Csvg x='4' y='4' width='24' height='24' viewBox='0 -960 960 960'%3E%3Cpath fill='%231d0f00' d='M120-160v-120q0-33 23.5-56.5T200-360h40v-80q0-33 23.5-56.5T320-520h120v-80h-40q-33 0-56.5-23.5T320-680v-120q0-33 23.5-56.5T400-880h160q33 0 56.5 23.5T640-800v120q0 33-23.5 56.5T560-600h-40v80h120q33 0 56.5 23.5T720-440v80h40q33 0 56.5 23.5T840-280v120q0 33-23.5 56.5T760-80H600q-33 0-56.5-23.5T520-160v-120q0-33 23.5-56.5T600-360h40v-80H320v80h40q33 0 56.5 23.5T440-280v120q0 33-23.5 56.5T360-80H200q-33 0-56.5-23.5T120-160Z'/%3E%3C/svg%3E%3C/svg%3E">
 <style>
 :root {
@@ -319,8 +319,10 @@ tbody tr.click:hover, tbody tr.sel { background: var(--surface-2); }
 .st.confirm { background: #4a3a10; color: #ffd76a; }
 .term-out { white-space: pre; color: #cfcec6; margin-top: 4px; overflow-x: auto; }
 .term-ask { margin-top: 8px; display: flex; gap: 8px; align-items: center; color: #ffd76a; flex-wrap: wrap; }
+.term-ask .btn:not(.primary) { color: var(--text); } /* « Non » : texte du bouton, pas le jaune de la question */
 .term-in { border-top: 1px solid #2a2a28; display: flex; gap: 8px; padding: 10px; align-items: flex-end; }
 .term-in textarea { background: #1a1a19; border-color: #2f2f2c; color: #f4f3ec; font-family: var(--mono); resize: none; min-height: 38px; max-height: 140px; }
+.term-in textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(255 131 0 / .45); } /* la règle générale du focus passe avant celle de la console */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .chip { font: 12px var(--mono); padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; color: var(--text-2); }
 .chip:hover { background: var(--surface-2); color: var(--text); }
@@ -735,6 +737,46 @@ input[type=number].num-in { width: 88px; padding: 7px 8px 7px 10px; text-align: 
   .save-acts { width: 100%; }
   .save-acts .btn { flex: 1 1 0; white-space: normal; }
 }
+
+/* ---------- relevés du switch : en attente, en cours, agent muet, impossible ; agent ancien à mettre à jour */
+.ic-bad { color: var(--bad); }
+.diag-state { display: grid; justify-items: center; gap: 6px; padding: 20px 8px; }
+.diag-state b { color: var(--text); }
+.diag-state .diag-err { font-size: 12.5px; color: var(--text-2); overflow-wrap: anywhere; }
+.alert.diag-agent { display: flex; gap: 8px; align-items: flex-start; color: var(--text); margin: 0 0 10px; }
+.alert.diag-agent > .ic-svg { color: var(--warn); margin-top: 1px; }
+.diag-agent > div { display: grid; gap: 4px; min-width: 0; }
+.diag-agent a, .diag-agent-line a { color: var(--accent-ink-2); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; justify-self: start; } /* 4.5:1 sur --warn-soft */
+.diag-agent-line { display: flex; gap: 6px; align-items: flex-start; margin: 8px 0 0; }
+.diag-agent-line > .ic-svg { margin-top: 1px; }
+
+/* ---------- page Console (administrateur) : la console de la carte du tableau de bord, en grand */
+.con-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; } /* une longue ligne de sortie défile dans la console, sans élargir la page */
+#view-console .chips { margin: 0; }
+.con-tools { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; }
+.con-tools .grow { flex: 1; }
+.term.term-page { height: calc(100vh - 300px); min-height: 320px; } /* hauteur exacte posée par fitConsole() */
+.term-page .term-log { padding: 14px 16px; }
+.term-log:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.term-copy { margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border: 1px solid #3a3a37; border-radius: 6px; background: #232321; color: #e6e5de; font: 500 11.5px/1 system-ui, sans-serif; cursor: pointer; }
+.term-copy:hover { background: #2e2e2b; color: #fff; }
+#conInput::placeholder { color: #a3a29a; opacity: 1; }
+#conHint { margin: 0; }
+.touch-only { display: none; }
+@media (hover: none) and (pointer: coarse) { .kbd-only { display: none; } .touch-only { display: inline; } } /* écran tactile : ni Maj+Entrée ni flèches */
+@media (max-width: 560px) {
+  #view-console .chip, #view-console .btn, #view-console .check, .term-copy, #conInput, #termOpen, #diagRefresh { min-height: 44px; }
+  #view-console .btn, .term-copy { min-width: 44px; }
+  .diag-agent a, .diag-agent-line a, #agentVersion a { min-height: 44px; }
+  #agentVersion a { display: inline-flex; align-items: center; }
+  #view-console .chip { padding: 4px 12px; flex: none; }
+  #conChips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; } /* une seule ligne qui défile : la sortie garde la place */
+  #conChips.more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent); } /* il en reste à droite */
+  .con-tools { flex-wrap: nowrap; gap: 8px; }
+  #conClear .con-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } /* « Vider » à l'écran, nom complet pour le lecteur d'écran */
+  .term-copy { padding: 0 12px; }
+  .term-page .term-log { padding: 12px; }
+}
 </style>
 </head>
 <body>
@@ -842,7 +884,7 @@ input[type=number].num-in { width: 88px; padding: 7px 8px 7px 10px; text-align: 
       <a href="#vlan" data-view="dashboard" data-target="sec-vlan"><i data-icon="layers"></i>VLAN</a>
       <div class="group staff-only">Administration</div>
       <a href="#outils" class="staff-only" data-view="dashboard" data-target="sec-admin" id="navTools"><i data-icon="build"></i>Outils</a>
-      <a href="#console" class="manage-only staff-only" data-view="dashboard" data-target="sec-console"><i data-icon="terminal"></i>Console</a>
+      <a href="#console" class="manage-only staff-only" data-view="console"><i data-icon="terminal"></i>Console</a>
       <a href="#reglages" class="manage-only staff-only" data-view="settings" id="settingsBtn"><i data-icon="settings"></i>Réglages</a>
       <div class="group">Compte et accès</div>
       <a href="#utilisateurs" class="manage-only staff-only" data-view="users"><i data-icon="group"></i>Utilisateurs</a>
@@ -935,6 +977,7 @@ input[type=number].num-in { width: 88px; padding: 7px 8px 7px 10px; text-align: 
       <h2>Journal du switch <span class="count" id="logCount"></span>
         <span class="right"><span class="seg" id="logFilter"><button data-f="all" class="on">Tout</button><button data-f="port">Ports</button><button data-f="warn">Avertissements</button></span></span>
       </h2>
+      <div id="logWarn"></div>
       <div class="log-list" id="logList"><div class="empty">Chargement du journal…</div></div>
     </section>
 
@@ -942,6 +985,7 @@ input[type=number].num-in { width: 88px; padding: 7px 8px 7px 10px; text-align: 
       <h2>Switch <span class="right"><button class="btn small" id="diagRefresh">Actualiser</button></span></h2>
       <dl class="kv" id="swInfo"></dl>
       <p class="note" id="diagNote" style="margin:12px 0 0"></p>
+      <div id="diagWarn"></div>
     </section>
 
     <section class="card span-4" id="sec-vlan">
@@ -950,12 +994,12 @@ input[type=number].num-in { width: 88px; padding: 7px 8px 7px 10px; text-align: 
     </section>
 
     <section class="card span-8 admin-only manage-only" id="sec-console">
-      <h2>Console de gestion <span class="count" id="termMode">les commandes passent par l’agent</span></h2>
+      <h2>Console de gestion <span class="count" id="termMode">les commandes passent par l’agent</span><span class="right"><a class="btn small" href="#console" id="termOpen"><i data-icon="open_in_full" data-size="14"></i>Ouvrir en grand</a></span></h2>
       <div class="chips" id="chips"></div>
       <div class="term">
-        <div class="term-log" id="termLog"></div>
+        <div class="term-log" id="termLog" role="log" aria-live="off" aria-label="Sortie de la console" tabindex="-1"></div>
         <form class="term-in" id="termForm">
-          <textarea id="termInput" rows="1" placeholder="show vlan    (Entrée pour envoyer, Maj+Entrée pour une nouvelle ligne)"></textarea>
+          <textarea id="termInput" rows="1" enterkeyhint="send" placeholder="show vlan    (Entrée pour envoyer, Maj+Entrée pour une nouvelle ligne)"></textarea>
           <button class="btn primary" id="termSend">Envoyer</button>
         </form>
       </div>
@@ -1036,6 +1080,28 @@ input[type=number].num-in { width: 88px; padding: 7px 8px 7px 10px; text-align: 
         <div class="save-acts"><button type="button" class="btn" id="alReset">Annuler</button><button class="btn primary" id="alSave">Enregistrer</button></div>
       </div>
     </form>
+  </section>
+
+  <!-- ============ CONSOLE (administrateur ; app.js : TERMS, drawTerm, openConsole) : la carte du tableau de bord, en grand ============ -->
+  <section id="view-console" class="view manage-only staff-only" hidden aria-labelledby="conTitle">
+    <div class="view-head"><div><h2 id="conTitle" tabindex="-1">Console</h2><p>Les commandes passent par l’agent installé sur le PC, jusqu’au switch <b id="conHost">Switch</b>. <span id="conMode"></span></p></div></div>
+    <div class="card con-card" id="conCard">
+      <div class="chips" id="conChips" role="group" aria-label="Commandes rapides"></div>
+      <div class="con-tools">
+        <label class="check"><input type="checkbox" id="conAuto"> Afficher les relevés automatiques</label>
+        <span class="grow"></span>
+        <button type="button" class="btn small" id="conClear">Vider<span class="con-more"> l’affichage</span><span class="sr"> (sur cette page seulement)</span></button>
+      </div>
+      <div class="term term-page" id="conTerm">
+        <div class="term-log" id="conLog" role="log" aria-live="off" aria-label="Sortie de la console" tabindex="0"></div>
+        <form class="term-in" id="conForm">
+          <label class="sr" for="conInput">Commande pour le switch</label>
+          <textarea id="conInput" rows="1" placeholder="show vlan" aria-describedby="conHint" enterkeyhint="send" autocomplete="off" autocapitalize="none" spellcheck="false"></textarea>
+          <button class="btn primary" id="conSend">Envoyer</button>
+        </form>
+      </div>
+      <p class="note" id="conHint"><span class="kbd-only">Entrée&nbsp;: envoyer · Maj+Entrée&nbsp;: nouvelle ligne · flèches haut et bas&nbsp;: commandes déjà tapées. </span><span class="touch-only">Plusieurs lignes&nbsp;: colle-les dans le champ. </span>Une commande qui modifie le switch demande une confirmation, une commande sensible une seconde confirmation. «&nbsp;Vider l’affichage&nbsp;» n’efface rien sur le switch ni dans le journal.</p>
+    </div>
   </section>
 
   <!-- ============ UTILISATEURS ============ -->
@@ -1263,20 +1329,21 @@ input[type=number].num-in { width: 88px; padding: 7px 8px 7px 10px; text-align: 
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <div class="sr" id="obSay" aria-live="polite"></div>
+<div class="sr" id="conSay" aria-live="polite"></div>
 
-<script src="/js/icons.js?v=1.9.1"></script>
-<script src="/js/app.js?v=1.9.1"></script>
+<script src="/js/icons.js?v=1.9.2"></script>
+<script src="/js/app.js?v=1.9.2"></script>
 <!-- Fonctions d'administration : chacune dans son fichier (public/js), branchées sur les points d'accroche ci-dessus. -->
-<script src="/js/undo.js?v=1.9.1"></script>
-<script src="/js/backup.js?v=1.9.1"></script>
-<script src="/js/profiles.js?v=1.9.1"></script>
-<script src="/js/bulk.js?v=1.9.1"></script>
-<script src="/js/devices.js?v=1.9.1"></script>
-<script src="/js/schedule.js?v=1.9.1"></script>
-<script src="/js/diagnose.js?v=1.9.1"></script>
-<script src="/js/health.js?v=1.9.1"></script>
-<script src="/js/wol.js?v=1.9.1"></script>
-<script src="/js/account.js?v=1.9.1"></script>
-<script src="/js/onboarding.js?v=1.9.1"></script>
+<script src="/js/undo.js?v=1.9.2"></script>
+<script src="/js/backup.js?v=1.9.2"></script>
+<script src="/js/profiles.js?v=1.9.2"></script>
+<script src="/js/bulk.js?v=1.9.2"></script>
+<script src="/js/devices.js?v=1.9.2"></script>
+<script src="/js/schedule.js?v=1.9.2"></script>
+<script src="/js/diagnose.js?v=1.9.2"></script>
+<script src="/js/health.js?v=1.9.2"></script>
+<script src="/js/wol.js?v=1.9.2"></script>
+<script src="/js/account.js?v=1.9.2"></script>
+<script src="/js/onboarding.js?v=1.9.2"></script>
 </body>
 </html>

@@ -62,7 +62,9 @@ It runs on the free plans of Vercel and Supabase and relies on a small Python ag
 - Enable, disable or restart a port, change its description.
 - **VLANs**: create, rename, delete, assign ports.
 - **Cable test** (TDR): length and state of each pair, with a plain-language verdict.
-- **Console**: any CLI command; yes/no questions from the switch are shown as buttons.
+- **Console**: any CLI command; yes/no questions from the switch are shown as buttons. A small console on the
+  dashboard, and a full-height **Console** page in the sidebar (command history, copy an output, automatic readings on
+  request).
 - One-click configuration save.
 
 ### Administration without touching the code

@@ -32,11 +32,11 @@
   }
 
   // ------------------------------------------------------------ navigation
-  const VIEWS = ['dashboard', 'settings', 'users', 'roles', 'activity', 'profile', 'setup'];
-  const ADMIN_VIEWS = new Set(['settings', 'users', 'activity', 'setup']);
+  const VIEWS = ['dashboard', 'console', 'settings', 'users', 'roles', 'activity', 'profile', 'setup'];
+  const ADMIN_VIEWS = new Set(['console', 'settings', 'users', 'activity', 'setup']);
   const HASH = { 'tableau-de-bord': ['dashboard', 'top'], ports: ['dashboard', 'sec-facade'], alertes: ['dashboard', 'sec-alertes'],
     debit: ['dashboard', 'sec-debit'], journal: ['dashboard', 'sec-logs'], vlan: ['dashboard', 'sec-vlan'], outils: ['dashboard', 'sec-admin'],
-    console: ['dashboard', 'sec-console'], reglages: ['settings'], utilisateurs: ['users'], roles: ['roles'], activite: ['activity'], profil: ['profile'], demarrage: ['setup'] };
+    console: ['console'], reglages: ['settings'], utilisateurs: ['users'], roles: ['roles'], activite: ['activity'], profil: ['profile'], demarrage: ['setup'] };
   let current = 'dashboard';
   const links = () => qsa('#sideNav a[data-view]');
 
@@ -86,6 +86,13 @@
     if (!(await leave('profile'))) return;
     history.replaceState(null, '', '#profil'); show('profile', { focus: true });
   });
+  // « Ouvrir en grand » de la carte Console du tableau de bord : la page Console, dans une nouvelle entrée de l'historique.
+  // Le bouton Retour du navigateur ramène à la carte (history.state.card, lu par fromHash).
+  $('#termOpen').addEventListener('click', (e) => {
+    e.preventDefault();
+    history.replaceState({ card: 'sec-console' }, '');
+    history.pushState(null, '', '#console'); show('console', { focus: true });
+  });
 
   // Section visible du tableau de bord : l'entrée correspondante du menu est mise en avant.
   const spy = 'IntersectionObserver' in window && new IntersectionObserver((entries) => {
@@ -96,7 +103,7 @@
     const a = links().find((l) => l.dataset.target === vis.target.id);
     if (a) mark(a);
   }, { rootMargin: '-30% 0px -60% 0px' });
-  ['top', 'sec-facade', 'sec-alertes', 'sec-debit', 'sec-logs', 'sec-vlan', 'sec-admin', 'sec-console'].forEach((id) => { const el = document.getElementById(id); if (el && spy) spy.observe(el); });
+  ['top', 'sec-facade', 'sec-alertes', 'sec-debit', 'sec-logs', 'sec-vlan', 'sec-admin'].forEach((id) => { const el = document.getElementById(id); if (el && spy) spy.observe(el); });
   // Tout en haut de la page : « Tableau de bord ».
   addEventListener('scroll', () => { if (current === 'dashboard' && scrollY < 60) mark(links().find((a) => a.dataset.target === 'top')); }, { passive: true });
 
@@ -119,10 +126,12 @@
   });
 
   async function fromHash() {
-    const h = HASH[decodeURIComponent(location.hash.slice(1))];
+    const key = decodeURIComponent(location.hash.slice(1));
+    const h = HASH[key] || (!key && HASH['tableau-de-bord']); // Retour jusqu'à l'adresse sans ancre : tableau de bord
     if (!h) return;
     if (!(await leave(h[0]))) return history.replaceState(null, '', '#reglages'); // on reste sur Réglages
-    show(h[0], { target: h[1] });
+    const card = h[0] === 'dashboard' && history.state?.card; // Retour après « Ouvrir en grand » : la carte Console
+    show(h[0], { target: (card && document.getElementById(card) && card) || h[1] });
   }
   addEventListener('hashchange', fromHash);
 
@@ -432,7 +441,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
-  const LOAD = { settings: () => loadSettings(true), users: loadUsers, activity: loadAudit, profile: loadProfile, setup: () => ADMIN.setupOpen?.() }; // settings : app.js, setup : onboarding.js
+  const LOAD = { console: openConsole, settings: () => loadSettings(true), users: loadUsers, activity: loadAudit, profile: loadProfile, setup: () => ADMIN.setupOpen?.() }; // console, settings : app.js, setup : onboarding.js
   // Les pages ouvertes se rafraîchissent toutes seules (comptes en ligne, nouvelles entrées du journal).
   setInterval(() => { if (!document.hidden && !$('#app').hidden && (current === 'users' || current === 'activity')) LOAD[current](); }, 30000);
 

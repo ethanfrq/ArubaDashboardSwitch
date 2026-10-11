@@ -61,7 +61,9 @@ Il fonctionne avec les offres gratuites de Vercel et de Supabase et s’appuie s
 - Activer, désactiver ou redémarrer un port, changer sa description.
 - **VLANs** : créer, renommer, supprimer, affecter des ports.
 - **Test de câble** (TDR) : longueur et état de chaque paire, avec un verdict en clair.
-- **Console** : n’importe quelle commande CLI ; les questions oui/non du switch s’affichent sous forme de boutons.
+- **Console** : n’importe quelle commande CLI ; les questions oui/non du switch s’affichent sous forme de boutons. Une
+  petite console sur le tableau de bord, et une page **Console** en pleine hauteur dans la barre latérale (historique des
+  commandes, copie d’une sortie, relevés automatiques sur demande).
 - Sauvegarde de la configuration en un clic.
 
 ### Administration sans toucher au code

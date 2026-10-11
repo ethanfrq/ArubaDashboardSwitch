@@ -1,7 +1,13 @@
 // My Aruba Manager : application du dashboard (chargée par index.html avant les extensions de public/js).
-const APP_VERSION = '1.9.1';
+const APP_VERSION = '1.9.2';
 const AGENT_LATEST = '1.4.0'; // dernière version de l'agent publiée avec ce dashboard
-const verNum = (v) => String(v).split('.').reduce((a, x) => a * 1000 + (Number(x) || 0), 0);
+// x.y.z en nombre comparable ; parties en trop ou non numériques ignorées (« 1.2.0.1 », version reçue mal formée)
+const verNum = (v) => { const p = String(v).split('.'); return [0, 1, 2].reduce((a, i) => a * 1000 + (parseInt(p[i], 10) || 0), 0); };
+// Agent installé plus ancien que AGENT_LATEST. Avant 1.3.0, l'agent envoyait un numéro de protocole (« 2 ») ou rien.
+const agentSemver = (v) => /^\d+\.\d+/.test(String(v));
+const agentOlder = () => !agentSemver(S?.agent?.version) || verNum(S.agent.version) < verNum(AGENT_LATEST);
+// Agent d'avant 1.3.0 : sans relevé intégré ni mise à jour automatique, il faut le mettre à jour une fois à la main.
+const agentPre13 = () => Boolean(S) && !S.diag?.h && (!agentSemver(S.agent?.version) || verNum(S.agent.version) < verNum('1.3.0'));
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
@@ -181,7 +187,7 @@ $('#viewBtn').addEventListener('click', async () => {
   try { localStorage.setItem('aruba-view', MONITOR ? 'monitor' : 'admin'); } catch {}
   applyRole();
 });
-function showLogin() { EPOCH++; keepSettings(); LV = AV = ''; SAVED = null; for (const k of Object.keys(XV)) delete XV[k]; $('#foot').hidden = true; $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
+function showLogin() { EPOCH++; keepSettings(); forgetTyped(); LV = AV = ''; SAVED = null; for (const k of Object.keys(XV)) delete XV[k]; $('#foot').hidden = true; $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
 function showApp() { $('#login').hidden = true; $('#app').hidden = false; $('#foot').hidden = false; }
 $('#appVersion').textContent = `v${APP_VERSION}`;
 
@@ -490,19 +496,108 @@ function flapCell(p, long) {
   return `${nf0.format(t)}${f >= 4 ? ' <span class="badge amber" title="coupures récentes">instable</span>' : ''}${long ? ' <span class="muted">depuis le démarrage du switch</span>' : ''}`;
 }
 function latestDiag() { return LOG.find((c) => c.kind === 'auto:diag'); }
+// Relevés automatiques ratés (connexion SSH refusée par le switch, agent ancien…) : nouvel essai après 1, 2, 5, 10, puis
+// 15 min au plus. Compté d'après le journal des commandes, partagé par toutes les pages et relu au rechargement : une page
+// rechargée ne relance pas tout de suite, et le premier relevé réussi remet l'attente à zéro.
+const AUTO_RETRY = [60, 120, 300, 600, 900];
+const retryWait = (n) => AUTO_RETRY[Math.min(n, AUTO_RETRY.length) - 1];
+const autoLost = (c) => ['pending', 'running'].includes(c.status) && NOW - c.created >= 180; // jamais exécuté par l'agent
+// Échecs consécutifs d'un relevé automatique (kind), du plus récent au plus ancien, jusqu'au premier réussi (ok). Un relevé
+// en cours est sauté ; une sortie pas encore lue arrête le compte.
+function autoFails(kind, ok) {
+  const out = [];
+  for (const c of LOG) {
+    if (c.kind !== kind) continue;
+    if (ok(c)) break;
+    if (autoLost(c) || c.status === 'error' || (c.status === 'done' && OUT[c.id] !== undefined)) out.push(c);
+    else if (!['pending', 'running'].includes(c.status)) break;
+  }
+  return out;
+}
+// Relevés de la page ratés à la suite. Avec un agent qui fait lui-même le relevé (1.3.0 et plus), un essai raté (bouton
+// « Actualiser ») plus ancien que son dernier relevé ne compte plus : le relevé affiché est le sien, et il est frais.
+function diagFails() {
+  const fails = autoFails('auto:diag', diagUsable);
+  const agentT = S?.diag?.h ? Math.max(S.diag.t || 0, DIAG?.src === 'agent' ? DIAG.t : 0) : 0;
+  return agentT ? fails.filter((c) => (c.finished || c.created) > agentT) : fails;
+}
+const diagRunning = () => { const c = latestDiag(); return Boolean(c && ['pending', 'running'].includes(c.status) && NOW - c.created < 180); };
+const agentQuiet = () => !S?.received || NOW - S.received > 90; // agent muet : un relevé resterait dans la file
+// Heure du prochain relevé automatique : diagEvery() après un relevé réussi, attente croissante après des échecs.
+function diagNext() {
+  const last = latestDiag();
+  if (!last) return NOW;
+  const n = diagFails().length;
+  return (last.finished || last.created) + (n ? retryWait(n) : diagEvery());
+}
+// Relevé du switch par la page (agent sans relevé intégré) : 'sent' (mis en file), 'running' (déjà en cours) ou rien.
+// manual : bouton « Actualiser », essai immédiat même pendant l'attente après des échecs.
 async function maybeDiag(force, manual) {
   if (!S || $('#app').hidden || document.hidden) return;
   if (S.diag?.h && !manual) return; // l'agent 1.3.0 fait lui-même le relevé, à son rythme
-  const last = latestDiag();
-  if (last && ['pending', 'running'].includes(last.status) && NOW - last.created < 180) return;
-  const age = last ? NOW - (last.finished || last.created) : Infinity;
-  const failed = last && last.status === 'error' && OUT[last.id] !== undefined && !diagUsable(last); // nouvel essai dans 1 min
-  if (!force && age < (failed ? 60 : diagEvery())) return;
+  if (diagRunning()) return 'running';
+  if (!manual && agentQuiet()) return; // il partira au retour de l'agent, au lieu de s'empiler dans la file
+  if (!force && NOW < diagNext()) return;
   if (Date.now() / 1000 - diagAsked < (force ? 5 : 60)) return;
   diagAsked = Date.now() / 1000;
-  try { await api('/api/command', { cmd: DIAG_CMD, label: 'Relevé automatique', kind: 'auto:diag' }); setTimeout(poll, 800); } catch {}
+  try { await api('/api/command', { cmd: DIAG_CMD, label: 'Relevé automatique', kind: 'auto:diag' }); setTimeout(poll, 800); return 'sent'; } catch {}
 }
-$('#diagRefresh').addEventListener('click', (e) => busy(e.currentTarget, async () => { await maybeDiag(true, true); toast('Relevé demandé au switch', { sub: 'Résultat dans quelques secondes.' }); }));
+$('#diagRefresh').addEventListener('click', (e) => busy(e.currentTarget, async () => {
+  const r = await maybeDiag(true, true);
+  if (r === 'running') toast('Relevé déjà en cours', { sub: 'Résultat dans quelques secondes.' });
+  else if (r === 'sent') toast('Relevé demandé au switch', { sub: agentQuiet() ? 'L’agent ne répond pas pour l’instant : le relevé partira à son retour.' : 'Résultat dans quelques secondes.' });
+}));
+// État des relevés en clair (carte Switch, journal du switch). Textes : espace insécable (\u00a0) dans « » et avant « : ».
+const diagHM = (t) => new Date(t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+const fmtEvery = (x) => (x < 60 ? `${x} s` : `${Math.round(x / 60)} min`);
+// Prochain essai, en une phrase : la page relance (attente croissante après des échecs), ou l'agent refait son relevé.
+function diagNextText() {
+  if (agentQuiet()) return 'Prochain essai dès que l’agent répondra.';
+  if (S?.diag?.h) return `Nouvel essai au prochain relevé de l’agent${S.diag.every ? ` (toutes les ${fmtEvery(S.diag.every)})` : ''}.`; // la page ne relance pas
+  const t = diagNext();
+  return `Prochain essai ${t - NOW < 45 ? 'dans moins d’une minute' : `vers ${new Date(t * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}.`;
+}
+const nbsp = (s) => String(s).replace(/ ([:;!?»])/g, '\u00a0$1').replace(/« /g, '«\u00a0'); // texte reçu (message de l'agent)
+const quote = (s) => `«\u00a0${nbsp(s)}\u00a0»`;
+// Causes connues d'un relevé raté, dites en clair ; le message réel reste affiché en « Détail technique ».
+const DIAG_CAUSES = [
+  [/mot de passe SSH refusé|Authentication failed|AuthenticationException/i, 'le switch refuse le mot de passe SSH de l’agent'],
+  [/protocol banner|reset by peer|connection reset|EOFError|socket is closed|session not active/i, 'le switch a refusé ou coupé la connexion SSH de l’agent'],
+  [/timed? ?out|No route to host|unreachable|Unable to connect|WinError 10060/i, 'le switch ne répond pas à l’agent (adresse, câble ou réseau)'],
+  [/Connection refused|WinError 10061/i, 'le switch refuse la connexion SSH de l’agent'],
+  [/^% ?Invalid|Invalid input/i, 'le switch n’a pas reconnu une commande du relevé'],
+];
+// Relevé raté : cause en clair (why, sans point final) et ligne réelle de l'agent ou du switch (raw).
+function diagFail(c) {
+  if (OUT[c.id] === undefined) return { why: 'détail en cours de lecture' };
+  const lines = String(OUT[c.id]).split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('» '));
+  const raw = (lines.find((x) => /^(%|Erreur|Error|ERROR|Invalid)/.test(x)) || lines[0] || '').slice(0, 240);
+  if (!raw) return { why: 'le switch n’a renvoyé aucune réponse' };
+  return { why: DIAG_CAUSES.find(([re]) => re.test(raw))?.[1] || '', raw };
+}
+// Où en sont les relevés. k : 'running', 'quiet' (agent muet : PC éteint, agent arrêté), 'fail' (relevés ratés, n de
+// suite, le plus récent c), 'lost' (relevés jamais exécutés par l'agent), '' (rien à signaler).
+function diagState() {
+  if (!S) return { k: '' };
+  if (diagRunning()) return { k: 'running' };
+  const fails = diagFails(), real = fails.filter((c) => !autoLost(c)), lost = fails.filter(autoLost);
+  if (agentQuiet() && (fails.length || (!DIAG && !S.diag?.h))) return { k: 'quiet', lost, age: NOW - (S.received || S.updated || NOW) };
+  if (real.length) return { k: 'fail', c: real[0], n: real.length, lost, ...diagFail(real[0]) };
+  if (lost.length) return { k: 'lost', lost };
+  return { k: '' };
+}
+const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
+const lostText = (lost) => `${plural(lost.length, 'relevé en attente', 'relevés en attente')} depuis ${diagHM(lost.at(-1).created)}`;
+// Agent d'avant 1.3.0 dont les relevés échouent : encadré « mets-le à jour » au-dessus du journal du switch, et une ligne
+// sous la note de la carte Switch. Le lien mène tout droit à la marche à suivre (deux lignes à coller dans PowerShell).
+const AGENT_GUIDE = 'https://github.com/ethanfrq/ArubaDashboardSwitch/blob/main/agent/INSTALLATION-WINDOWS.md#passer-dune-ancienne-version-avant-130';
+const guideLink = (text) => `<a href="${AGENT_GUIDE}" target="_blank" rel="noopener">${text}${icon('open_in_new', { size: 14 })}<span class="sr"> (marche à suivre sur GitHub, nouvel onglet)</span></a>`;
+function agentOldBox() {
+  const av = S?.agent?.version, ver = agentSemver(av) ? `version ${av}` : 'version antérieure à 1.3.0';
+  return `<div class="alert amber diag-agent">${icon('warning', { size: 16 })}<div><b>L’agent installé sur le PC est ancien\u00a0: mets-le à jour.</b>
+    <span>Les relevés du switch échouent avec lui (${esc(ver)}, dernière version ${AGENT_LATEST}). Depuis la version 1.3.0, l’agent fait lui-même le relevé et rouvre sa connexion SSH quand le switch l’a fermée. Une seule mise à jour à la main suffit (deux lignes à coller dans PowerShell, configuration et mot de passe conservés)\u00a0; ensuite, il se met à jour tout seul.</span>
+    ${guideLink('Mettre à jour l’agent')}</div></div>`;
+}
 
 function sections(out) {
   const sec = {}; let cur = null;
@@ -612,22 +707,55 @@ function renderSwitch() {
     ['Température', t ? `${nf.format(t.temp)} °C <span class="muted">(${(S.temps || []).length} capteurs, ${(S.temps || []).every((x) => x.status === 'normal') ? 'tous normaux' : 'alerte'})</span>` : '-'],
   ];
   setHTML($('#swInfo'), rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(''));
-  const last = latestDiag();
-  const every = S.diag?.every, fmtEvery = (x) => (x < 60 ? `${x} s` : `${Math.round(x / 60)} min`);
-  $('#diagNote').textContent = last && ['pending', 'running'].includes(last.status) && NOW - last.created < 180 ? 'Relevé du switch en cours…'
-    : d ? `Relevé ${ago(NOW - d.t)} · ${every ? `refait par l’agent toutes les ${fmtEvery(every)}` : `actualisé toutes les ${diagEvery() / 60} min quand le dashboard est ouvert`}.` : 'Premier relevé en attente…';
+  const ds = diagState(), every = S.diag?.every, last = d ? `Dernier relevé réussi ${ago(NOW - d.t)}. ` : '';
+  const lostN = ds.lost?.length, notYet = lostN > 1 ? 'ne les a pas encore exécutés' : 'ne l’a pas encore exécuté';
+  $('#diagNote').textContent = ds.k === 'running' ? 'Relevé du switch en cours…'
+    : ds.k === 'quiet' ? `${last}L’agent ne répond plus depuis ${fmtDur(ds.age)}\u00a0: vérifie que le PC est allumé. Le relevé partira à son retour.`
+    : ds.k === 'fail' ? `${last}Relevé impossible\u00a0: ${ds.why || quote(ds.raw)} (dernier essai ${diagHM(ds.c.finished || ds.c.created)}${ds.n > 1 ? `, ${ds.n} échecs de suite` : ''}).${d ? '' : ' Configuration et spanning-tree indisponibles.'} ${diagNextText()}`
+    : ds.k === 'lost' ? `${lostText(ds.lost)}\u00a0: l’agent ${notYet}. ${diagNextText()}`
+    : d ? `Relevé ${ago(NOW - d.t)} · ${every ? `refait par l’agent toutes les ${fmtEvery(every)}` : `actualisé toutes les ${diagEvery() / 60} min quand le dashboard est ouvert`}.`
+    : S.diag?.h ? 'Lecture du relevé de l’agent…' : `Premier relevé en attente. ${diagNextText()}`;
+  // agent d'avant 1.3.0 : une ligne sous la note (l'encadré complet est au-dessus du journal du switch)
+  setHTML($('#diagWarn'), ds.k === 'fail' && agentPre13() ? `<p class="note diag-agent-line">${icon('warning', { size: 16, cls: 'ic-warn' })}<span>L’agent du PC est ancien\u00a0: ${guideLink('mets-le à jour')}</span></p>` : '');
   $('#unsavedPill').hidden = !(d && d.saved === false);
 }
 $('#swInfo').addEventListener('click', (e) => { if (e.target.closest('[data-save]')) $('#unsavedPill').click(); });
 const saveText = (t) => [ADMIN.saveWarning?.(), t].filter(Boolean).join(' '); // avertit pendant un délai d'annulation automatique
 $('#unsavedPill').addEventListener('click', () => canOperate() && confirmCmd('Sauvegarder la configuration ?', saveText('Les changements en cours deviennent la configuration chargée au démarrage du switch.'), 'write memory', 'Configuration sauvegardée'));
+// Journal du switch : en attente de l'agent ou du premier relevé, relevé en cours, agent muet, relevé impossible, relevés
+// jamais exécutés, aucun événement, ou les événements. Un agent d'avant 1.3.0 dont les relevés échouent est signalé
+// au-dessus (#logWarn), hors de la liste qui défile.
 function renderLogs() {
-  const d = DIAG;
-  if (!d) return;
-  const list = d.logs.filter((l) => logFilter === 'all' || (logFilter === 'warn' ? l.lvl !== 'info' : l.port));
-  $('#logCount').textContent = `${d.logs.length} derniers événements`;
-  setHTML($('#logList'), list.length ? list.map((l) => `<div class="log-item ${l.lvl}" title="${esc(l.raw)}"><span class="when">${new Date(l.t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
-    <div><span class="msg">${esc(l.msg)}</span> <span class="src">${esc(l.src)}</span></div></div>`).join('') : '<div class="empty">Aucun événement pour ce filtre.</div>');
+  const d = DIAG, ds = diagState();
+  setHTML($('#logWarn'), ds.k === 'fail' && agentPre13() ? agentOldBox() : '');
+  // état : icône, titre éventuel, puis une ligne par élément (texte, ou HTML déjà composé commençant par « < »)
+  const state = (ic, title, ...lines) => `<div class="empty diag-state">${ic}${title ? `<b>${title}</b>` : ''}${lines.filter(Boolean).map((l) => (l.startsWith('<') ? l : `<span>${l}</span>`)).join('')}</div>`;
+  $('#logCount').textContent = d?.logs.length ? plural(d.logs.length, 'dernier événement', 'derniers événements') : '';
+  let body;
+  if (!S) body = state(icon('hourglass_empty', { size: 18 }), '', 'En attente de l’agent\u00a0: le journal du switch s’affichera après son premier envoi.');
+  else if (!d) {
+    const n = ds.lost?.length, next = diagNextText();
+    body = ds.k === 'running' ? state('<span class="spinner"></span>', '', 'Relevé du switch en cours…')
+      : ds.k === 'quiet' ? state(icon('power_settings_new', { size: 18, cls: 'ic-warn' }), `L’agent ne répond plus depuis ${fmtDur(ds.age)}`,
+        'Vérifie que le PC de l’agent est allumé et relié au réseau, et que l’agent tourne\u00a0: le relevé du switch partira à son retour.',
+        n && `${lostText(ds.lost)}, pas encore exécuté${n > 1 ? 's' : ''}.`)
+      : ds.k === 'fail' ? state(icon('error', { size: 18, cls: 'ic-bad' }), 'Relevé impossible',
+        ds.why && `${ds.why[0].toUpperCase()}${ds.why.slice(1)}.`,
+        ds.raw && `<span class="diag-err">Détail technique\u00a0: <span class="mono">${esc(quote(ds.raw))}</span></span>`,
+        'Sans relevé, le journal du switch, l’état de la configuration et le spanning-tree ne s’affichent pas.',
+        `Dernier essai\u00a0: ${diagHM(ds.c.finished || ds.c.created)}${ds.n > 1 ? ` (${ds.n} échecs de suite)` : ''}. ${next}`,
+        n && `${lostText(ds.lost)}, pas encore exécuté${n > 1 ? 's' : ''}.`)
+      : ds.k === 'lost' ? state(icon('hourglass_top', { size: 18 }), 'Relevé en attente',
+        `${lostText(ds.lost)}\u00a0: l’agent ${n > 1 ? 'ne les a pas encore exécutés' : 'ne l’a pas encore exécuté'}.`, next)
+      : S.diag?.h ? state('<span class="spinner"></span>', '', 'Lecture du relevé de l’agent…')
+      : state(icon('hourglass_empty', { size: 18 }), '', `Premier relevé en attente. ${diagNextText()}`);
+  } else if (!d.logs.length) body = '<div class="empty">Aucun événement dans le journal du switch.</div>';
+  else {
+    const list = d.logs.filter((l) => logFilter === 'all' || (logFilter === 'warn' ? l.lvl !== 'info' : l.port));
+    body = list.length ? list.map((l) => `<div class="log-item ${l.lvl}" title="${esc(l.raw)}"><span class="when">${new Date(l.t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+    <div><span class="msg">${esc(l.msg)}</span> <span class="src">${esc(l.src)}</span></div></div>`).join('') : '<div class="empty">Aucun événement pour ce filtre.</div>';
+  }
+  setHTML($('#logList'), body);
 }
 $('#logFilter').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
@@ -637,8 +765,8 @@ $('#logFilter').addEventListener('click', (e) => {
 // ================================================================ rendu
 function render() {
   renderAgent();
-  if (!S) { $('#hostname').textContent = 'En attente de l’agent'; $('#subtitle').textContent = 'Aucune donnée reçue pour l’instant.'; renderTerm(); renderAlerts(); return; }
-  $('#hostname').textContent = S.hostname || 'Switch';
+  if (!S) { $('#hostname').textContent = 'En attente de l’agent'; $('#subtitle').textContent = 'Aucune donnée reçue pour l’instant.'; renderTerm(); renderAlerts(); renderLogs(); return; }
+  $('#hostname').textContent = $('#conHost').textContent = S.hostname || 'Switch';
   $('#subtitle').textContent = $('#subtitle').title = [DIAG?.ip?.replace(/\/\d+$/, '') || S.mgmt_ip, S.model, S.location && `Emplacement ${S.location}`, S.version && `AOS-CX ${S.version}`, S.uptime && `allumé depuis ${S.uptime.replace(/weeks?/, 'sem.').replace(/days?/, 'j').replace(/hours?/, 'h').replace(/minutes?/, 'min')}`].filter(Boolean).join(' · ');
   updateDiag(); updateBcast();
   renderKpis(); renderFaceplate(); renderPorts(); renderChart(); renderPanel(); renderVlans(); renderTerm(); renderAlerts(); fillPortSelect(); renderSwitch(); renderLogs(); ddSyncAll();
@@ -650,12 +778,12 @@ function render() {
 function renderAgent() {
   const pill = $('#agentPill');
   const av = S?.agent?.version;
-  const maj = S?.agent?.maj, older = !/^\d+\.\d+/.test(String(av)) || verNum(av) < verNum(AGENT_LATEST);
-  setHTML($('#agentVersion'), !S?.agent ? '' : esc(/^\d+\.\d+/.test(String(av)) ? `agent v${av}` : 'agent : version antérieure à 1.0.0')
+  const maj = S?.agent?.maj, older = agentOlder();
+  setHTML($('#agentVersion'), !S?.agent ? '' : esc(agentSemver(av) ? `agent v${av}` : 'agent : version antérieure à 1.3.0')
     + (maj ? ` · mise à jour auto ${maj.ok ? icon('check_circle', { size: 14, label: 'réussie', cls: 'ic-good' }) : icon('warning', { size: 14, label: 'en échec', cls: 'ic-warn' })}`
-      : older ? ` · v${AGENT_LATEST} disponible` : ''));
-  $('#agentVersion').title = maj ? `${maj.msg || ''} (vérifié ${ago(NOW - (maj.t || 0))})` : older ? 'Mets l’agent à jour : voir agent/INSTALLATION-WINDOWS.md.' : '';
-  if (!S) { pill.className = 'pill ko'; pill.lastElementChild.textContent = 'Agent jamais connecté'; return; }
+      : older ? ` · v${AGENT_LATEST} disponible${agentPre13() ? `, ${guideLink('mettre à jour l’agent')}` : ''}` : '')); // même marche à suivre que l'encadré du journal
+  $('#agentVersion').title = maj ? `${maj.msg || ''} (vérifié ${ago(NOW - (maj.t || 0))})` : older && !agentPre13() ? 'L’agent se met à jour tout seul dans les minutes qui viennent.' : '';
+  if (!S) { pill.className = 'pill ko'; pill.lastElementChild.textContent = 'Agent jamais connecté'; $('#conMode').textContent = 'L’agent ne s’est encore jamais connecté : les commandes attendront son premier envoi.'; return; }
   const age = NOW - (S.received || S.updated);
   const every = S.agent?.sync || 10;
   const online = age < Math.max(45, every * 2.5);
@@ -664,8 +792,10 @@ function renderAgent() {
   pill.lastElementChild.textContent = online ? `Agent en ligne · ${ago(age)}` : working ? 'Agent occupé : commande longue en cours…' : `Agent hors ligne · ${ago(age)}`;
   pill.title = `${S.agent?.host ? `Agent sur ${S.agent.host}. ` : ''}Envoi toutes les ${every} s (${SETTINGS?.agent?.hot ?? 10} s quand le dashboard est ouvert, ${SETTINGS?.agent?.warm ?? 30} s pour un écran lecture seule, ${SETTINGS?.agent?.idle ?? 60} s sinon).`;
   const hotEvery = SETTINGS?.agent?.hot ?? 10, idleEvery = SETTINGS?.agent?.idle ?? 60;
-  $('#termMode').textContent = online && every <= hotEvery * 2 ? 'temps réel : exécution en 1 à 5 s'
-    : `l’agent passe en temps réel dans ${idleEvery <= 60 ? 'moins d’une minute' : `moins de ${Math.ceil(idleEvery / 60)} min`}`;
+  const realtime = online && every <= hotEvery * 2, soon = idleEvery <= 60 ? 'moins d’une minute' : `moins de ${Math.ceil(idleEvery / 60)} min`;
+  $('#termMode').textContent = realtime ? 'temps réel : exécution en 1 à 5 s' : `l’agent passe en temps réel dans ${soon}`;
+  $('#conMode').textContent = realtime ? 'Agent en ligne : exécution en 1 à 5 s.' : online ? `Agent en ligne : il passe en temps réel dans ${soon}.`
+    : working ? 'Agent occupé par une commande longue : la suivante attendra la fin.' : `Agent hors ligne (${ago(age)}) : les commandes partiront à son retour.`;
 }
 
 function renderKpis() {
@@ -1028,6 +1158,9 @@ async function maybeCableCheck() {
   // jamais devant une commande de l'utilisateur, et un seul lot à la fois
   if (LOG.some((c) => ['pending', 'running', 'confirm'].includes(c.status) && (!isAuto(c) || c.kind === 'auto:cable'))) return;
   if (Date.now() / 1000 - cableAsked < 60) return;
+  // lots ratés à la suite (switch injoignable…) : attente croissante avant le suivant, comme les relevés (1 à 15 min)
+  const fails = autoFails('auto:cable', (c) => c.status === 'done');
+  if (fails.length && NOW < (fails[0].finished || fails[0].created) + retryWait(fails.length)) return;
   const tried = {}; // dernier test lancé sur chaque port, toutes pages confondues (le journal est partagé)
   for (const c of LOG) for (const port of cablePorts(c)) tried[port] = Math.max(tried[port] || 0, c.created);
   const todo = (S.ports || []).filter((p) => pState(p) === 'down' && p.type === '1GbT' && !isUplink(p) && !ADMIN.portGuard?.(p))
@@ -1234,6 +1367,9 @@ const answer = (id, a, btn) => busy(btn, async () => {
     await api('/api/command', { answer_to: id, answer: a });
     toast(a === 'y' ? 'Confirmation envoyée' : 'Refus envoyé', { id, sub: 'Le switch continue…', spinner: true, timeout: 0 });
     SEEN[id] = 'running'; lastTouch = 0; setTimeout(poll, 500);
+    // les boutons vont disparaître : le focus reste dans la console (sa sortie), au lieu de repartir du haut de la page
+    const t = TERMS.find((x) => x.log.contains(btn)), f = document.activeElement;
+    if (t && (f === btn || f === document.body || !f)) t.log.focus({ preventScroll: true });
   } catch (e) { if (e.message !== '401') toast('Échec', { type: 'error', sub: e.message }); }
 });
 // Boutons Oui / Non d'une question du switch (notification et console) : un seul écouteur, pas de code dans le HTML.
@@ -1242,43 +1378,164 @@ document.addEventListener('click', (e) => {
   if (b) answer(b.dataset.answerId, b.dataset.answer, b);
 });
 
+// ---------------------------------------------------------------- consoles
+// Deux consoles, mêmes données (LOG, OUT) et même envoi : la carte du tableau de bord et la page Console (#console,
+// administrateur). La page peut en plus montrer les relevés automatiques, copier une sortie et vider son affichage
+// (sur cette page seulement : rien n'est effacé du journal des commandes).
 const CONFIG_RE = /^(conf|configure|write|copy|erase|reload|boot|no |interface|vlan|shutdown|diag|user |aaa|ssh |https-server|spanning-tree|checkpoint|zeroize|ip |lag|vrf)/im;
-$('#termForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const cmd = $('#termInput').value.trim(); if (!cmd) return;
+const TERMS = [
+  { log: $('#termLog'), form: $('#termForm'), input: $('#termInput'), btn: $('#termSend'), chips: $('#chips'), max: 140 },
+  { log: $('#conLog'), form: $('#conForm'), input: $('#conInput'), btn: $('#conSend'), chips: $('#conChips'), max: 220, page: true },
+];
+const CON = TERMS[1];
+let conAuto = false; // page : relevés automatiques affichés (mémorisé dans ce navigateur)
+try { conAuto = localStorage.getItem('aruba-console-auto') === '1'; } catch {}
+$('#conAuto').checked = conAuto;
+const conHidden = new Set(); // page : commandes retirées de l'affichage par « Vider l'affichage »
+const TYPED = []; // commandes tapées dans les deux consoles, la plus récente à la fin
+const autoGrow = (t) => { t.input.style.height = 'auto'; t.input.style.height = Math.min(t.max, t.input.scrollHeight) + 'px'; };
+function submitTerm(t) {
+  const cmd = t.input.value.trim(); if (!cmd) return;
+  if (TYPED.at(-1) !== cmd) { TYPED.push(cmd); if (TYPED.length > 50) TYPED.shift(); }
+  t.at = -1;
   if (CONFIG_RE.test(cmd)) confirmCmd('Commande de configuration', 'Cette commande modifie le switch.', cmd, '');
-  else busy($('#termSend'), () => send(cmd).catch(() => {}));
-  $('#termInput').value = ''; autoGrow();
-});
-const autoGrow = () => { const t = $('#termInput'); t.style.height = 'auto'; t.style.height = Math.min(140, t.scrollHeight) + 'px'; };
-$('#termInput').addEventListener('input', autoGrow);
-$('#termInput').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#termForm').requestSubmit(); } });
+  else busy(t.btn, () => send(cmd).catch(() => {}));
+  t.input.value = ''; autoGrow(t);
+}
+// Flèches haut et bas : commandes tapées plus tôt, quand le champ est vide, le curseur au tout début, ou la commande
+// rappelée pas encore modifiée. Après la plus récente, la saisie en cours revient.
+function browseTyped(t, e) {
+  const el = t.input, up = e.key === 'ArrowUp';
+  const free = !el.value || (el.selectionStart === 0 && el.selectionEnd === 0) || (t.at >= 0 && el.value === TYPED[t.at]);
+  if (!free || !TYPED.length || (!up && !(t.at >= 0))) return;
+  e.preventDefault();
+  if (up) {
+    if (!(t.at >= 0)) { t.draft = el.value; t.at = TYPED.length; }
+    t.at = Math.max(0, t.at - 1); el.value = TYPED[t.at];
+  } else if (++t.at >= TYPED.length) { t.at = -1; el.value = t.draft || ''; }
+  else el.value = TYPED[t.at];
+  autoGrow(t);
+  el.setSelectionRange(el.value.length, el.value.length);
+}
+// Déconnexion (showLogin) : historique des commandes tapées, saisies en cours et affichage vidé sont oubliés : le compte
+// suivant, dans le même onglet, ne les retrouve pas.
+function forgetTyped() {
+  TYPED.length = 0; conHidden.clear();
+  for (const t of TERMS) { t.at = -1; t.draft = ''; t.input.value = ''; t.input.style.height = ''; t.key = null; }
+}
 
 const CHIPS = [['show interface brief'], ['show mac-address-table'], ['show lldp neighbor-info'], ['show vlan'], ['show running-config'], ['show logging -r'], ['show system'], ['write memory', 'Sauvegarder la config', 'save']];
-$('#chips').innerHTML = CHIPS.map(([c, l, cls]) => `<button class="chip ${cls || ''}" data-cmd="${esc(c)}">${esc(l || c)}</button>`).join('');
-$('#chips').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-cmd]'); if (!b) return;
-  if (b.dataset.cmd === 'write memory') confirmCmd('Sauvegarder la configuration ?', saveText('La configuration actuelle devient celle chargée au démarrage du switch.'), 'write memory', 'Configuration sauvegardée');
-  else busy(b, () => send(b.dataset.cmd).catch(() => {}));
-});
+for (const t of TERMS) {
+  t.form.addEventListener('submit', (e) => { e.preventDefault(); submitTerm(t); });
+  t.input.addEventListener('input', () => { if (t.at >= 0 && t.input.value !== TYPED[t.at]) t.at = -1; autoGrow(t); });
+  t.input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); t.form.requestSubmit(); }
+    else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey) browseTyped(t, e);
+  });
+  t.chips.innerHTML = (t.page ? [CHIPS.at(-1), ...CHIPS.slice(0, -1)] : CHIPS).map(([c, l, cls]) => `<button class="chip ${cls || ''}" data-cmd="${esc(c)}">${esc(l || c)}</button>`).join('');
+  t.chips.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cmd]'); if (!b) return;
+    if (b.dataset.cmd === 'write memory') confirmCmd('Sauvegarder la configuration ?', saveText('La configuration actuelle devient celle chargée au démarrage du switch.'), 'write memory', 'Configuration sauvegardée');
+    else busy(b, () => send(b.dataset.cmd).catch(() => {}));
+  });
+}
 
-let lastLogKey = '';
-function renderTerm(force) {
-  const items = LOG.filter((c) => !isAuto(c)).reverse();
-  const key = items.map((c) => c.id + c.status + (OUT[c.id] || '').length).join();
-  if (key === lastLogKey && !force) return;
-  lastLogKey = key;
-  const box = $('#termLog');
+const TERM_ST = { pending: 'en attente', running: 'en cours', done: 'ok', error: 'erreur', confirm: 'question' };
+function termEntry(c, page) {
+  const st = Object.hasOwn(TERM_ST, c.status), out = OUT[c.id];
+  return `<div class="term-cmd"><span class="st ${st ? c.status : ''}">${['pending', 'running'].includes(c.status) ? '<span class="spinner" style="width:9px;height:9px;border-width:1.5px"></span>' : ''}${st ? TERM_ST[c.status] : esc(c.status)}</span><span>${esc(c.label ? `${c.label} : ` : '')}${String(c.cmd).split('\n').map(esc).join(` ${icon('keyboard_return', { size: 13, label: 'puis' })} `)}</span>${page && out ? `<button type="button" class="term-copy" data-copy-out="${esc(c.id)}" aria-label="Copier la sortie : ${esc(cmdName(c))}">${icon('content_copy', { size: 14 })}Copier</button>` : ''}</div>
+      ${out ? `<div class="term-out">${esc(out)}</div>` : ''}
+      ${c.status === 'confirm' ? `<div class="term-ask">${esc(c.question || 'Confirmer ?')} <button class="btn small primary" data-answer="y" data-answer-id="${esc(c.id)}">Oui</button><button class="btn small" data-answer="n" data-answer-id="${esc(c.id)}">Non</button></div>` : ''}`;
+}
+// Les deux consoles d'un coup. force : après un envoi, ou à l'ouverture de la page (descend en bas).
+function renderTerm(force) { for (const t of TERMS) drawTerm(t, force); }
+// Une entrée par commande, mise à jour sur place : un bouton garde le focus, et le défilement ne suit que si l'on était
+// déjà en bas. Sur la page, une ligne courte est annoncée quand une commande se termine (sayDone).
+function drawTerm(t, force) {
+  const box = t.log;
+  const items = LOG.filter((c) => (t.page ? (conAuto || !isAuto(c)) && !conHidden.has(c.id) : !isAuto(c))).reverse();
+  const key = `${t.page ? `${conAuto}|${conHidden.size}|` : ''}${items.map((c) => c.id + c.status + (OUT[c.id] || '').length).join()}`;
+  if (key === t.key && !force) return;
+  t.key = key;
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
-  const stLabel = { pending: 'en attente', running: 'en cours', done: 'ok', error: 'erreur', confirm: 'question' };
-  box.innerHTML = items.length ? items.map((c) => `
-    <div class="term-entry">
-      <div class="term-cmd"><span class="st ${Object.hasOwn(stLabel, c.status) ? c.status : ''}">${['pending', 'running'].includes(c.status) ? '<span class="spinner" style="width:9px;height:9px;border-width:1.5px"></span>' : ''}${Object.hasOwn(stLabel, c.status) ? stLabel[c.status] : esc(c.status)}</span><span>${esc(c.label ? `${c.label} : ` : '')}${String(c.cmd).split('\n').map(esc).join(` ${icon('keyboard_return', { size: 13, label: 'puis' })} `)}</span></div>
-      ${OUT[c.id] ? `<div class="term-out">${esc(OUT[c.id])}</div>` : ''}
-      ${c.status === 'confirm' ? `<div class="term-ask">${esc(c.question || 'Confirmer ?')} <button class="btn small primary" data-answer="y" data-answer-id="${esc(c.id)}">Oui</button><button class="btn small" data-answer="n" data-answer-id="${esc(c.id)}">Non</button></div>` : ''}
-    </div>`).join('') : '<div class="muted">Aucune commande pour l’instant. Les sorties s’afficheront ici.</div>';
+  if (!items.length) {
+    t.nodes = null;
+    setHTML(box, t.page && conHidden.size ? '<div class="muted">Affichage vidé : les nouvelles commandes s’afficheront ici. <button type="button" class="btn small" data-con-all>Tout réafficher</button></div>'
+      : '<div class="muted">Aucune commande pour l’instant. Les sorties s’afficheront ici.</div>');
+  } else {
+    if (!t.nodes) { box.textContent = ''; box._html = null; t.nodes = new Map(); }
+    const keep = new Set(items.map((c) => c.id));
+    for (const [id, n] of t.nodes) if (!keep.has(id)) { n.remove(); t.nodes.delete(id); }
+    let prev = null;
+    for (const c of items) {
+      let n = t.nodes.get(c.id);
+      if (!n) { n = document.createElement('div'); n.className = 'term-entry'; t.nodes.set(c.id, n); }
+      const had = n.contains(document.activeElement) && document.activeElement.matches('[data-copy-out]');
+      setHTML(n, termEntry(c, t.page));
+      if (had && !n.contains(document.activeElement)) n.querySelector('[data-copy-out]')?.focus({ preventScroll: true });
+      const want = prev ? prev.nextSibling : box.firstChild;
+      if (n !== want) box.insertBefore(n, want);
+      prev = n;
+    }
+  }
+  if (t.page) sayDone(t, items);
   if (atBottom || force) box.scrollTop = box.scrollHeight;
 }
+// Page Console, lecteur d'écran : la sortie elle-même n'est pas lue (aria-live="off" : une configuration complète ferait
+// plus de cent lignes) ; #conSay annonce « show vlan : terminé, 6 lignes ». Rien pour les commandes déjà là à l'ouverture.
+function sayDone(t, items) {
+  const first = !t.said; let msg = '';
+  t.said ||= new Map();
+  for (const c of items) {
+    const k = OUT[c.id] !== undefined && ['done', 'error'].includes(c.status) ? c.status : '';
+    if (t.said.get(c.id) === k) continue;
+    t.said.set(c.id, k);
+    if (!k || first || window.NAV?.current !== 'console') continue;
+    const n = String(OUT[c.id]).split('\n').filter((l) => l.trim()).length;
+    msg = `${cmdName(c)}\u00a0: ${k === 'done' ? 'terminé' : 'erreur'}, ${plural(n, 'ligne', 'lignes')}`;
+  }
+  if (!msg) return;
+  const say = $('#conSay');
+  say.textContent = ''; setTimeout(() => { say.textContent = msg; }, 60); // même texte deux fois de suite : relu quand même
+}
+
+// Page Console : hauteur de l'écran, relevés automatiques, copie d'une sortie, affichage vidé.
+function fitConsole() {
+  if ($('#view-console').hidden) return;
+  const term = $('#conTerm'), r = term.getBoundingClientRect(), top = r.top + scrollY, foot = $('#foot');
+  // sous la console : aide, bas de la carte, marge du bas de la page, bas de page
+  const below = $('#conCard').getBoundingClientRect().bottom - r.bottom + parseFloat(getComputedStyle($('#appMain')).paddingBottom)
+    + (foot.hidden ? 0 : foot.getBoundingClientRect().height);
+  // Tout tient dans l'écran (ordinateur). Sinon (téléphone), la console s'arrête au bas de l'écran, champ de saisie
+  // compris, et l'aide se lit en défilant ; 240 px au moins.
+  const all = Math.floor(innerHeight - top - below);
+  term.style.height = `${all >= 320 ? all : Math.max(240, Math.floor(innerHeight - top - 8))}px`;
+}
+// Téléphone : les commandes rapides tiennent sur une ligne qui défile ; bord droit estompé tant qu'il en reste à voir.
+const chipsEdge = () => { const c = CON.chips; c.classList.toggle('more', c.scrollLeft + c.clientWidth < c.scrollWidth - 2); };
+CON.chips.addEventListener('scroll', chipsEdge, { passive: true });
+function openConsole() { fitConsole(); chipsEdge(); drawTerm(CON, true); } // account.js, à l'ouverture de la page
+addEventListener('resize', () => { if (window.NAV?.current === 'console') { fitConsole(); chipsEdge(); } });
+$('#conAuto').addEventListener('change', (e) => {
+  conAuto = e.target.checked;
+  try { localStorage.setItem('aruba-console-auto', conAuto ? '1' : '0'); } catch {}
+  drawTerm(CON, true);
+});
+$('#conClear').addEventListener('click', () => {
+  for (const c of LOG) if (!['pending', 'running', 'confirm'].includes(c.status)) conHidden.add(c.id); // une commande en cours reste
+  drawTerm(CON, true);
+});
+$('#conLog').addEventListener('click', async (e) => {
+  if (e.target.closest('[data-con-all]')) { conHidden.clear(); drawTerm(CON, true); CON.log.focus(); return; }
+  const b = e.target.closest('[data-copy-out]'); if (!b) return;
+  const id = b.dataset.copyOut, text = Object.hasOwn(OUT, id) ? String(OUT[id]) : '';
+  try { await navigator.clipboard.writeText(text); toast('Sortie copiée', { type: 'success', timeout: 2000 }); }
+  catch {
+    const out = b.closest('.term-entry')?.querySelector('.term-out');
+    if (out) getSelection().selectAllChildren(out);
+    toast('Copie impossible', { type: 'warn', sub: 'La sortie est sélectionnée : Ctrl+C ou Cmd+C.' });
+  }
+});
 
 // ================================================================ réglages (page de l'administrateur) et alertes
 // Page #view-settings (ancre #reglages) : où et quand prévenir, ports surveillés, site, rythme de l'agent.

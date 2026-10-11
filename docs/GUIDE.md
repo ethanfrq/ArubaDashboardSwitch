@@ -421,6 +421,15 @@ Reviens dans le dashboard. L’assistant affiche **En attente de l’agent…** 
 Si l’agent reste en attente plus de 2 minutes, ouvre le dépannage de l’assistant ou la section
 [L’agent ne se connecte pas](#lagent-ne-se-connecte-pas).
 
+**La console.** Pour taper des commandes sur le switch (comptes administrateur) : ouvre **Console** dans la barre
+latérale (groupe **Administration**), ou clique sur **Ouvrir en grand** dans la carte **Console de gestion** du tableau
+de bord. La page reprend la même console sur toute la hauteur de l’écran : commandes rapides, sortie de chaque commande
+avec un bouton **Copier**, commandes déjà tapées rappelées avec les flèches haut et bas. Une commande qui modifie le
+switch demande une confirmation. Les relevés automatiques du dashboard (état des liens, spanning-tree, journal du switch,
+tests de câble…) sont masqués par défaut : coche **Afficher les relevés automatiques** pour les voir.
+
+<img src="captures/console.png" width="720" alt="Page Console en thème sombre : commandes rapides, case Afficher les relevés automatiques décochée, sorties de show mac-address-table et de write memory avec leur bouton Copier, puis le champ de saisie et le bouton Envoyer">
+
 ## 8. Inviter l’équipe et régler les alertes
 
 Durée : 3 minutes · facultatif · dans l’assistant : étape « Inviter l’équipe »
@@ -540,6 +549,24 @@ Le plus simple : dans `C:\aruba-agent`, clic droit sur `installer-service.bat`, 
 puis appuie sur **Entrée sans rien taper** quand le mot de passe SSH est demandé (« Rien de changé. » : le mot de passe
 enregistré est gardé). Le service est arrêté puis relancé, et la fenêtre affiche « Service installé et démarré ».
 
+### Le journal du switch dit que l’agent est ancien
+
+L’encadré « L’agent installé sur le PC est ancien : mets-le à jour » apparaît au-dessus du **Journal du switch** (avec
+la ligne « L’agent du PC est ancien : mets-le à jour » dans la carte **Switch**) quand l’agent du PC date d’avant la
+version 1.3.0 et que les relevés du switch échouent. Le bas de page affiche alors « agent : version antérieure à 1.3.0 ».
+Cet agent ne se met pas à jour tout seul : mets-le à jour une fois à la main.
+
+1. Clique sur **Mettre à jour l’agent** dans l’encadré, ou suis la section [L’agent](#lagent) de « Mettre à jour » :
+   les deux mènent à la marche à suivre de
+   [`agent/INSTALLATION-WINDOWS.md`](../agent/INSTALLATION-WINDOWS.md#passer-dune-ancienne-version-avant-130).
+2. Sur le PC de l’agent, ouvre PowerShell **en administrateur**, va dans `C:\aruba-agent`, puis colle les deux lignes
+   indiquées (configuration et mot de passe conservés).
+3. **Tu dois voir**, quelques minutes plus tard, le numéro de version en bas du dashboard (par exemple « agent v1.4.0 »),
+   et l’encadré disparaît. Ensuite, l’agent se met à jour tout seul.
+
+Sans encadré, si le journal affiche « Relevé impossible », la cause est dite en clair (mot de passe SSH refusé, switch
+qui ne répond pas…) : voir [L’agent ne se connecte pas](#lagent-ne-se-connecte-pas).
+
 ### Les appareils n’ont pas d’adresse IP
 
 Indique le **Réseau à scanner (facultatif)** (par exemple `192.168.10.0/24`) à l’étape 6.4, télécharge le nouveau fichier,
@@ -560,6 +587,13 @@ cela n’arrive que si le PC reste éteint une semaine. Ouvre ton projet sur sup
 Rien à faire : il se met à jour tout seul, uniquement à partir des versions publiées sur la page
 [Releases](https://github.com/ethanfrq/ArubaDashboardSwitch/releases). Le bas du dashboard affiche
 « mise à jour auto » suivi d’une coche verte (un triangle orange si la dernière vérification a échoué). Détails : [`agent/INSTALLATION-WINDOWS.md`](../agent/INSTALLATION-WINDOWS.md#mise-à-jour-automatique).
+
+Un agent installé avant la version 1.3.0 ne se met pas à jour tout seul : le dashboard l’indique par l’encadré
+« L’agent installé sur le PC est ancien : mets-le à jour » au-dessus du journal du switch (et une ligne dans la carte
+Switch), et le bas de page affiche « agent : version antérieure à 1.3.0 ». Le lien de l’encadré mène à la marche à
+suivre, dans [`agent/INSTALLATION-WINDOWS.md`](../agent/INSTALLATION-WINDOWS.md#passer-dune-ancienne-version-avant-130) :
+deux lignes à coller une seule fois dans PowerShell, configuration et mot de passe conservés ; ensuite, tout est
+automatique.
 
 ### Le dashboard
 

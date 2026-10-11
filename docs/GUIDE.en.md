@@ -425,6 +425,16 @@ version (here "SWITCH-DEMO (28 ports)"). At the top of the dashboard, the badge 
 If the agent is still waiting after 2 minutes, open the assistant's troubleshooting panel or the
 [The agent does not connect](#the-agent-does-not-connect) section.
 
+**The console.** To type commands on the switch (administrator accounts): open **Console** in the sidebar
+(**Administration** group), or click **Ouvrir en grand** (open full size) on the dashboard's **Console de gestion**
+(management console) card. The page shows the same console over the full height of the screen: quick commands, the
+output of each command with a **Copier** (copy) button, and the commands already typed brought back with the up and
+down arrows. A command that changes the switch asks for confirmation. The dashboard's automatic readings (link state,
+spanning-tree, switch log, cable tests, and so on) are hidden by default: tick **Afficher les relevés automatiques**
+(show automatic readings) to see them.
+
+<img src="captures/console.png" width="720" alt="Console page in dark theme: quick commands, the Afficher les relevés automatiques (show automatic readings) box unticked, outputs of show mac-address-table and write memory with their Copier (copy) button, then the input field and the Envoyer (send) button">
+
 ## 8. Invite your team and set up alerts
 
 Time: 3 minutes · optional · in the assistant: "Inviter l’équipe" (invite the team) step
@@ -545,6 +555,25 @@ The simplest way: in `C:\aruba-agent`, right-click `installer-service.bat`, **Ru
 **Enter without typing anything** when the SSH password is asked ("Rien de changé.", nothing changed: the saved
 password is kept). The service is stopped and started again, and the window shows "Service installé et démarré".
 
+### The switch log says the agent is old
+
+The box "L’agent installé sur le PC est ancien : mets-le à jour" (the agent installed on the PC is old: update it)
+appears above the **Journal du switch** (switch log), with the line "L’agent du PC est ancien : mets-le à jour" in the
+**Switch** card, when the PC's agent predates version 1.3.0 and the switch readings fail. The bottom of the page then
+shows "agent : version antérieure à 1.3.0" (version older than 1.3.0). Such an agent does not update itself: update it
+by hand once.
+
+1. Click **Mettre à jour l’agent** (update the agent) in the box (steps in French), or follow [The agent](#the-agent)
+   under "Updating": it leads to the same steps in English, in
+   [`agent/INSTALL-WINDOWS.md`](../agent/INSTALL-WINDOWS.md#upgrading-from-an-old-version-before-130).
+2. On the agent's PC, open PowerShell **as administrator**, go to `C:\aruba-agent`, then paste the two lines given
+   there (configuration and password kept).
+3. **You should see**, a few minutes later, the version number at the bottom of the dashboard (for example
+   "agent v1.4.0"), and the box disappears. After that, the agent updates itself.
+
+Without the box, if the log shows "Relevé impossible" (reading failed), the cause is spelled out (SSH password refused,
+switch not answering, and so on): see [The agent does not connect](#the-agent-does-not-connect).
+
 ### Devices have no IP address
 
 Fill in the **Réseau à scanner (facultatif)** (network to scan, for example `192.168.10.0/24`) in step 6.4, download the new file,
@@ -566,6 +595,12 @@ Nothing to do: it updates itself, only from the versions published on the
 [Releases](https://github.com/ethanfrq/ArubaDashboardSwitch/releases) page. The bottom of the dashboard shows
 "mise à jour auto" (automatic update) followed by a green check mark (an orange triangle if the last check
 failed). Details: [`agent/INSTALL-WINDOWS.md`](../agent/INSTALL-WINDOWS.md#automatic-update).
+
+An agent installed before version 1.3.0 does not update itself: the dashboard says so with the box
+"L’agent installé sur le PC est ancien : mets-le à jour" (the agent installed on the PC is old: update it) above the
+switch log (and a line in the Switch card), and the bottom of the page shows "agent : version antérieure à 1.3.0". The
+box's link leads to the steps in French; in English, they are in [`agent/INSTALL-WINDOWS.md`](../agent/INSTALL-WINDOWS.md#upgrading-from-an-old-version-before-130):
+two lines to paste once into PowerShell, configuration and password kept; after that, everything is automatic.
 
 ### The dashboard
 

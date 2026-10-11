@@ -88,7 +88,14 @@ Si tu publies ta propre version de l’agent, souviens-toi que les PC installent
 protège le compte GitHub (double authentification) et ne publie que des versions testées.
 
 ## Passer d’une ancienne version (avant 1.3.0)
-Une seule fois, dans PowerShell ouvert en administrateur dans le dossier de l’agent :
+Le dashboard le signale par l’encadré « L’agent installé sur le PC est ancien : mets-le à jour » (au-dessus du journal
+du switch) et le bas de page affiche « agent : version antérieure à 1.3.0 ». À faire une seule fois, sur le PC où
+l’agent est installé ; la configuration et le mot de passe enregistré sont conservés.
+
+1. Ouvre PowerShell **en administrateur** : menu Démarrer, tape `PowerShell`, clic droit sur « Windows PowerShell »,
+   « Exécuter en tant qu’administrateur », puis « Oui » quand Windows demande l’autorisation.
+2. Va dans le dossier de l’agent : tape `cd C:\aruba-agent` (ou le dossier où l’agent est installé), puis Entrée.
+3. Copie les deux lignes ci-dessous, colle-les dans la fenêtre PowerShell (clic droit), puis Entrée :
 
 ```powershell
 Invoke-WebRequest https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest/download/mise_a_jour.py -OutFile mise_a_jour.py
@@ -96,7 +103,8 @@ python mise_a_jour.py --installer
 ```
 
 Le script télécharge la nouvelle version, redémarre l’agent, vérifie qu’il fonctionne puis installe les deux tâches.
-La configuration et le mot de passe enregistré sont conservés. Ensuite, tout est automatique.
+Quelques minutes plus tard, le bas du dashboard affiche le numéro de version de l’agent (par exemple « agent v1.4.0 »)
+et l’encadré disparaît. Ensuite, tout est automatique.
 
 ## Ce que fait l’agent
 - envoie l’état du switch toutes les 10 s quand le dashboard administrateur est ouvert, 30 s pour un écran
