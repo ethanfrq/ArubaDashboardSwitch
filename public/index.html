@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>My Aruba Manager</title>
-<script src="/js/theme.js?v=1.9.0"></script>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='9' width='28' height='14' rx='3' fill='%23ff8300'/%3E%3Crect x='6' y='13' width='4' height='4' fill='%23fff'/%3E%3Crect x='12' y='13' width='4' height='4' fill='%23fff'/%3E%3Crect x='18' y='13' width='4' height='4' fill='%23fff'/%3E%3C/svg%3E">
+<script src="/js/theme.js?v=1.9.1"></script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ff8300'/%3E%3Csvg x='4' y='4' width='24' height='24' viewBox='0 -960 960 960'%3E%3Cpath fill='%231d0f00' d='M120-160v-120q0-33 23.5-56.5T200-360h40v-80q0-33 23.5-56.5T320-520h120v-80h-40q-33 0-56.5-23.5T320-680v-120q0-33 23.5-56.5T400-880h160q33 0 56.5 23.5T640-800v120q0 33-23.5 56.5T560-600h-40v80h120q33 0 56.5 23.5T720-440v80h40q33 0 56.5 23.5T840-280v120q0 33-23.5 56.5T760-80H600q-33 0-56.5-23.5T520-160v-120q0-33 23.5-56.5T600-360h40v-80H320v80h40q33 0 56.5 23.5T440-280v120q0 33-23.5 56.5T360-80H200q-33 0-56.5-23.5T120-160Z'/%3E%3C/svg%3E%3C/svg%3E">
 <style>
 :root {
   color-scheme: light;
@@ -15,7 +15,7 @@
   --accent-ink-2: #9a4600; --ph: #6b6a64; /* sur fond orangé (pastilles), texte d'exemple des champs : 4.5:1 au moins */
   --rx: #2a78d6; --tx: #eb6834;
   --good: #1f8a3c; --good-soft: #dff2e3; --bad: #c9302c; --bad-soft: #fbe3e2;
-  --warn: #a86700; --warn-soft: #fbf0d9; --info: #2a6fc9; --info-soft: #e1ecfa;
+  --warn: #9a5f00; --warn-soft: #fbf0d9; --info: #2a6fc9; --info-soft: #e1ecfa; /* --warn : 4.5:1 au moins, aussi sur --warn-soft */
   --faceplate: #2b2b2a; --faceplate-ink: #c9c8c0;
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
   --shadow: 0 1px 2px rgb(0 0 0 / .04), 0 1px 1px rgb(0 0 0 / .03);
@@ -49,6 +49,9 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .mono { font-family: var(--mono); }
 .muted { color: var(--text-3); }
 [hidden] { display: none !important; }
+/* icônes Google Material Symbols (public/js/icons.js) : couleur du texte, alignées sur la ligne */
+.ic-svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+.ic-warn { color: var(--warn); } .ic-good { color: var(--good); }
 .sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* ---------- formulaires & boutons */
@@ -69,6 +72,7 @@ a.btn { text-decoration: none; color: inherit; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #1d0f00; }
 .btn.primary:hover { filter: brightness(.95); }
 .btn.danger { color: var(--bad); }
+.btn.danger:hover { background: var(--bad-soft); }
 .btn.small { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
 .btn:disabled { opacity: .55; cursor: default; }
 .btn.loading { color: transparent !important; pointer-events: none; }
@@ -88,7 +92,7 @@ a.btn { text-decoration: none; color: inherit; }
   :root:not([data-theme="light"]) .theme-moon { display: none; }
   :root:not([data-theme="light"]) .theme-sun { display: block; }
 }
-.logo { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--accent); flex-shrink: 0; }
+.logo { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: #1d0f00; flex-shrink: 0; }
 .check { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; cursor: pointer; }
 .check input { width: 16px; height: 16px; accent-color: var(--accent); }
 .row { display: flex; gap: 8px; align-items: center; }
@@ -115,7 +119,7 @@ header.top .spacer { flex: 1; }
 .tf-list { margin: 8px 0; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; font-size: 14px; line-height: 1.7; }
 .tools { display: flex; flex-wrap: wrap; gap: 8px; }
 .tools .btn { display: inline-flex; align-items: center; gap: 7px; }
-.tools .btn .ic { font-size: 14px; line-height: 1; }
+.tools .btn .ic { display: inline-flex; }
 .tools .badge { margin-left: 2px; }
 .btn.icon[aria-pressed="true"] { background: var(--info-soft); color: var(--info); border-color: transparent; }
 /* Lecture seule (accès écran de monitoring, ou vue monitoring de l'administrateur) */
@@ -133,7 +137,10 @@ body.readonly .pill.warn { cursor: default; }
 input.search { width: min(320px, 60vw); padding: 6px 10px; font-size: 13px; }
 table.ports th[data-sort] { cursor: pointer; user-select: none; }
 table.ports th[data-sort]:hover { color: var(--text); }
-table.ports th .arrow { font-size: 10px; margin-left: 3px; }
+table.ports th .arrow { margin: -4px -2px -4px 1px; }
+/* en-têtes triables et « ports libres » : de vrais boutons (clavier), sans allure de bouton */
+table.ports th .th-sort, table.ports tr.free-toggle button { border: 0; padding: 0; background: none; font: inherit; color: inherit; cursor: pointer; display: inline-flex; align-items: center; }
+table.ports tr.free-toggle button { gap: 4px; }
 table.ports td.dev { white-space: normal; min-width: 170px; }
 table.ports .sub { display: block; font-size: 12px; color: var(--text-3); }
 table.ports tr.free-toggle td { text-align: center; color: var(--text-2); cursor: pointer; font-size: 12.5px; padding: 9px; }
@@ -179,17 +186,20 @@ dialog.wide { width: min(580px, calc(100% - 32px)); }
 .fp-sfp { grid-auto-columns: 66px; padding-left: 14px; border-left: 1px solid #ffffff1a; }
 .jack {
   --c: #3a3a38; --led: #4d4d4a; --ink: #a3a29a;
-  position: relative; height: 56px; min-width: 0; border-radius: 6px; border: 0; padding: 6px 7px;
+  position: relative; height: 56px; min-width: 0; border-radius: 6px; border: 0; padding: 6px;
   background: var(--c); color: var(--ink); cursor: pointer; text-align: left;
   display: flex; flex-direction: column; justify-content: space-between;
   box-shadow: inset 0 -5px 0 rgb(0 0 0 / .22); transition: transform .08s;
 }
 .jack:hover { transform: translateY(-1px); filter: brightness(1.12); }
-.jack .top { display: flex; align-items: center; gap: 5px; }
+/* Étiquettes : à droite du numéro, puis sur une seconde ligne si la prise est étroite (petit écran, fenêtre réduite).
+   Deux lignes au plus : au-delà, coupées dans la prise (jamais sur la voisine) ; tout reste dans l'info-bulle. */
+.jack .top { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 1px 5px; max-height: 26px; clip-path: inset(-8px 0 0 -8px); }
 .jack .led { width: 7px; height: 4px; border-radius: 1px; background: var(--led); flex-shrink: 0; }
-.jack .n { font: 600 13px/1 var(--mono); }
-.jack .tag { margin-left: auto; font: 600 9px/1 var(--mono); opacity: .9; }
-.jack .tag + .tag { margin-left: 4px; }
+.jack .n { font: 600 13px/1 var(--mono); margin-right: auto; }
+.jack .tag { height: 12px; font: 600 9px/1 var(--mono); opacity: .9; display: inline-flex; align-items: center; gap: 1px; }
+.jack .tag .ic-svg { margin: 0 -1px; } /* l'icône a 1 px de blanc de chaque côté à 12 px */
+.jack .meta .ic-svg { vertical-align: -2px; margin-right: 1px; }
 .jack > span:last-child, .jack .meter { display: block; }
 .jack .meta { display: block; font: 500 10px/1 var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .9; }
 .jack .meter { height: 3px; border-radius: 2px; background: rgb(0 0 0 / .3); overflow: hidden; margin-top: 4px; }
@@ -212,6 +222,7 @@ dialog.wide { width: min(580px, calc(100% - 32px)); }
 @media (prefers-reduced-motion: reduce) { .jack.idle .led, .spinner, .btn.loading::after, .jack.busy::after { animation: none; } .jack { transition: none; } }
 .legend { display: flex; gap: 8px 18px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--text-2); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend .ic-svg { margin-right: -2px; }
 .legend b { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
 .sw { width: 12px; height: 10px; border-radius: 2px; display: inline-block; }
 
@@ -260,7 +271,7 @@ select.compact { width: auto; padding: 4px 8px; font-size: 12px; border-radius: 
 @media (prefers-reduced-motion: reduce) { .dd-menu { animation: none; } .dd-btn .chev { transition: none; } }
 
 /* ---------- tableaux */
-.table-wrap { overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
+.table-wrap { overflow-x: auto; margin: 0 -16px; padding: 0 16px; position: relative; } /* le texte masqué (.sr) des cellules défile aussi : la page ne s'élargit pas */
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th { text-align: left; font-weight: 500; color: var(--text-3); font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 td { padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -277,6 +288,7 @@ tbody tr.click:hover, tbody tr.sel { background: var(--surface-2); }
 .status.unk { color: var(--warn); } .status.unk::before { background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
 .status.idle::before { border-radius: 1px; transform: rotate(45deg); }
 .speed-slow { color: var(--warn); font-weight: 500; }
+.badge .ic-svg { vertical-align: -2px; margin-right: 1px; }
 .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-weight: 500; }
 
 /* ---------- tiroir port */
@@ -356,12 +368,14 @@ tbody tr.click:hover, tbody tr.sel { background: var(--surface-2); }
 .toast .ic { display: grid; place-items: center; height: 18px; font-weight: 700; }
 .toast.success .ic { color: var(--good); } .toast.error .ic { color: var(--bad); } .toast.warn .ic { color: var(--warn); } .toast .ic { color: var(--info); }
 .toast .sub { color: var(--text-3); font-size: 12px; margin-top: 2px; overflow-wrap: anywhere; }
-.toast .x { border: 0; background: none; cursor: pointer; color: var(--text-3); font-size: 16px; line-height: 1; padding: 0 2px; }
+.toast .x { border: 0; background: none; cursor: pointer; color: var(--text-3); line-height: 1; padding: 1px; display: inline-flex; border-radius: 6px; }
+.toast .x:hover { color: var(--text); }
 .toast .acts { display: flex; gap: 6px; margin-top: 8px; }
 @keyframes pop { from { transform: translateY(8px); opacity: 0; } }
 
-.danger { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); border: 1px solid rgb(201 48 44 / .35); font-size: 13px; }
-.danger .danger-head { font-weight: 700; display: flex; align-items: center; gap: 8px; }
+/* encadré rouge (seconde confirmation) ; un bouton .btn.danger garde seulement son texte rouge */
+.danger:not(.btn) { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); border: 1px solid rgb(201 48 44 / .35); font-size: 13px; }
+.danger .danger-head { font-weight: 700; display: flex; align-items: flex-start; gap: 8px; } /* icône sur la première ligne si le titre passe sur deux */
 .danger ul { margin: 8px 0 12px 18px; padding: 0; display: grid; gap: 4px; color: var(--text); }
 .danger label { display: block; color: var(--text-2); }
 .danger input { margin-top: 6px; font-family: var(--mono); letter-spacing: .08em; border-color: rgb(201 48 44 / .5); }
@@ -373,7 +387,7 @@ dialog { border: 1px solid var(--border); border-radius: 12px; background: var(-
 dialog::backdrop { background: rgb(0 0 0 / .4); }
 dialog h3 { margin: 0 0 8px; font-size: 15px; }
 dialog pre { background: var(--surface-2); padding: 10px; border-radius: 8px; font: 12px/1.5 var(--mono); white-space: pre-wrap; max-height: 240px; overflow: auto; }
-dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+dialog .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 @media (max-width: 560px) { .app { padding: 14px 16px 32px; } .term { height: 380px; } }
 
 /* ---------- barre latérale et pages */
@@ -391,11 +405,17 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top
 .side nav { flex: 1; overflow-y: auto; padding: 2px 10px 10px; }
 .side .group { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); padding: 14px 10px 5px; font-weight: 600; }
 .side nav a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; min-height: 36px; border-radius: 8px; color: var(--text-2); text-decoration: none; font-weight: 500; }
-.side nav a svg { width: 17px; height: 17px; flex: none; }
+.side nav a > svg { width: 17px; height: 17px; flex: none; }
 .side nav a:hover { background: var(--surface-2); color: var(--text); }
 .side nav a[aria-current="page"], .side nav a[aria-current="true"] { background: rgb(255 131 0 / .12); color: var(--accent-ink); }
 .side nav a .n { margin-left: auto; min-width: 18px; text-align: center; font-size: 11px; background: var(--bad); color: #fff; border-radius: 999px; padding: 1px 6px; font-weight: 600; }
-a:focus-visible, .btn:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a:focus-visible, .btn:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; } /* 3:1 au moins sur les fonds */
+/* blocs dépliables : chevron Material (expand_more, tourné une fois ouvert) à la place du triangle du navigateur */
+summary { list-style: none; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+summary::-webkit-details-marker { display: none; }
+summary > .chev { color: var(--text-3); transition: transform .15s; }
+details[open] > summary > .chev { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { summary > .chev { transition: none; } }
 .side-user { border-top: 1px solid var(--border); padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
 .side-user .who { flex: 1; min-width: 0; }
 .side-user .who b { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -438,7 +458,8 @@ table.list .r { text-align: right; }
 .role-card h3 { margin: 0 0 4px; font-size: 14px; }
 .role-card p { margin: 0 0 8px; color: var(--text-3); font-size: 13px; }
 .role-card ul { margin: 0; padding-left: 18px; color: var(--text-2); font-size: 13px; line-height: 1.7; }
-.role-card li.no { color: var(--text-3); list-style: "✕  "; }
+.role-card li.no { color: var(--text-3); list-style: none; position: relative; }
+.role-card li.no .ic-svg { position: absolute; left: -18px; top: 3px; }
 .radio-cards { display: grid; gap: 8px; }
 .radio-cards label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-size: 13px; color: var(--text); font-weight: 400; }
 .radio-cards label:has(input:checked) { border-color: var(--accent); background: rgb(255 131 0 / .08); }
@@ -447,12 +468,12 @@ table.list .r { text-align: right; }
 .linkbox { display: flex; gap: 8px; }
 .linkbox input { font-family: var(--mono); font-size: 12px; }
 .danger-zone { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
-dialog .sub-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sub-actions { display: flex; flex-wrap: wrap; gap: 8px; } /* boutons côte à côte (double authentification de Mon profil) */
 .field .note { margin: 0; }
 .req { color: var(--bad); }
 @media (max-width: 900px) {
-  .side { position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: transform .2s ease; }
-  body.menu-open .side { transform: none; box-shadow: 0 0 40px rgb(0 0 0 / .25); } /* fermé : pas d'ombre qui déborde sur la page */
+  .side { position: fixed; left: 0; top: 0; transform: translateX(-100%); visibility: hidden; transition: transform .2s ease, visibility 0s .2s; } /* fermé : hors de la tabulation */
+  body.menu-open .side { transform: none; visibility: visible; transition: transform .2s ease; box-shadow: 0 0 40px rgb(0 0 0 / .25); } /* fermé : pas d'ombre qui déborde sur la page */
   .side-head .side-close, .burger { display: inline-flex; }
   .side nav a { min-height: 44px; }
   .app { padding: 14px 16px 24px; }
@@ -479,7 +500,7 @@ body.readonly .staff-only { display: none !important; }
 /* notes et sous-titres : couleur secondaire lisible (4.5:1), pas la couleur atténuée du reste de l'interface */
 .ob-step .note, .ob-welcome .note, #view-setup .view-head p { color: var(--text-2); }
 #wcRole { color: var(--text); }
-.ob-form input::placeholder { color: var(--ph); opacity: 1; }
+.ob-form input::placeholder, #view-settings input::placeholder { color: var(--ph); opacity: 1; }
 .ob-step code, .setup-card code, .first-box code, .ob-welcome code { font: 12px/1.4 var(--mono); background: var(--surface-2); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
 .ob-checks { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .ob-chk { display: flex; align-items: center; gap: 8px 12px; padding: 11px 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
@@ -520,7 +541,7 @@ body.readonly .staff-only { display: none !important; }
 .ob-video { position: relative; border-radius: 12px; overflow: hidden; background: #0b0b0b; aspect-ratio: 16 / 9; }
 .ob-video video { display: block; width: 100%; height: 100%; object-fit: contain; background: #0b0b0b; }
 .ob-details { border: 1px solid var(--border); border-radius: 10px; padding: 0 14px; background: var(--surface); }
-.ob-details > summary { cursor: pointer; padding: 11px 0; font-weight: 600; list-style-position: outside; margin-left: 14px; }
+.ob-details > summary { padding: 11px 0; font-weight: 600; }
 .ob-details[open] > summary { border-bottom: 1px solid var(--border); margin-bottom: 10px; }
 .ob-details > :last-child { margin-bottom: 12px; }
 .field-err { color: var(--bad); font-size: 12.5px; font-weight: 500; }
@@ -588,7 +609,8 @@ dialog.video-dlg { width: min(900px, calc(100% - 32px)); padding: 16px; }
 .ob-step h3 { font-size: 20px; margin: 6px 0 6px; letter-spacing: -.01em; }
 .ob-step h3:focus { outline: none; } /* reçoit le focus à chaque changement d'étape : titre, pas un contrôle */
 .ob-lead { margin: 0 0 18px; color: var(--text-2); max-width: 72ch; }
-.ob-auto { display: flex; align-items: center; gap: 6px; margin: -10px 0 18px; font-size: 12.5px; color: var(--text-2); }
+.ob-auto { display: flex; align-items: flex-start; gap: 6px; margin: -10px 0 18px; font-size: 12.5px; color: var(--text-2); }
+.ob-auto .ob-svg { margin-top: 1px; }
 .ob-sec { margin-top: 22px; }
 .ob-sec > h4, .ob-row h4 { font-size: 14px; margin: 0 0 8px; }
 .ob-sec > p, .ob-row p { margin: 0 0 8px; max-width: 72ch; }
@@ -650,6 +672,69 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
 .ob-role h4 { margin: 0 0 4px; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ob-role p { margin: 0 0 8px; color: var(--text-2); }
 .ob-welcome .alert { margin: 12px 0 0; }
+
+/* ---------- réglages (page de l'administrateur) */
+#alertChannels a { color: var(--accent-ink); font-weight: 500; }
+.alert.set-cron { color: var(--text); border-left: 3px solid var(--warn); margin: 0 0 14px; font-size: 13px; }
+#view-settings .grid2 { grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); } /* deux colonnes dès 990 px de large avec la barre latérale (726 px sans) */
+.set-lead { margin: -4px 0 12px; }
+.set-fields { display: grid; gap: 12px 14px; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); }
+.sync-grid { display: grid; gap: 12px 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.set-fields .field, .sync-grid .field { margin: 0; align-content: start; }
+.set-test { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding-top: 14px; margin-top: 2px; border-top: 1px solid var(--border); }
+.set-test .note { flex: 1 1 200px; min-width: 0; }
+/* une ligne par alerte : case, texte, réglage éventuel dessous */
+.opt-list { display: grid; }
+.opt-list > .opt { display: flex; align-items: flex-start; gap: 6px 12px; flex-wrap: wrap; padding: 11px 0; border-bottom: 1px solid var(--border); } /* pas .opt seul : c'est aussi le statut « Facultatif » de l'assistant */
+.opt-list > .opt:first-child { padding-top: 0; }
+.opt-list > .opt:last-child { border-bottom: 0; padding-bottom: 0; }
+label.opt, .opt-txt { cursor: pointer; }
+.opt > input[type=checkbox] { width: 18px; height: 18px; margin: 1px 0 0; flex: none; accent-color: var(--accent); cursor: pointer; }
+.opt > input[type=checkbox]:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; } /* distinct de la case cochée (orange) */
+.opt-txt { flex: 1 1 200px; min-width: 0; }
+.opt-txt b { display: block; font-weight: 500; }
+.opt-txt small { display: block; margin-top: 1px; color: var(--text-3); font-size: 12.5px; }
+.opt .unit-in { flex-basis: calc(100% - 30px); margin-left: 30px; } /* seuil juste sous le texte de l'alerte, aligné avec lui */
+.opt > label.opt-txt { padding: 11px 0; margin: -11px 0; } /* toute la hauteur de la ligne est cliquable */
+/* champ nombre court, unité à côté : jamais de chiffre coupé */
+.unit-in { display: inline-flex; align-items: center; gap: 7px; justify-self: start; }
+.unit-in > span { color: var(--text-2); }
+input[type=number].num-in { width: 88px; padding: 7px 8px 7px 10px; text-align: right; font-variant-numeric: tabular-nums; }
+.num-in:disabled + span { opacity: .55; }
+.seg.seg-lg button { padding: 7px 14px; font-size: 13px; }
+.seg.seg-lg button.on { font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
+.set-mode-note { margin: 8px 0 12px; }
+/* ports surveillés, comme la façade : impairs en haut, pairs en bas ; 1 à 12, 13 à 24, puis les SFP 25 à 28 */
+.wp-face { display: flex; flex-wrap: wrap; gap: 10px 12px; }
+.wp-g { display: grid; grid-template-rows: repeat(2, auto); grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; flex: 6 1 0; min-width: 0; }
+.wp-g.sfp { flex: 2 1 0; padding-left: 12px; border-left: 1px solid var(--border); }
+.wp { height: 34px; min-width: 0; padding: 0; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text-2); font: 500 12.5px/1 var(--mono); cursor: pointer; }
+.wp:hover { border-color: var(--text-3); color: var(--text); }
+.wp[aria-pressed="true"] { background: rgb(255 131 0 / .13); border-color: var(--accent-ink); box-shadow: inset 0 0 0 1px var(--accent-ink); color: var(--text); font-weight: 700; } /* bord : 3:1 au moins */
+.wp:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; } /* distinct du port choisi (bord orange) */
+.seg button:focus-visible { outline-offset: -3px; } /* le groupe coupe ce qui dépasse : contour à l'intérieur du bouton */
+/* carte des ports étroite : un groupe par ligne, ports assez larges. Téléphone, et largeurs où la page a deux colonnes
+   de moins de 430 px (#view-settings .grid2 : barre latérale de 248 px au-dessus de 900 px, marges de la page comprises) */
+@media (max-width: 560px), (min-width: 726px) and (max-width: 900px), (min-width: 990px) and (max-width: 1173px) {
+  .wp-g { flex: 1 1 100%; }
+  .wp-g.sfp { flex: 0 0 auto; width: calc((100% - 20px) / 3 + 4px); padding-left: 0; border-left: 0; }
+}
+/* enregistrement : barre collée en bas de l'écran tant qu'il reste des changements */
+.save-bar { position: sticky; bottom: 12px; z-index: 6; display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; margin-top: 14px; padding: 10px 12px 10px 16px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 12px; box-shadow: 0 10px 30px rgb(0 0 0 / .16); }
+.save-msg { margin: 0; display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.save-msg .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+.save-bar .error { margin: 0; min-height: 0; flex: 1 1 auto; min-width: 0; font-weight: 500; }
+.save-acts { display: flex; gap: 8px; margin-left: auto; }
+@media (max-width: 560px) {
+  .sync-grid { grid-template-columns: minmax(0, 1fr); }
+  #view-settings input[type=text], #view-settings input[type=url], #view-settings .num-in, #view-settings .btn, .seg.seg-lg button { min-height: 44px; }
+  .seg.seg-lg { display: flex; }
+  .seg.seg-lg button { flex: 1 1 0; }
+  .wp { height: 44px; }
+  .save-bar { bottom: 8px; padding: 10px 12px; }
+  .save-acts { width: 100%; }
+  .save-acts .btn { flex: 1 1 0; white-space: normal; }
+}
 </style>
 </head>
 <body>
@@ -658,9 +743,9 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
 <section class="login" id="login" hidden>
   <!-- Installation à terminer : remplace la connexion tant que la base ou une variable Vercel manque (onboarding.js) -->
   <div class="card setup-card" id="installCard" hidden>
-    <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d0f00" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg></span>
+    <span class="logo"><i data-icon="lan" data-size="20"></i></span>
     <h1 id="instTitle" tabindex="-1">Installation à terminer</h1>
-    <a class="inst-video" href="/media/my-aruba-manager.mp4" data-video><span class="inst-poster"><img src="/media/apercu.jpg" width="128" height="72" loading="lazy" decoding="async" alt=""><svg class="ob-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z" fill="currentColor"/></svg></span>
+    <a class="inst-video" href="/media/my-aruba-manager.mp4" data-video><span class="inst-poster"><img src="/media/apercu.jpg" width="128" height="72" loading="lazy" decoding="async" alt=""><i data-icon="play_arrow" class="ob-svg"></i></span>
       <span><b>Voir la présentation (30 s)</b><small>Ce que fait My Aruba Manager, en vidéo sans son, avant de terminer l’installation.</small></span></a>
     <p class="setup-lead">Le dashboard est en ligne, mais il lui manque encore des réglages sur Vercel. Suis les étapes ci-dessous, puis revérifie. <b id="instCount"></b></p>
     <ul class="ob-checks" id="instList" aria-label="État de l’installation"></ul>
@@ -673,11 +758,11 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
       </ol>
       <div>
         <span class="ob-cmd-label">macOS ou Linux (Terminal)</span>
-        <div class="ob-cmd"><pre>openssl rand -base64 32</pre><button type="button" class="btn small" data-copy aria-label="Copier la commande pour macOS ou Linux"><svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copier</span></button></div>
+        <div class="ob-cmd"><pre>openssl rand -base64 32</pre><button type="button" class="btn small" data-copy aria-label="Copier la commande pour macOS ou Linux"><i data-icon="content_copy" class="ob-svg"></i><span>Copier</span></button></div>
         <span class="ob-cmd-label">Windows (PowerShell)</span>
-        <div class="ob-cmd"><pre>$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)</pre><button type="button" class="btn small" data-copy aria-label="Copier la commande pour Windows"><svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copier</span></button></div>
+        <div class="ob-cmd"><pre>$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)</pre><button type="button" class="btn small" data-copy aria-label="Copier la commande pour Windows"><i data-icon="content_copy" class="ob-svg"></i><span>Copier</span></button></div>
       </div>
-      <figure class="ob-fig"><a href="/onboarding/vercel-env.svg" target="_blank" rel="noopener"><img src="/onboarding/vercel-env.svg" width="720" height="400" loading="lazy" decoding="async" alt="Vercel : Settings, puis Environment Variables, avec DASHBOARD_PASSWORD, SESSION_SECRET et AGENT_TOKEN (valeurs masquées)."><span class="ob-zoom"><svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Agrandir l’image<span class="sr"> (nouvel onglet)</span></span></a>
+      <figure class="ob-fig"><a href="/onboarding/vercel-env.svg" target="_blank" rel="noopener"><img src="/onboarding/vercel-env.svg" width="720" height="400" loading="lazy" decoding="async" alt="Vercel : Settings, puis Environment Variables, avec DASHBOARD_PASSWORD, SESSION_SECRET et AGENT_TOKEN (valeurs masquées)."><span class="ob-zoom"><i data-icon="open_in_full" class="ob-svg"></i>Agrandir l’image<span class="sr"> (nouvel onglet)</span></span></a>
         <figcaption>Settings, Environment Variables : une ligne par variable.</figcaption></figure>
     </section>
     <section class="inst-step" id="instDb" hidden aria-labelledby="instDbT">
@@ -692,28 +777,28 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
         <li>Ouvre ton projet sur supabase.com : s’il est en pause, relance-le (<b>Restore project</b>).</li>
         <li>Sinon, dans l’onglet <b>Storage</b> de Vercel, vérifie que la base Supabase est bien connectée à ce projet.</li>
       </ol>
-      <figure class="ob-fig"><a href="/onboarding/vercel-supabase.svg" target="_blank" rel="noopener"><img src="/onboarding/vercel-supabase.svg" width="720" height="400" loading="lazy" decoding="async" alt="Vercel : onglet Storage, Supabase, plan Free, région Paris, puis Connect et Redeploy."><span class="ob-zoom"><svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Agrandir l’image<span class="sr"> (nouvel onglet)</span></span></a>
+      <figure class="ob-fig"><a href="/onboarding/vercel-supabase.svg" target="_blank" rel="noopener"><img src="/onboarding/vercel-supabase.svg" width="720" height="400" loading="lazy" decoding="async" alt="Vercel : onglet Storage, Supabase, plan Free, région Paris, puis Connect et Redeploy."><span class="ob-zoom"><i data-icon="open_in_full" class="ob-svg"></i>Agrandir l’image<span class="sr"> (nouvel onglet)</span></span></a>
         <figcaption>Storage, Supabase, plan Free, région Paris, Connect.</figcaption></figure>
     </section>
     <section class="inst-step" aria-labelledby="instRedeployT">
       <h2 id="instRedeployT">Redéploie le projet</h2>
-      <p>Dans Vercel : <b>Deployments</b>, le bouton <b>⋯</b> du dernier déploiement, puis <b>Redeploy</b>. Les changements ne s’appliquent qu’au déploiement suivant (une minute environ).</p>
+      <p>Dans Vercel : <b>Deployments</b>, le bouton <b><i data-icon="more_horiz" data-size="16" data-label="trois points"></i></b> du dernier déploiement, puis <b>Redeploy</b>. Les changements ne s’appliquent qu’au déploiement suivant (une minute environ).</p>
     </section>
     <div class="setup-actions">
       <button type="button" class="btn primary" id="instRecheck">Revérifier</button>
-      <a class="btn" href="https://github.com/ethanfrq/ArubaDashboardSwitch/blob/main/docs/GUIDE.md" target="_blank" rel="noopener">Guide d’installation complet<svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg><span class="sr"> (GitHub, nouvel onglet)</span></a>
+      <a class="btn" href="https://github.com/ethanfrq/ArubaDashboardSwitch/blob/main/docs/GUIDE.md" target="_blank" rel="noopener">Guide d’installation complet<i data-icon="open_in_new" class="ob-svg"></i><span class="sr"> (GitHub, nouvel onglet)</span></a>
       <span class="grow"></span>
       <button type="button" class="btn quiet small" id="instSkip">Afficher quand même la connexion</button>
     </div>
   </div>
   <form id="loginForm">
-    <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d0f00" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg></span>
+    <span class="logo"><i data-icon="lan" data-size="20"></i></span>
     <h1>My Aruba Manager</h1>
     <p>Connecte-toi avec ton compte.</p>
     <div class="first-box" id="firstBox" hidden>
       <b>Première connexion</b>
       <p>Identifiant <code>admin</code> et le mot de passe <code>DASHBOARD_PASSWORD</code> choisi lors du déploiement sur Vercel.</p>
-      <a class="ob-link" href="/media/my-aruba-manager.mp4" id="firstVideo" data-video><svg class="ob-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z" fill="currentColor"/></svg>Voir la présentation (30 s)</a>
+      <a class="ob-link" href="/media/my-aruba-manager.mp4" id="firstVideo" data-video><i data-icon="play_arrow" class="ob-svg"></i>Voir la présentation (30 s)</a>
     </div>
     <div class="field"><label for="loginId">Identifiant ou e-mail</label><input id="loginId" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus></div>
     <div class="field"><label for="pw">Mot de passe</label><input id="pw" type="password" autocomplete="current-password" required></div>
@@ -725,7 +810,7 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
     <p class="note" style="margin:14px 0 0">Mot de passe oublié : demande un lien à un administrateur.</p>
   </form>
   <form id="inviteForm" hidden>
-    <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d0f00" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg></span>
+    <span class="logo"><i data-icon="lan" data-size="20"></i></span>
     <h1 id="ivTitle">Bienvenue</h1>
     <p id="ivText">Choisis ton mot de passe.</p>
     <div class="field"><label for="ivLogin">Identifiant</label><input id="ivLogin" type="text" autocomplete="username" readonly></div>
@@ -741,55 +826,55 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
 <div class="shell" id="app" hidden>
   <aside class="side" id="side" aria-label="Menu principal">
     <div class="side-head">
-      <span class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d0f00" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg></span>
+      <span class="logo"><i data-icon="lan" data-size="18"></i></span>
       <div><b>My Aruba Manager</b><small id="sideVersion"></small></div>
-      <button class="btn icon side-close" id="sideClose" type="button" aria-label="Fermer le menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <button class="btn icon side-close" id="sideClose" type="button" aria-label="Fermer le menu"><i data-icon="close"></i></button>
     </div>
     <div class="side-site"><span class="dot" id="sideDot"></span><div><b id="sideHost">Switch</b><span id="sideSite">connexion…</span></div></div>
     <nav id="sideNav">
-      <a href="#demarrage" class="manage-only staff-only" data-view="setup" id="navSetup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>Démarrage<span class="n prog" id="navSetupN" hidden></span></a>
+      <a href="#demarrage" class="manage-only staff-only" data-view="setup" id="navSetup"><i data-icon="flag"></i>Démarrage<span class="n prog" id="navSetupN" hidden></span></a>
       <div class="group">Supervision</div>
-      <a href="#tableau-de-bord" data-view="dashboard" data-target="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Tableau de bord</a>
-      <a href="#ports" data-view="dashboard" data-target="sec-facade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg>Façade et ports</a>
-      <a href="#alertes" data-view="dashboard" data-target="sec-alertes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Alertes<span class="n" id="navAlertCount" hidden></span></a>
-      <a href="#debit" data-view="dashboard" data-target="sec-debit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>Débit et historique</a>
-      <a href="#journal" data-view="dashboard" data-target="sec-logs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Journal du switch</a>
-      <a href="#vlan" data-view="dashboard" data-target="sec-vlan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/></svg>VLAN</a>
+      <a href="#tableau-de-bord" data-view="dashboard" data-target="top"><i data-icon="dashboard"></i>Tableau de bord</a>
+      <a href="#ports" data-view="dashboard" data-target="sec-facade"><i data-icon="router"></i>Façade et ports</a>
+      <a href="#alertes" data-view="dashboard" data-target="sec-alertes"><i data-icon="notifications"></i>Alertes<span class="n" id="navAlertCount" hidden></span></a>
+      <a href="#debit" data-view="dashboard" data-target="sec-debit"><i data-icon="monitoring"></i>Débit et historique</a>
+      <a href="#journal" data-view="dashboard" data-target="sec-logs"><i data-icon="list"></i>Journal du switch</a>
+      <a href="#vlan" data-view="dashboard" data-target="sec-vlan"><i data-icon="layers"></i>VLAN</a>
       <div class="group staff-only">Administration</div>
-      <a href="#outils" class="staff-only" data-view="dashboard" data-target="sec-admin" id="navTools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4Z"/></svg>Outils</a>
-      <a href="#console" class="manage-only staff-only" data-view="dashboard" data-target="sec-console"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 17 6-6-6-6M12 19h8"/></svg>Console</a>
-      <a href="#reglages" class="manage-only staff-only" id="settingsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Réglages</a>
+      <a href="#outils" class="staff-only" data-view="dashboard" data-target="sec-admin" id="navTools"><i data-icon="build"></i>Outils</a>
+      <a href="#console" class="manage-only staff-only" data-view="dashboard" data-target="sec-console"><i data-icon="terminal"></i>Console</a>
+      <a href="#reglages" class="manage-only staff-only" data-view="settings" id="settingsBtn"><i data-icon="settings"></i>Réglages</a>
       <div class="group">Compte et accès</div>
-      <a href="#utilisateurs" class="manage-only staff-only" data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Utilisateurs</a>
-      <a href="#roles" data-view="roles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>Rôles et droits</a>
-      <a href="#activite" class="manage-only staff-only" data-view="activity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Journal d’activité</a>
-      <a href="#profil" data-view="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Mon profil</a>
+      <a href="#utilisateurs" class="manage-only staff-only" data-view="users"><i data-icon="group"></i>Utilisateurs</a>
+      <a href="#roles" data-view="roles"><i data-icon="shield_person"></i>Rôles et droits</a>
+      <a href="#activite" class="manage-only staff-only" data-view="activity"><i data-icon="history"></i>Journal d’activité</a>
+      <a href="#profil" data-view="profile"><i data-icon="person"></i>Mon profil</a>
     </nav>
     <div class="side-user">
       <span class="avatar me" id="meAvatar" aria-hidden="true">?</span>
       <div class="who"><b id="meName">…</b><small id="meRole"></small></div>
       <button class="btn icon" id="themeBtn" type="button">
-        <svg class="theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-        <svg class="theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <i data-icon="dark_mode" class="theme-moon"></i>
+        <i data-icon="light_mode" class="theme-sun"></i>
       </button>
-      <button class="btn icon" id="logout" type="button" title="Se déconnecter" aria-label="Se déconnecter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
+      <button class="btn icon" id="logout" type="button" title="Se déconnecter" aria-label="Se déconnecter"><i data-icon="logout"></i></button>
     </div>
   </aside>
   <div class="side-scrim" id="sideScrim" hidden></div>
 <div class="main">
 <main class="app" id="appMain">
   <header class="top" id="top">
-    <button class="btn icon burger" id="sideOpen" type="button" aria-label="Ouvrir le menu" aria-controls="side" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <button class="btn icon burger" id="sideOpen" type="button" aria-label="Ouvrir le menu" aria-controls="side" aria-expanded="false"><i data-icon="menu"></i></button>
     <div class="title"><h1 id="hostname" tabindex="-1">Chargement…</h1><div class="sub" id="subtitle"><span class="spinner"></span></div></div>
     <span class="spacer"></span>
-    <button class="pill warn" id="unsavedPill" type="button" hidden title="Des changements ne sont pas encore enregistrés dans la configuration de démarrage">⚠ Config non sauvegardée</button>
+    <button class="pill warn" id="unsavedPill" type="button" hidden title="Des changements ne sont pas encore enregistrés dans la configuration de démarrage"><i data-icon="warning" data-size="14"></i>Config non sauvegardée</button>
     <span class="pill" id="agentPill"><span class="dot"></span><span>…</span></span>
     <span class="pill role" id="rolePill" hidden></span>
     <button class="btn icon" id="viewBtn" type="button" hidden aria-pressed="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      <i data-icon="desktop_windows"></i>
     </button>
     <button class="btn icon" id="bellBtn" type="button" title="Alertes récentes" aria-label="Alertes récentes">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <i data-icon="notifications"></i>
       <span class="bell-count" id="bellCount" hidden></span>
     </button>
   </header>
@@ -860,7 +945,7 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
     </section>
 
     <section class="card span-4" id="sec-vlan">
-      <h2>VLAN <span class="count" id="vlanCount"></span><span class="right"><button class="btn small admin-only manage-only" id="vlanAssignOpen">Affecter des ports</button><button class="btn small admin-only manage-only" id="vlanNew">+ Nouveau</button></span></h2>
+      <h2>VLAN <span class="count" id="vlanCount"></span><span class="right"><button class="btn small admin-only manage-only" id="vlanAssignOpen">Affecter des ports</button><button class="btn small admin-only manage-only" id="vlanNew"><i data-icon="add" data-size="14"></i>Nouveau</button></span></h2>
       <div class="vlan-list" id="vlanList"></div>
     </section>
 
@@ -878,10 +963,85 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
   </div>
   </section>
 
+  <!-- ============ RÉGLAGES (administrateur ; app.js : loadSettings, fillSettings, renderWatch) ============ -->
+  <section id="view-settings" class="view manage-only staff-only" hidden aria-labelledby="setTitle">
+    <div class="view-head"><div><h2 id="setTitle" tabindex="-1">Réglages</h2><p>Où et quand prévenir, ports surveillés, site et rythme de l’agent.</p></div></div>
+    <div class="alert amber set-cron" id="alCron" hidden></div>
+    <form id="alertForm" novalidate>
+      <div class="grid2">
+        <div class="stack">
+          <div class="card">
+            <h2>Où envoyer les alertes</h2>
+            <div class="field"><label for="alEmail">E-mail(s)</label>
+              <input id="alEmail" type="text" inputmode="email" autocomplete="off" spellcheck="false" autocapitalize="none" placeholder="admin@exemple.fr, autre@exemple.fr" aria-describedby="alEmailHint alEmailNote">
+              <span class="note" id="alEmailHint">Plusieurs adresses : sépare-les par des virgules. Les comptes qui ont coché «&nbsp;Recevoir les alertes&nbsp;» dans Mon profil les reçoivent aussi.</span>
+              <span class="note" id="alEmailNote"></span></div>
+            <div class="field"><label for="alHook">Webhook</label>
+              <input id="alHook" type="url" inputmode="url" autocomplete="off" spellcheck="false" autocapitalize="none" placeholder="https://…" aria-describedby="alHookNote">
+              <span class="note" id="alHookNote">Teams, Discord, Slack, ou ntfy pour recevoir les alertes sur un téléphone. Adresse en https://.</span></div>
+            <div class="set-test"><button type="button" class="btn" id="alertTest" aria-describedby="alTestNote">Envoyer un test</button><span class="note" id="alTestNote"></span></div>
+          </div>
+          <div class="card">
+            <h2>Prévenir quand…</h2>
+            <div class="opt-list">
+              <label class="opt"><input type="checkbox" id="alPortDown" aria-labelledby="alPortDownT" aria-describedby="alPortDownH"><span class="opt-txt"><b id="alPortDownT">Un port surveillé tombe</b><small id="alPortDownH">Et quand il revient.</small></span></label>
+              <div class="opt"><input type="checkbox" id="alTemp" aria-labelledby="alTempT" aria-describedby="alTempH"><label class="opt-txt" for="alTemp"><b id="alTempT">La température dépasse le seuil</b><small id="alTempH">Seuil réglable de 40 à 95&nbsp;°C.</small></label>
+                <span class="unit-in"><input type="number" id="alTempMax" class="num-in" min="40" max="95" step="1" required inputmode="numeric" aria-label="Seuil de température, en degrés"><span aria-hidden="true">°C</span></span></div>
+              <label class="opt"><input type="checkbox" id="alAgent" aria-labelledby="alAgentT" aria-describedby="alAgentH"><span class="opt-txt"><b id="alAgentT">L’agent ne répond plus</b><small id="alAgentH">Aucune nouvelle depuis 5&nbsp;min.</small></span></label>
+              <label class="opt"><input type="checkbox" id="alSlow" aria-labelledby="alSlowT" aria-describedby="alSlowH"><span class="opt-txt"><b id="alSlowT">Un port passe à 10 ou 100&nbsp;Mb/s</b><small id="alSlowH">Au lieu de 1000 : souvent un câble abîmé.</small></span></label>
+              <label class="opt"><input type="checkbox" id="alIdle" aria-labelledby="alIdleT" aria-describedby="alIdleH"><span class="opt-txt"><b id="alIdleT">Un port surveillé n’a plus de trafic</b><small id="alIdleH">Câble branché, mais aucun paquet depuis 10&nbsp;min.</small></span></label>
+              <label class="opt"><input type="checkbox" id="alNewDev" aria-labelledby="alNewDevT" aria-describedby="alNewDevH"><span class="opt-txt"><b id="alNewDevT">Un appareil jamais vu se branche</b><small id="alNewDevH">Hors liens vers d’autres switches et ports à plus de 4 appareils.</small></span></label>
+            </div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="card">
+            <h2>Ports surveillés <span class="count" id="alPortsCount"></span></h2>
+            <p class="note set-lead">Les alertes «&nbsp;port tombé&nbsp;» et «&nbsp;plus de trafic&nbsp;» ne concernent que ces ports.</p>
+            <span class="seg seg-lg" id="alMode" role="group" aria-label="Choix des ports surveillés"><button type="button" id="alAuto" data-mode="auto" aria-pressed="true">Automatique</button><button type="button" id="alManual" data-mode="manual" aria-pressed="false">Manuel</button></span>
+            <p class="note set-mode-note" id="alPortsNote" aria-live="polite"></p>
+            <div class="wp-face" id="alPorts" role="group" aria-label="Ports du switch"></div>
+          </div>
+          <div class="card">
+            <h2>Site</h2>
+            <div class="set-fields">
+              <div class="field"><label for="alSite">Nom du site</label><input id="alSite" type="text" maxlength="60" autocomplete="off" placeholder="ex. Lycée, salle 101" aria-describedby="alSiteNote">
+                <span class="note" id="alSiteNote">Affiché dans l’onglet du navigateur et sur le plan de brassage imprimé.</span></div>
+              <div class="field"><label for="alTz">Fuseau horaire</label><input id="alTz" type="text" maxlength="40" list="tzList" autocomplete="off" spellcheck="false" autocapitalize="none" aria-describedby="alTzNote">
+                <span class="note" id="alTzNote">Heure des actions planifiées. Par exemple Europe/Paris.</span></div>
+            </div>
+            <datalist id="tzList"><option value="Europe/Paris"><option value="Europe/Brussels"><option value="Europe/Zurich"><option value="Europe/Luxembourg"><option value="America/Montreal"><option value="Indian/Reunion"><option value="America/Guadeloupe"><option value="America/Martinique"><option value="Pacific/Noumea"><option value="Africa/Casablanca"></datalist>
+          </div>
+          <div class="card">
+            <h2>Rythme de l’agent</h2>
+            <p class="note set-lead">Secondes entre deux envois de l’agent. Plus court : plus réactif, mais plus de requêtes (offres gratuites limitées). Appliqué par l’agent 1.4.0 et plus.</p>
+            <div class="sync-grid">
+              <div class="field"><label for="alHot">Dashboard ouvert</label><span class="unit-in"><input type="number" id="alHot" class="num-in" min="5" max="120" step="1" required inputmode="numeric" aria-describedby="alHotNote"><span aria-hidden="true">s</span></span><span class="note" id="alHotNote">Quelqu’un consulte la page. De 5 à 120&nbsp;s.</span></div>
+              <div class="field"><label for="alWarm">Écran lecture seule</label><span class="unit-in"><input type="number" id="alWarm" class="num-in" min="10" max="120" step="1" required inputmode="numeric" aria-describedby="alWarmNote"><span aria-hidden="true">s</span></span><span class="note" id="alWarmNote">Seul un écran mural est ouvert. De 10 à 120&nbsp;s.</span></div>
+              <div class="field"><label for="alIdleSync">Aucune page ouverte</label><span class="unit-in"><input type="number" id="alIdleSync" class="num-in" min="10" max="120" step="1" required inputmode="numeric" aria-describedby="alIdleSyncNote"><span aria-hidden="true">s</span></span><span class="note" id="alIdleSyncNote">De 10 à 120&nbsp;s.</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Vérifications automatiques</h2>
+            <div class="opt-list">
+              <label class="opt"><input type="checkbox" id="alAutoCable" aria-labelledby="alAutoCableT" aria-describedby="alAutoCableH"><span class="opt-txt"><b id="alAutoCableT">Tester le câble des ports sans lien</b><small id="alAutoCableH">Ports jamais testés ou rebranchés, puis revérification des autres toutes les 2&nbsp;h. Ne coupe aucun appareil.</small></span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Barre d'enregistrement : visible tant qu'il reste des changements, collée en bas de l'écran -->
+      <div class="save-bar" id="alBar" role="group" aria-label="Enregistrer les réglages" hidden>
+        <p class="save-msg"><span class="dot" aria-hidden="true"></span>Modifications non enregistrées</p>
+        <p class="error" id="alErr" role="alert"></p>
+        <div class="save-acts"><button type="button" class="btn" id="alReset">Annuler</button><button class="btn primary" id="alSave">Enregistrer</button></div>
+      </div>
+    </form>
+  </section>
+
   <!-- ============ UTILISATEURS ============ -->
   <section id="view-users" class="view" hidden aria-labelledby="usersTitle">
     <div class="view-head"><div><h2 id="usersTitle" tabindex="-1">Utilisateurs</h2><p>Crée un compte par personne : chacun a son mot de passe et ses actions sont signées dans le journal.</p></div>
-      <div class="right"><button class="btn primary" type="button" id="userNew">+ Nouvel utilisateur</button></div></div>
+      <div class="right"><button class="btn primary" type="button" id="userNew"><i data-icon="add" data-size="16"></i>Nouvel utilisateur</button></div></div>
     <div class="stack">
       <div class="card">
         <div class="toolbar">
@@ -904,9 +1064,9 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
       <div class="role-card"><h3><span class="pill accent">Administrateur</span></h3><p>Tout, y compris les comptes.</p>
         <ul><li>Gérer les utilisateurs et leurs droits</li><li>Ports, VLAN, profils, actions planifiées</li><li>Console et commandes sensibles</li><li>Réglages, alertes, sauvegardes, annulation</li></ul></div>
       <div class="role-card"><h3><span class="pill info">Technicien</span></h3><p>Agit sur les ports d’accès, pas sur la configuration.</p>
-        <ul><li>Activer, couper, redémarrer un port</li><li>Description et VLAN d’un port</li><li>Tester les câbles, allumer des PC, ping</li><li>Nommer les appareils, plan de brassage</li><li class="no">Liens vers d’autres switches</li><li class="no">Console, réglages, comptes</li></ul></div>
+        <ul><li>Activer, couper, redémarrer un port</li><li>Description et VLAN d’un port</li><li>Tester les câbles, allumer des PC, ping</li><li>Nommer les appareils, plan de brassage</li><li class="no"><i data-icon="close" data-size="15"></i><span class="sr">Non autorisé : </span>Liens vers d’autres switches</li><li class="no"><i data-icon="close" data-size="15"></i><span class="sr">Non autorisé : </span>Console, réglages, comptes</li></ul></div>
       <div class="role-card"><h3><span class="pill">Lecture seule</span></h3><p>Regarde, ne touche à rien.</p>
-        <ul><li>Tableau de bord, façade, alertes</li><li>Débit et historique</li><li class="no">Aucune action sur le switch</li><li class="no">Configuration complète masquée</li></ul><p style="margin:8px 0 0">Idéal pour un écran mural.</p></div>
+        <ul><li>Tableau de bord, façade, alertes</li><li>Débit et historique</li><li class="no"><i data-icon="close" data-size="15"></i><span class="sr">Non autorisé : </span>Aucune action sur le switch</li><li class="no"><i data-icon="close" data-size="15"></i><span class="sr">Non autorisé : </span>Configuration complète masquée</li></ul><p style="margin:8px 0 0">Idéal pour un écran mural.</p></div>
     </div></div>
   </section>
 
@@ -986,7 +1146,7 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
     <div class="view-head"><div><h2 id="setupTitle" tabindex="-1">Démarrage</h2><p>Relie ton switch au dashboard, étape par étape. Chaque étape se vérifie toute seule.</p>
       <div class="ob-prog"><div class="bar" aria-hidden="true"><i id="obBar"></i></div><span id="obProgText">Vérification de l’installation…</span></div></div>
       <div class="right"><button class="btn" type="button" id="obLater" title="L’assistant ne s’ouvrira plus tout seul : tu le retrouveras dans le menu, Démarrage.">Plus tard</button></div></div>
-    <div class="alert red" id="obErr" role="alert" hidden><svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg><span id="obErrText"></span> <button type="button" class="btn small" id="obRetry">Réessayer</button></div>
+    <div class="alert red" id="obErr" role="alert" hidden><i data-icon="error" class="ob-svg"></i><span id="obErrText"></span> <button type="button" class="btn small" id="obRetry">Réessayer</button></div>
     <div class="ob-layout">
       <nav class="card ob-nav" aria-label="Étapes du démarrage"><ol class="ob-steps" id="obSteps"></ol></nav>
       <div class="card ob-step" id="obStep"><div class="empty"><span class="spinner"></span> Chargement…</div></div>
@@ -1011,7 +1171,7 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
   <div id="cfText" class="note"></div>
   <pre id="cfCmd"></pre>
   <div class="danger" id="cfDanger" hidden>
-    <div class="danger-head">⚠ Commande sensible : seconde confirmation obligatoire</div>
+    <div class="danger-head"><i data-icon="warning"></i>Commande sensible : seconde confirmation obligatoire</div>
     <ul id="cfReasons"></ul>
     <label for="cfWord">Pour l’exécuter quand même, tape <b>CONFIRMER</b> :</label>
     <input id="cfWord" type="text" autocomplete="off" spellcheck="false" autocapitalize="characters">
@@ -1019,48 +1179,11 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
   <div class="actions"><button class="btn" id="cfNo">Annuler</button><button class="btn primary" id="cfYes">Envoyer au switch</button></div>
 </dialog>
 
-<dialog id="alertDialog" class="wide" aria-labelledby="alTitle">
-  <h3 id="alTitle">Réglages</h3>
-  <div class="alert amber" id="alCron" hidden></div>
-  <form id="alertForm">
-    <div class="field"><label for="alEmail">E-mail(s)</label><input id="alEmail" type="text" placeholder="admin@exemple.fr, autre@exemple.fr"><span class="note" id="alEmailNote"></span></div>
-    <div class="field"><label for="alHook">Webhook (Teams, Discord, Slack, ntfy pour le téléphone…)</label><input id="alHook" type="url" placeholder="https://…"></div>
-    <div class="field"><span class="label">Prévenir quand…</span>
-      <label class="check"><input type="checkbox" id="alPortDown"> un port surveillé tombe (et quand il revient)</label>
-      <label class="check"><input type="checkbox" id="alTemp"> la température dépasse <input type="number" id="alTempMax" min="40" max="95" style="width:70px;padding:3px 6px"> °C</label>
-      <label class="check"><input type="checkbox" id="alAgent"> l’agent ne répond plus (5 min)</label>
-      <label class="check"><input type="checkbox" id="alSlow"> un port passe à 10 ou 100 Mb/s</label>
-      <label class="check"><input type="checkbox" id="alIdle"> un port surveillé n’a plus de trafic depuis 10 min</label>
-      <label class="check"><input type="checkbox" id="alNewDev"> un appareil jamais vu se branche (hors liens vers d’autres switches et ports à plus de 4 appareils)</label>
-    </div>
-    <div class="field"><span class="label">Ports surveillés <button type="button" class="btn small" id="alAuto" style="margin-left:6px">Auto</button></span>
-      <div class="portpick" id="alPorts"></div>
-      <span class="note" id="alPortsNote"></span>
-    </div>
-    <div class="field"><span class="label">Site</span>
-      <div class="row"><input id="alSite" type="text" maxlength="60" placeholder="Nom du site, ex. Lycée, salle 101" aria-label="Nom du site">
-        <input id="alTz" type="text" maxlength="40" list="tzList" style="max-width:190px" aria-label="Fuseau horaire" title="Fuseau horaire des actions planifiées"></div>
-      <datalist id="tzList"><option value="Europe/Paris"><option value="Europe/Brussels"><option value="Europe/Zurich"><option value="Europe/Luxembourg"><option value="America/Montreal"><option value="Indian/Reunion"><option value="America/Guadeloupe"><option value="America/Martinique"><option value="Pacific/Noumea"><option value="Africa/Casablanca"></datalist>
-      <span class="note">Le fuseau horaire sert aux actions planifiées.</span>
-    </div>
-    <div class="field"><span class="label">Rythme de l’agent (secondes entre deux envois)</span>
-      <div class="row" style="flex-wrap:wrap"><label class="check" style="flex:1 1 140px">dashboard ouvert <input type="number" id="alHot" min="5" max="120" required style="width:70px;padding:3px 6px"></label>
-        <label class="check" style="flex:1 1 140px">écran lecture seule <input type="number" id="alWarm" min="10" max="120" required style="width:70px;padding:3px 6px"></label>
-        <label class="check" style="flex:1 1 140px">personne <input type="number" id="alIdleSync" min="10" max="120" required style="width:70px;padding:3px 6px"></label></div>
-      <span class="note">Plus court = plus réactif, mais plus de requêtes (offres gratuites limitées). 120 s au plus. Appliqué par l’agent 1.4.0 et plus.</span>
-    </div>
-    <div class="field"><span class="label">Vérifications automatiques</span>
-      <label class="check"><input type="checkbox" id="alAutoCable"> tester le câble des ports sans lien jamais testés ou rebranchés, et revérifier les autres toutes les 2 h (ne coupe aucun appareil)</label>
-    </div>
-    <div class="actions"><button type="button" class="btn" id="alertTest">Envoyer un test</button><span style="flex:1"></span><button type="button" class="btn" id="alClose">Fermer</button><button class="btn primary" id="alSave">Enregistrer</button></div>
-  </form>
-</dialog>
-
 <dialog id="vlanAssignDialog" aria-labelledby="vaTitle">
   <h3 id="vaTitle">Affecter des ports à un VLAN</h3>
   <div class="field"><label for="vlanPorts">Ports</label><input id="vlanPorts" type="text" placeholder="3-8, 12"></div>
   <div class="field"><label for="vlanTarget">VLAN</label><select id="vlanTarget"></select></div>
-  <p class="note" style="margin:0">Les ports passent en mode « access » sur ce VLAN. Évite les ports marqués ⇅ : ils relient d’autres switches.</p>
+  <p class="note" style="margin:0">Les ports passent en mode « access » sur ce VLAN. Évite les liens vers d’autres switches (double flèche <i data-icon="swap_vert" data-size="15"></i> sur la façade, pastille « switch » dans le tableau des ports).</p>
   <div class="actions"><button class="btn" id="vaNo">Annuler</button><button class="btn primary" id="vlanAssign">Continuer</button></div>
 </dialog>
 
@@ -1122,9 +1245,9 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
 <!-- Présentation en vidéo (Installation à terminer, encadré « Première connexion ») -->
 <dialog id="videoDialog" class="video-dlg keep" aria-labelledby="vidTitle">
   <div class="dlg-head"><h3 id="vidTitle">My Aruba Manager en 30 secondes</h3>
-    <button type="button" class="btn icon" id="vidClose" aria-label="Fermer la vidéo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <button type="button" class="btn icon" id="vidClose" aria-label="Fermer la vidéo"><i data-icon="close"></i></button></div>
   <div class="ob-video"><video id="vidPlayer" controls playsinline muted preload="none" poster="/media/apercu.jpg" aria-describedby="vidSum"><source src="/media/my-aruba-manager.mp4" type="video/mp4"><a href="/media/my-aruba-manager.mp4">Télécharger la vidéo</a></video></div>
-  <details class="ob-details"><summary>Ce que montre la vidéo (sans son)</summary><ul class="ob-list" id="vidSum" data-vsum></ul></details>
+  <details class="ob-details"><summary><i data-icon="expand_more" class="chev"></i>Ce que montre la vidéo (sans son)</summary><ul class="ob-list" id="vidSum" data-vsum></ul></details>
 </dialog>
 
 <!-- Bienvenue d'un nouveau compte (une seule fois : prefs.welcomed) -->
@@ -1132,7 +1255,7 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
   <h3 id="wcTitle" tabindex="-1">Bienvenue</h3>
   <p class="note" style="margin:0">Voici My Aruba Manager en 30 secondes.</p>
   <div class="ob-video"><video id="wcPlayer" controls playsinline muted preload="none" poster="/media/apercu.jpg" aria-describedby="wcSum"><source src="/media/my-aruba-manager.mp4" type="video/mp4"><a href="/media/my-aruba-manager.mp4">Télécharger la vidéo</a></video></div>
-  <details class="ob-details"><summary>Ce que montre la vidéo (sans son)</summary><ul class="ob-list" id="wcSum" data-vsum></ul></details>
+  <details class="ob-details"><summary><i data-icon="expand_more" class="chev"></i>Ce que montre la vidéo (sans son)</summary><ul class="ob-list" id="wcSum" data-vsum></ul></details>
   <div class="ob-role"><h4>Ton rôle : <span class="pill" id="wcRole"></span></h4><p id="wcRoleText"></p><ul class="ob-list" id="wcRoleList"></ul></div>
   <div class="alert amber" id="wcSecure" hidden>La double authentification n’est pas encore active sur ton compte : un code de ton téléphone en plus du mot de passe, c’est bien plus sûr.</div>
   <div class="actions"><button type="button" class="btn" id="wcSecureBtn" hidden>Sécuriser mon compte</button><button type="button" class="btn primary" id="wcGo">C’est parti</button></div>
@@ -1141,18 +1264,19 @@ dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <div class="sr" id="obSay" aria-live="polite"></div>
 
-<script src="/js/app.js?v=1.9.0"></script>
+<script src="/js/icons.js?v=1.9.1"></script>
+<script src="/js/app.js?v=1.9.1"></script>
 <!-- Fonctions d'administration : chacune dans son fichier (public/js), branchées sur les points d'accroche ci-dessus. -->
-<script src="/js/undo.js?v=1.9.0"></script>
-<script src="/js/backup.js?v=1.9.0"></script>
-<script src="/js/profiles.js?v=1.9.0"></script>
-<script src="/js/bulk.js?v=1.9.0"></script>
-<script src="/js/devices.js?v=1.9.0"></script>
-<script src="/js/schedule.js?v=1.9.0"></script>
-<script src="/js/diagnose.js?v=1.9.0"></script>
-<script src="/js/health.js?v=1.9.0"></script>
-<script src="/js/wol.js?v=1.9.0"></script>
-<script src="/js/account.js?v=1.9.0"></script>
-<script src="/js/onboarding.js?v=1.9.0"></script>
+<script src="/js/undo.js?v=1.9.1"></script>
+<script src="/js/backup.js?v=1.9.1"></script>
+<script src="/js/profiles.js?v=1.9.1"></script>
+<script src="/js/bulk.js?v=1.9.1"></script>
+<script src="/js/devices.js?v=1.9.1"></script>
+<script src="/js/schedule.js?v=1.9.1"></script>
+<script src="/js/diagnose.js?v=1.9.1"></script>
+<script src="/js/health.js?v=1.9.1"></script>
+<script src="/js/wol.js?v=1.9.1"></script>
+<script src="/js/account.js?v=1.9.1"></script>
+<script src="/js/onboarding.js?v=1.9.1"></script>
 </body>
 </html>

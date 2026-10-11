@@ -2,24 +2,20 @@
 <title id="architecture-t">Comment My Aruba Manager est relié</title>
 <desc id="architecture-d">Schéma d’ensemble. Dans le réseau local, le PC de l’agent (Windows, Python) lit le switch Aruba SWITCH-DEMO (192.168.10.2) en SSH. Il envoie l’état du switch par Internet, en HTTPS sortant seulement, sans aucun port ouvert, au dashboard hébergé sur Vercel, qui enregistre les données dans la base Supabase. Tu ouvres le dashboard depuis un navigateur, partout : PC, tablette ou téléphone.</desc>
 <rect x="1" y="1" width="718" height="398" rx="16" fill="#fcfcfb" stroke="#e2e1da" stroke-width="2"/>
+<!-- Pictogrammes : Google Material Symbols Rounded (Apache License 2.0), chemins officiels recopiés tels quels -->
 <text x="32" y="44" font-size="18" fill="#0b0b0b" font-weight="600">Comment tout est relié</text>
 <!-- Réseau local : le switch et le PC de l’agent -->
 <rect x="24" y="60" width="228" height="220" rx="14" fill="#f4f4f1" stroke="#d4d3cb" stroke-width="2" stroke-dasharray="6 5"/>
 <text x="40" y="84" font-size="13" fill="#52514e" font-weight="600" letter-spacing="0.8">RÉSEAU LOCAL</text>
 <rect x="40" y="92" width="196" height="68" rx="12" fill="#ffffff" stroke="#d4d3cb" stroke-width="2"/>
 <rect x="52" y="108" width="36" height="36" rx="9" fill="#efeee9"/>
-<rect x="55" y="118" width="30" height="16" rx="3" fill="none" stroke="#0b0b0b" stroke-width="2"/>
-<rect x="60" y="124" width="4" height="4" fill="#0b0b0b"/>
-<rect x="66" y="124" width="4" height="4" fill="#0b0b0b"/>
-<rect x="72" y="124" width="4" height="4" fill="#0b0b0b"/>
-<circle cx="80" cy="126" r="2" fill="#1f8a3c"/>
+<svg x="56" y="112" width="28" height="28" viewBox="0 -960 960 960"><path fill="#0b0b0b" d="M120-160v-120q0-33 23.5-56.5T200-360h40v-80q0-33 23.5-56.5T320-520h120v-80h-40q-33 0-56.5-23.5T320-680v-120q0-33 23.5-56.5T400-880h160q33 0 56.5 23.5T640-800v120q0 33-23.5 56.5T560-600h-40v80h120q33 0 56.5 23.5T720-440v80h40q33 0 56.5 23.5T840-280v120q0 33-23.5 56.5T760-80H600q-33 0-56.5-23.5T520-160v-120q0-33 23.5-56.5T600-360h40v-80H320v80h40q33 0 56.5 23.5T440-280v120q0 33-23.5 56.5T360-80H200q-33 0-56.5-23.5T120-160Zm280-520h160v-120H400v120ZM200-160h160v-120H200v120Zm400 0h160v-120H600v120ZM480-680ZM360-280Zm240 0Z"/></svg>
 <text x="100" y="117" font-size="15" fill="#0b0b0b" font-weight="600">Switch Aruba</text>
 <text x="100" y="136" font-size="13" fill="#52514e">SWITCH-DEMO</text>
 <text x="100" y="153" font-size="13" fill="#52514e" font-family="ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace">192.168.10.2</text>
 <rect x="40" y="204" width="196" height="68" rx="12" fill="#ffffff" stroke="#d4d3cb" stroke-width="2"/>
 <rect x="52" y="220" width="36" height="36" rx="9" fill="#efeee9"/>
-<rect x="56" y="227" width="28" height="18" rx="3" fill="none" stroke="#0b0b0b" stroke-width="2"/>
-<path d="M70 245v5m-7 0h14" fill="none" stroke="#0b0b0b" stroke-width="2" stroke-linecap="round"/>
+<svg x="56" y="224" width="28" height="28" viewBox="0 -960 960 960"><path fill="#0b0b0b" d="M400-200v-80H160q-33 0-56.5-23.5T80-360v-400q0-33 23.5-56.5T160-840h640q33 0 56.5 23.5T880-760v400q0 33-23.5 56.5T800-280H560v80h40q17 0 28.5 11.5T640-160q0 17-11.5 28.5T600-120H360q-17 0-28.5-11.5T320-160q0-17 11.5-28.5T360-200h40ZM160-360h640v-400H160v400Zm0 0v-400 400Z"/></svg>
 <text x="100" y="229" font-size="15" fill="#0b0b0b" font-weight="600">PC de l’agent</text>
 <text x="100" y="248" font-size="13" fill="#52514e">Windows</text>
 <text x="100" y="265" font-size="13" fill="#52514e">agent Python</text>
@@ -32,7 +28,7 @@
 <text x="484" y="84" font-size="13" fill="#52514e" font-weight="600" letter-spacing="0.8">CLOUD (GRATUIT)</text>
 <rect x="484" y="92" width="196" height="68" rx="12" fill="#ffffff" stroke="#d4d3cb" stroke-width="2"/>
 <rect x="496" y="108" width="36" height="36" rx="9" fill="#efeee9"/>
-<path d="M502 118a12 4.5 0 1 0 24 0a12 4.5 0 1 0-24 0v16a12 4.5 0 0 0 24 0v-16M502 126a12 4.5 0 0 0 24 0" fill="none" stroke="#0b0b0b" stroke-width="2"/>
+<svg x="500" y="112" width="28" height="28" viewBox="0 -960 960 960"><path fill="#0b0b0b" d="M480-120q-151 0-255.5-46.5T120-280v-400q0-66 105.5-113T480-840q149 0 254.5 47T840-680v400q0 67-104.5 113.5T480-120Zm0-479q89 0 179-25.5T760-679q-11-29-100.5-55T480-760q-91 0-178.5 25.5T200-679q14 30 101.5 55T480-599Zm0 199q42 0 81-4t74.5-11.5q35.5-7.5 67-18.5t57.5-25v-120q-26 14-57.5 25t-67 18.5Q600-528 561-524t-81 4q-42 0-82-4t-75.5-11.5Q287-543 256-554t-56-25v120q25 14 56 25t66.5 18.5Q358-408 398-404t82 4Zm0 200q46 0 93.5-7t87.5-18.5q40-11.5 67-26t32-29.5v-98q-26 14-57.5 25t-67 18.5Q600-328 561-324t-81 4q-42 0-82-4t-75.5-11.5Q287-343 256-354t-56-25v99q5 15 31.5 29t66.5 25.5q40 11.5 88 18.5t94 7Z"/></svg>
 <text x="544" y="117" font-size="15" fill="#0b0b0b" font-weight="600">Supabase</text>
 <text x="544" y="136" font-size="13" fill="#52514e">base de données</text>
 <text x="544" y="153" font-size="13" fill="#52514e">Postgres</text>
@@ -49,19 +45,16 @@
 <!-- Internet : HTTPS sortant seulement -->
 <path d="M238 238L472 238" fill="none" stroke="#ff8300" stroke-width="2" stroke-linejoin="round"/>
 <path d="M482 238L472 243.5L472 232.5Z" fill="#ff8300"/>
-<circle cx="318" cy="216" r="8" fill="none" stroke="#0b0b0b" stroke-width="1.6"/>
-<path d="M310 216h16M318 208c-4.5 4.5-4.5 11.5 0 16c4.5-4.5 4.5-11.5 0-16" fill="none" stroke="#0b0b0b" stroke-width="1.6"/>
+<svg x="308" y="205" width="20" height="20" viewBox="0 -960 960 960"><path fill="#0b0b0b" d="M480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-83 31.5-155.5t86-127Q252-817 325-848.5T480-880q83 0 155.5 31.5t127 86q54.5 54.5 86 127T880-480q0 82-31.5 155t-86 127.5q-54.5 54.5-127 86T480-80Zm0-82q26-36 45-75t31-83H404q12 44 31 83t45 75Zm-104-16q-18-33-31.5-68.5T322-320H204q29 50 72.5 87t99.5 55Zm208 0q56-18 99.5-55t72.5-87H638q-9 38-22.5 73.5T584-178ZM170-400h136q-3-20-4.5-39.5T300-480q0-21 1.5-40.5T306-560H170q-5 20-7.5 39.5T160-480q0 21 2.5 40.5T170-400Zm216 0h188q3-20 4.5-39.5T580-480q0-21-1.5-40.5T574-560H386q-3 20-4.5 39.5T380-480q0 21 1.5 40.5T386-400Zm268 0h136q5-20 7.5-39.5T800-480q0-21-2.5-40.5T790-560H654q3 20 4.5 39.5T660-480q0 21-1.5 40.5T654-400Zm-16-240h118q-29-50-72.5-87T584-782q18 33 31.5 68.5T638-640Zm-234 0h152q-12-44-31-83t-45-75q-26 36-45 75t-31 83Zm-200 0h118q9-38 22.5-73.5T376-782q-56 18-99.5 55T204-640Z"/></svg>
 <text x="334" y="221" font-size="15" fill="#0b0b0b" font-weight="600">Internet</text>
 <text x="360" y="262" font-size="13" fill="#52514e" text-anchor="middle">HTTPS sortant seulement</text>
 <rect x="282" y="272" width="156" height="26" rx="13" fill="#dff2e3"/>
-<rect x="296" y="283" width="11" height="8" rx="2" fill="#1f8a3c"/>
-<path d="M298.5 283v-2a3 3 0 0 1 6 0v2" fill="none" stroke="#1f8a3c" stroke-width="1.6"/>
+<svg x="293" y="277" width="16" height="16" viewBox="0 -960 960 960"><path fill="#1f8a3c" d="M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm0-80h480v-400H240v400Zm240-120q33 0 56.5-23.5T560-360q0-33-23.5-56.5T480-440q-33 0-56.5 23.5T400-360q0 33 23.5 56.5T480-280ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80ZM240-160v-400 400Z"/></svg>
 <text x="314" y="290" font-size="13" fill="#1f8a3c" font-weight="600">aucun port ouvert</text>
 <!-- Navigateur, partout -->
 <rect x="484" y="304" width="196" height="72" rx="12" fill="#ffffff" stroke="#d4d3cb" stroke-width="2"/>
 <rect x="496" y="320" width="36" height="36" rx="9" fill="#efeee9"/>
-<rect x="500" y="327" width="28" height="22" rx="3" fill="none" stroke="#0b0b0b" stroke-width="2"/>
-<line x1="500" y1="334" x2="528" y2="334" stroke="#0b0b0b" stroke-width="2"/>
+<svg x="500" y="324" width="28" height="28" viewBox="0 -960 960 960"><path fill="#0b0b0b" d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm0-80h420v-140H160v140Zm500 0h140v-360H660v360ZM160-460h420v-140H160v140Z"/></svg>
 <text x="544" y="329" font-size="15" fill="#0b0b0b" font-weight="600">Navigateur</text>
 <text x="544" y="348" font-size="13" fill="#52514e">partout : PC,</text>
 <text x="544" y="365" font-size="13" fill="#52514e">tablette, téléphone</text>

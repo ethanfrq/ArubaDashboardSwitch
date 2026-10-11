@@ -47,6 +47,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
+The interface icons are included in this repository, in `public/js/icons.js` (also the `lan` icon of the favicon, in
+`public/index.html`, and the pictograms of the `public/onboarding/architecture.svg` illustration): only the icons the
+dashboard uses, as SVG paths copied unchanged from the official files. They are served by the site itself (no icon
+font, no CDN, no request to Google).
+
+| Icons | Author | License |
+|---|---|---|
+| [Material Symbols](https://github.com/google/material-design-icons) (Rounded style, outlined: FILL 0, weight 400, grade 0, optical size 24) | Google | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) (full text in [`LICENSE`](LICENSE)) |
+
+Source files: `symbols/web/<name>/materialsymbolsrounded/<name>_24px.svg` in the
+[google/material-design-icons](https://github.com/google/material-design-icons) repository. The favicon uses the
+filled variant of `lan` (`lan_fill1_24px.svg`), easier to read at 16 pixels.
+
 ## Agent (Python, installed by pip on the agent's PC)
 
 These packages are not included in this repository: they are downloaded by

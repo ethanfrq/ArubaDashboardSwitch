@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" role="img" aria-labelledby="vercel-env-t vercel-env-d" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
 <title id="vercel-env-t">Variables d’environnement du projet sur Vercel</title>
-<desc id="vercel-env-d">Projet Vercel my-aruba-manager. 1 : onglet Settings. 2 : menu Environment Variables. 3 : les trois variables DASHBOARD_PASSWORD, SESSION_SECRET et AGENT_TOKEN, pour tous les environnements, valeurs masquées. Après une modification, redéploie le projet : Deployments, menu ⋯, Redeploy.</desc>
+<desc id="vercel-env-d">Projet Vercel my-aruba-manager. 1 : onglet Settings. 2 : menu Environment Variables. 3 : les trois variables DASHBOARD_PASSWORD, SESSION_SECRET et AGENT_TOKEN, pour tous les environnements, valeurs masquées. Après une modification, redéploie le projet : Deployments, menu aux trois points, Redeploy.</desc>
 <rect x="1" y="1" width="718" height="398" rx="16" fill="#fcfcfb" stroke="#e2e1da" stroke-width="2"/>
 <rect x="24" y="24" width="672" height="352" rx="10" fill="#ffffff"/>
 <path d="M24 56V34a10 10 0 0 1 10-10H686a10 10 0 0 1 10 10V56Z" fill="#efeee9"/>
@@ -67,5 +67,5 @@
 <circle cx="656" cy="300" r="1.8" fill="#52514e"/>
 <circle cx="680" cy="182" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
 <text x="680" y="187" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">3</text>
-<text x="264" y="356" font-size="13" fill="#b45200">Ensuite, redéploie : <tspan font-weight="600">Deployments, ⋯, Redeploy</tspan></text>
+<text x="264" y="356" font-size="13" fill="#b45200">Ensuite, redéploie : <tspan font-weight="600">Deployments, trois points, Redeploy</tspan></text>
 </svg>

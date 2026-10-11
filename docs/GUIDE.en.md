@@ -15,7 +15,7 @@ The dashboard interface is in French. Labels are quoted in French, with a transl
 
 [![My Aruba Manager in 30 seconds: live front panel, connected devices, cable test, VLANs, console and alerts](../public/media/apercu-anime.webp)](../public/media/my-aruba-manager.mp4)
 
-The animation above plays the 30-second presentation (no sound). **▶ [Download the MP4 video](../public/media/my-aruba-manager.mp4)**
+The animation above plays the 30-second presentation (no sound). **[Download the MP4 video](../public/media/my-aruba-manager.mp4)**
 (7 MB: on the GitHub page that opens, click "View raw"). It also plays inside the dashboard, in the setup assistant.
 
 What the video shows: the live front panel of the switch, port by port; the "who is plugged in where" table
@@ -69,7 +69,7 @@ Tick each line before you start:
 
 ## 1. Deploy on Vercel
 
-⏱ 5 minutes
+Time: 5 minutes
 
 ### Prepare the three values
 
@@ -126,7 +126,7 @@ Write down its address, such as `https://your-project.vercel.app`: this is the a
 
 ## 2. Add Supabase and redeploy
 
-⏱ 3 minutes · **only if Supabase was not added during the deployment**
+Time: 3 minutes · **only if Supabase was not added during the deployment**
 
 To check: in your Vercel project, open the **Storage** tab. If a Supabase database is already listed,
 go to [step 3](#3-first-login-and-setup-assistant).
@@ -138,7 +138,7 @@ go to [step 3](#3-first-login-and-setup-assistant).
 3. Keep the **Free** plan, choose the **Paris** region (cdg1, eu-west-3), then **Continue**.
 4. **Connect Project**: connect the database to your project, with the **Production** environment ticked, then **Connect**.
    Vercel adds the connection variables by itself (including `POSTGRES_URL`): there is nothing to copy.
-5. **Redeploy**: **Deployments** tab, **⋯** menu of the latest deployment, **Redeploy**.
+5. **Redeploy**: **Deployments** tab, three-dot menu of the latest deployment, **Redeploy**.
 
 **You should see** a new finished deployment (green **Ready** badge).
 
@@ -150,20 +150,20 @@ There is no script to run.
 
 ## 3. First login and setup assistant
 
-⏱ 2 minutes
+Time: 2 minutes
 
 Open the address of your dashboard (`https://…vercel.app`).
 
 **If the page shows "Installation à terminer"** (installation to finish), something is missing. The card starts with the
-**Voir la présentation (30 s)** (watch the presentation) link, then lists each item with ✓ or ✗, and a short tutorial
-for each ✗:
+**Voir la présentation (30 s)** (watch the presentation) link, then lists each item with its status (**OK**, or what is wrong), and a short
+tutorial for each item to fix:
 
 <img src="captures/installation-incomplete.png" width="720" alt="Installation à terminer screen: the link to the presentation video, the missing database is marked with a cross and the variables that are set with a tick, with the tutorial to connect Supabase, the reminder to redeploy and the Revérifier button">
 
-- **Base de données** (database) ✗: do [step 2](#2-add-supabase-and-redeploy).
-- **A variable** ✗ (`SESSION_SECRET`, `AGENT_TOKEN` or `DASHBOARD_PASSWORD`): add it in Vercel
+- **Base de données** (database) marked **Absente** (missing) or **Injoignable** (unreachable): do [step 2](#2-add-supabase-and-redeploy).
+- **A variable** marked **Manquante** (missing) (`SESSION_SECRET`, `AGENT_TOKEN` or `DASHBOARD_PASSWORD`): add it in Vercel
   (see ["A variable is missing or wrong"](#a-variable-is-missing-or-wrong) in the troubleshooting section).
-- Redeploy the project (**Deployments**, **⋯**, **Redeploy**), then click **Revérifier** (check again).
+- Redeploy the project (**Deployments**, three-dot menu, **Redeploy**), then click **Revérifier** (check again).
 
 The page never shows the value of a variable, only its name.
 
@@ -183,7 +183,7 @@ The **Voir la présentation (30 s)** (watch the presentation) link opens the vid
 
 - Click **Commencer** (start). The assistant covers steps 3 to 8 of this guide, with its own numbering:
   from 1 (**Installation**) to 7 (**Inviter l’équipe**, invite the team). This guide therefore names each assistant step.
-- Each step shows its status, checked live: done ✓, to do, or waiting.
+- Each step shows its status, checked live: **Fait** (done), **À faire** (to do) or **En attente** (waiting).
 - **Précédent** (previous) and **Suivant** (next) move between steps; steps already done can still be opened.
 - **Plus tard** (later) closes the assistant. You can reopen it at any time from the sidebar: **Démarrage** (getting
   started) entry, with your progress, for example "3/7".
@@ -206,7 +206,7 @@ Otherwise, it tries again by itself within one hour at most.
 
 ## 4. Secure your account
 
-⏱ 3 minutes · in the assistant: "Sécuriser ton compte" (secure your account) step
+Time: 3 minutes · in the assistant: "Sécuriser ton compte" (secure your account) step
 
 The dashboard can be reached from the internet: your password and two-factor authentication protect it.
 
@@ -232,11 +232,11 @@ The dashboard can be reached from the internet: your password and two-factor aut
 
 <img src="captures/profil.png" width="720" alt="Mon profil page: information, own password chosen (the Vercel one stays valid as a backup), two-factor authentication enabled, start of the Sessions card">
 
-**You should see** two-factor authentication marked as active, and both items ticked ✓ in the assistant.
+**You should see** two-factor authentication marked as active, and both items marked **Fait** (done) and **Activée** (enabled) in the assistant.
 
 ## 5. Prepare the switch
 
-⏱ 2 minutes · in the assistant: "Préparer le switch" (prepare the switch) step
+Time: 2 minutes · in the assistant: "Préparer le switch" (prepare the switch) step
 
 The agent connects to the switch over **SSH**. You need:
 
@@ -309,7 +309,7 @@ the agent is connected. Two ways to reach it:
 
 ## 6. Install the agent on the Windows PC
 
-⏱ 5 to 10 minutes (depending on the Python download) · in the assistant: "Préparer le PC" (prepare the PC),
+Time: 5 to 10 minutes (depending on the Python download) · in the assistant: "Préparer le PC" (prepare the PC),
 "Configurer l’agent" (configure the agent), then "Installer et connecter" (install and connect) steps
 
 > **Warning**: this PC must **stay on all the time** and never go to sleep.
@@ -411,7 +411,7 @@ restarts by itself after an error and updates itself from the published versions
 
 ## 7. Check the connection
 
-⏱ 1 minute · in the assistant: "Installer et connecter" (install and connect) step
+Time: 1 minute · in the assistant: "Installer et connecter" (install and connect) step
 
 Go back to the dashboard. The assistant shows **En attente de l’agent…** (waiting for the agent) then, within a minute:
 
@@ -427,14 +427,14 @@ If the agent is still waiting after 2 minutes, open the assistant's troubleshoot
 
 ## 8. Invite your team and set up alerts
 
-⏱ 3 minutes · optional · in the assistant: "Inviter l’équipe" (invite the team) step
+Time: 3 minutes · optional · in the assistant: "Inviter l’équipe" (invite the team) step
 
 ### Create accounts
 
 One account per person: everyone has their own password, and their actions are signed in the activity log.
 
 1. Open **Utilisateurs** (users) from the sidebar, or with the assistant's **Créer des comptes** (create accounts) button.
-2. Click **+ Nouvel utilisateur** (new user).
+2. Click **Nouvel utilisateur** (new user).
 3. Enter the **Nom** (name) and the **Identifiant ou e-mail** (identifier or e-mail).
 4. Choose the **Rôle** (role):
    - **Administrateur** (administrator): everything, including accounts;
@@ -447,18 +447,24 @@ One account per person: everyone has their own password, and their actions are s
 
 At their first login, each person sees a welcome window with the video and what their role allows:
 
-<img src="captures/bienvenue-technicien.png" width="720" alt="Bienvenue window for a technician: the video, Ton rôle with three points, and the C’est parti button">
+<img src="captures/bienvenue-technicien.png" width="720" alt="Bienvenue window for a technician: the video, the Ton rôle (your role) card with the three things it allows, the two-factor authentication reminder and the Sécuriser mon compte (secure my account) and C’est parti (let’s go) buttons">
 
 ### Receive alerts
 
-1. Open **Réglages** (settings) from the sidebar, or with the assistant's **Régler les alertes** (set up alerts) button.
-2. Fill in **E-mail(s)** and/or **Webhook** (Teams, Discord, Slack, ntfy for your phone, and so on).
-3. Tick the events to report under **Prévenir quand…** (notify when) and choose the **Ports surveillés** (monitored ports).
-4. Click **Enregistrer** (save): the window closes.
-5. Open **Réglages** again and click **Envoyer un test** (send a test): you should receive the test message.
-   The test uses the saved settings: always save before testing.
+1. Open the **Réglages** (settings) page: from the sidebar, with the assistant's **Régler les alertes** (set up alerts)
+   button, or with the **Réglages** button of the **Alertes récentes** (recent alerts) card.
+2. In the **Où envoyer les alertes** (where to send alerts) card, fill in **E-mail(s)** and/or **Webhook** (Teams,
+   Discord, Slack, ntfy for your phone, and so on).
+3. Tick the events to report under **Prévenir quand…** (notify when), then choose the **Ports surveillés** (monitored
+   ports): **Automatique** (links to other switches and ports with a description) or **Manuel** (manual),
+   by clicking the ports.
+4. As soon as something changes, a bar appears at the bottom of the page: click **Enregistrer** (save).
+   **Annuler** (cancel) brings back the saved values. If you leave the page or log out without saving, the dashboard
+   asks you to confirm.
+5. Click **Envoyer un test** (send a test), in the **Où envoyer les alertes** card: you should receive the test message.
+   The test uses the saved settings: the button stays greyed out while there are unsaved changes.
 
-<img src="captures/alertes.png" width="720" alt="Réglages: e-mails, webhook, alert events, monitored ports, site and agent pace">
+<img src="captures/alertes.png" width="720" alt="Réglages page: where to send alerts, events to report, monitored ports, site, agent pace and automatic checks">
 
 **E-mail** alerts go through **Resend**: add Resend from the Vercel Marketplace, then redeploy.
 Without a verified domain, Resend only writes to the address of your own Resend account (default sender
@@ -468,7 +474,7 @@ Other optional variable: `DASHBOARD_URL` (link included in the alerts). Webhooks
 
 ### Finish
 
-In the assistant, click **Terminer** (finish). **You should see** the dashboard, and the **Démarrage** entry marked ✓.
+In the assistant, click **Terminer** (finish). **You should see** the dashboard, and the **Démarrage** entry marked with a check mark.
 
 ---
 
@@ -480,7 +486,7 @@ In the assistant, click **Terminer** (finish). **You should see** the dashboard,
 
 1. In your Vercel project: **Settings**, then **Environment Variables**.
 2. Add or fix `DASHBOARD_PASSWORD`, `SESSION_SECRET` or `AGENT_TOKEN` (keep **All Environments**, or at least **Production**).
-3. Redeploy (**Deployments**, **⋯**, **Redeploy**), then click **Revérifier** (check again) in the dashboard.
+3. Redeploy (**Deployments**, three-dot menu, **Redeploy**), then click **Revérifier** (check again) in the dashboard.
 
 > **Warning**: keep `SESSION_SECRET` unchanged once the installation is done: changing it logs everyone out.
 > If you change `AGENT_TOKEN`, the agent can no longer connect: download a new `agent_config.json`
@@ -558,7 +564,8 @@ so this only happens if the PC stays off for a week. Open your project on supaba
 
 Nothing to do: it updates itself, only from the versions published on the
 [Releases](https://github.com/ethanfrq/ArubaDashboardSwitch/releases) page. The bottom of the dashboard shows
-"mise à jour auto ✓" (automatic update). Details: [`agent/INSTALL-WINDOWS.md`](../agent/INSTALL-WINDOWS.md#automatic-update).
+"mise à jour auto" (automatic update) followed by a green check mark (an orange triangle if the last check
+failed). Details: [`agent/INSTALL-WINDOWS.md`](../agent/INSTALL-WINDOWS.md#automatic-update).
 
 ### The dashboard
 

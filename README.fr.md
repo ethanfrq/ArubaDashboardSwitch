@@ -4,7 +4,7 @@
 
 [![My Aruba Manager en 30 secondes : façade en direct, appareils branchés, test de câble, VLAN, console et alertes](public/media/apercu-anime.webp)](public/media/my-aruba-manager.mp4)
 
-L’animation ci-dessus montre la présentation de 30 secondes (sans son). **▶ [Télécharger la vidéo MP4](public/media/my-aruba-manager.mp4)**
+L’animation ci-dessus montre la présentation de 30 secondes (sans son). **[Télécharger la vidéo MP4](public/media/my-aruba-manager.mp4)**
 (7 Mo : sur la page GitHub qui s’ouvre, clique sur « View raw »). Elle se lit aussi dans le dashboard, dans l’assistant de démarrage.
 
 Un tableau de bord web pour les switches **HPE Aruba Networking CX** (AOS-CX) : façade en direct, débits et historique,
@@ -65,7 +65,7 @@ Il fonctionne avec les offres gratuites de Vercel et de Supabase et s’appuie s
 - Sauvegarde de la configuration en un clic.
 
 ### Administration sans toucher au code
-Tout se règle depuis la carte **Administration** et les réglages ⚙ :
+Tout se règle depuis la carte **Administration** et la page **Réglages** :
 - **Annuler une modification** : avant chaque changement, le dashboard crée un point de restauration sur le switch.
   On voit ce qui sera annulé, puis on revient en arrière en un clic (avec CONFIRMER). Pour un changement sensible
   (IP de gestion, lien vers un autre switch…), le switch **annule tout seul au bout de 5 min** si l’on ne confirme pas
@@ -85,7 +85,9 @@ Tout se règle depuis la carte **Administration** et les réglages ⚙ :
 - **Diagnostiquer un port** (étapes claires et conclusion en une phrase) et **« Un appareil ne marche pas ? »**.
 - **Bilan de santé** : configuration non sauvegardée, protections des postes, NTP, communauté SNMP par défaut,
   ports inutilisés, câbles, ports lents ou instables… avec correction en un clic.
-- **Réglages** : nom du site, fuseau horaire, rythme de l’agent, alertes.
+- **Réglages** : une page de la barre latérale, en cartes : où envoyer les alertes (avec un envoi de test), quand
+  prévenir, ports surveillés, nom du site, fuseau horaire, rythme de l’agent. La barre « Enregistrer » apparaît dès qu’un
+  champ change.
 - **Barre latérale** pour passer du tableau de bord aux outils et aux pages du compte, sur ordinateur comme sur téléphone.
 
 ### Comptes utilisateurs et rôles
@@ -159,9 +161,11 @@ Un compte par personne, chacun avec son mot de passe, et chaque action signée d
 
 ![Carte VLAN et console de gestion](docs/captures/vlan-console.png)
 
-**Réglages** : alertes par e-mail et/ou webhook, ports surveillés, seuil de température, vérification automatique des câbles.
+**Réglages** : une page en cartes pour les alertes par e-mail et/ou webhook (avec un envoi de test), les cas à signaler
+et le seuil de température, les ports surveillés (automatiques ou choisis sur une façade), le site, le rythme de l’agent
+et la vérification automatique des câbles.
 
-![Réglages des alertes](docs/captures/alertes.png)
+![Page Réglages](docs/captures/alertes.png)
 
 **Assistant de démarrage** : la vidéo, puis chaque étape de l’installation vérifiée en direct.
 
@@ -178,12 +182,12 @@ Un compte par personne, chacun avec son mot de passe, et chaque action signée d
 
 ```
 ┌──────────┐   SSH    ┌───────────────────┐ HTTPS (sortant) ┌──────────────────┐
-│  Switch  │ ◄──────► │  Agent Python     │ ──────────────► │  Vercel          │ ◄── navigateur
-│ Aruba CX │          │  (PC du réseau)   │ ◄────────────── │  page + API      │
+│  Switch  │ <──────> │  Agent Python     │ ──────────────> │  Vercel          │ <── navigateur
+│ Aruba CX │          │  (PC du réseau)   │ <────────────── │  page + API      │
 └──────────┘          └───────────────────┘    commandes    └─────────┬────────┘
-                                                                      ▲
+                                                                      ^
                                                                       │ données
-                                                                      ▼
+                                                                      v
                                                          ┌─────────────────────────┐
                                                          │  Supabase (Postgres)    │
                                                          │  tâche 5 min (pg_cron)  │
@@ -238,7 +242,7 @@ Dans le dashboard, l’**assistant de démarrage** reprend les mêmes étapes et
    Sous Windows sans `openssl`, le [guide](docs/GUIDE.md#1-déployer-sur-vercel) donne la commande PowerShell équivalente.
 2. **Ajouter Supabase** : le bouton propose de l’ajouter pendant le déploiement (offre Free, région Paris).
    Sinon : onglet **Storage** du projet Vercel, **Create Database**, **Supabase**, puis **redéploie** (onglet **Deployments**,
-   menu ⋯ du dernier déploiement, **Redeploy**). Au premier lancement, le dashboard crée ses tables et programme
+   menu aux trois points du dernier déploiement, **Redeploy**). Au premier lancement, le dashboard crée ses tables et programme
    la vérification toutes les 5 minutes dans Supabase : il n’y a aucun script à lancer.
 3. **Se connecter** avec l’identifiant **`admin`** et `DASHBOARD_PASSWORD` : l’assistant de démarrage s’ouvre.
 4. **Sécuriser le compte** dans **Mon profil** : ton propre mot de passe et la **double authentification**.
@@ -383,7 +387,7 @@ Tu peux l’utiliser, le modifier et le redistribuer, y compris dans un cadre co
 la licence, de conserver les mentions de copyright et le fichier [`NOTICE`](NOTICE), et de signaler les fichiers modifiés.
 La licence ne donne aucun droit sur les noms et marques.
 
-Les composants tiers utilisés (postgres, qrcode-generator, paramiko…) restent sous leur propre licence :
+Les composants tiers utilisés (postgres, qrcode-generator, icônes Google Material Symbols, paramiko…) restent sous leur propre licence :
 voir [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 ## Marques

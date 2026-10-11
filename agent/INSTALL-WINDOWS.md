@@ -74,7 +74,7 @@ There is nothing else to do.
 - Downloaded files are verified, and Python scripts are compiled before being installed.
 - The previous version is kept in `.sauvegarde`. If the new agent does not restart properly,
   the previous version is put back automatically and the faulty version is not retried until a new version is published.
-- The result of the last check is shown at the bottom of the dashboard ("mise à jour auto ✓").
+- The result of the last check is shown at the bottom of the dashboard ("mise à jour auto" followed by a green check mark, or an orange triangle if it failed).
 - To check right away (and reinstall both tasks): right-click `mettre-a-jour.bat`, "Run as administrator".
 
 To approve each version yourself before it is installed, set `auto_update` to `false` in `agent_config.json`,
@@ -100,7 +100,7 @@ The configuration and the stored password are kept. After that, everything is au
 
 ## What the agent does
 - sends the switch state every 10 s while the administrator dashboard is open, every 30 s for a read-only
-  screen, every 60 s otherwise (adjustable in ⚙ Réglages, 120 s at most);
+  screen, every 60 s otherwise (adjustable in Réglages, 120 s at most);
 - reads throughput, devices and CPU at each upload, link state and the switch log every 30 s
   (dashboard open), spanning tree and saved configuration every 2 min, the rest less often;
 - spaces out all these readings when the switch CPU goes above 60 % (twice as slow) or 80 % (four times as slow);

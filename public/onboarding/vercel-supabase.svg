@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" role="img" aria-labelledby="vercel-supabase-t vercel-supabase-d" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
 <title id="vercel-supabase-t">Ajouter la base Supabase depuis Vercel</title>
-<desc id="vercel-supabase-d">Dans le projet Vercel : 1 : onglet Storage. 2 : Supabase, bouton Create. 3 : plan Free. 4 : région Paris (cdg1 / eu-west-3), puis Continue. 5 : Connect Project, environnements cochés, bouton Connect. 6 : redéploie le projet : Deployments, menu ⋯, Redeploy.</desc>
+<desc id="vercel-supabase-d">Dans le projet Vercel : 1 : onglet Storage. 2 : Supabase, bouton Create. 3 : plan Free. 4 : région Paris (cdg1 / eu-west-3), puis Continue. 5 : Connect Project, environnements cochés, bouton Connect. 6 : redéploie le projet : Deployments, menu aux trois points, Redeploy.</desc>
 <rect x="1" y="1" width="718" height="398" rx="16" fill="#fcfcfb" stroke="#e2e1da" stroke-width="2"/>
 <!-- Projet Vercel : onglet Storage, Supabase -->
 <rect x="24" y="24" width="200" height="256" rx="10" fill="#ffffff"/>

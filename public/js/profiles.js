@@ -161,7 +161,7 @@
     if (arr(s?.watchPorts).length || s?.notify?.portDown === false) return '';
     const fresh = nums.filter((n) => descOf(n) && !portOf(n)?.desc);
     if (!fresh.length) return '';
-    return `⚠ Ports surveillés en mode Auto : chaque port décrit est surveillé, l’arrêt de son appareil enverra une alerte (${pl(fresh, 'port', 'ports')} ${portsText(fresh)}). Choisis les ports surveillés dans Réglages.`;
+    return { warn: `Ports surveillés en mode Auto : chaque port décrit est surveillé, l’arrêt de son appareil enverra une alerte (${pl(fresh, 'port', 'ports')} ${portsText(fresh)}). Choisis les ports surveillés dans Réglages.` };
   }
 
   // Ouvre la confirmation (lignes exactes) après avoir écarté les liens vers d'autres switches, et le port du PC de
@@ -197,11 +197,11 @@
       p.desc != null && p.desc.includes('{n}') && nums.length > 1 && '{n} est remplacé par le numéro de chaque port.',
       p.enable === false && 'Les appareils branchés perdront le réseau.',
       p.vlan != null && 'Les appareils branchés changeront de réseau (ils devront parfois renouveler leur IP).',
-      trunk.length && `⚠ ${pl(trunk, 'Le port', 'Les ports')} ${portsText(trunk)} ${pl(trunk, 'est', 'sont')} en mode trunk : ${pl(trunk, 'il passera', 'ils passeront')} en mode access sur le VLAN ${p.vlan}.`,
+      trunk.length && { warn: `${pl(trunk, 'Le port', 'Les ports')} ${portsText(trunk)} ${pl(trunk, 'est', 'sont')} en mode trunk : ${pl(trunk, 'il passera', 'ils passeront')} en mode access sur le VLAN ${p.vlan}.` },
       p.desc != null && watchWarn(nums, (n) => descFor(p.desc, n)),
       up.length && `Exclus (lien vers un autre switch) : ${portsText(up)}.`,
       ag.length && `${pl(ag, 'Exclu', 'Exclus')} (PC de l’agent) : ${portsText(ag)}.`,
-    ].filter(Boolean).join(' ');
+    ]; // morceaux du texte (confirmCmd : richText)
     confirmCmd(`Appliquer le profil « ${p.name} » ?`, text, cmd, `Profil ${p.name} : ${pl(nums, 'port', 'ports')} ${portsText(nums)}`,
       { ports: nums.map((n) => `1/1/${n}`), kind: 'profile' });
   }
@@ -306,7 +306,7 @@
     showList();
     if (!dlg.open) dlg.showModal();
   }
-  addTool({ id: 'profiles', label: 'Profils de port', icon: '▤', title: 'Crée et modifie les profils (poste élève, imprimante, borne Wi-Fi…) appliqués en un clic aux ports', open: openManager });
+  addTool({ id: 'profiles', label: 'Profils de port', icon: icon('tune', { size: 16 }), title: 'Crée et modifie les profils (poste élève, imprimante, borne Wi-Fi…) appliqués en un clic aux ports', open: openManager });
 
   function showList(err) {
     if (err !== undefined) listErr = err;
@@ -324,7 +324,7 @@
         ${isDefault() ? '' : `<button type="button" class="btn${resetting ? ' dangerous' : ''}" data-pf="reset">${resetting ? 'Confirmer : profils par défaut' : 'Revenir aux profils par défaut'}</button>`}
         <span class="prof-grow"></span>
         <button type="button" class="btn" data-pf="close">Fermer</button>
-        <button type="button" class="btn primary" data-pf="new"${list.length >= MAX ? ` disabled title="${MAX} profils au maximum"` : ''}>+ Nouveau profil</button>
+        <button type="button" class="btn primary" data-pf="new"${list.length >= MAX ? ` disabled title="${MAX} profils au maximum"` : ''}>${icon('add', { size: 16 })}Nouveau profil</button>
       </div>`);
   }
   const triRow = (k, label, help, [on, off] = ['Activer', 'Désactiver']) => `<div class="field prof-tri"><span class="label" id="pfL-${k}">${label}</span>

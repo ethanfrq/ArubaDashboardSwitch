@@ -57,7 +57,7 @@ dialog pre.undo-diff { margin: 0; max-height: 260px; }
   ADMIN.undoList = () => available().map((e) => ({ name: e.name, t: Number(e.t), id: e.id, label: labelOf(e), status: e.status }));
 
   // ---------------------------------------------------------------- outil « Annuler une modification »
-  const tool = { id: 'undo', label: 'Annuler une modification', icon: '↶', open: openDialog,
+  const tool = { id: 'undo', label: 'Annuler une modification', icon: icon('undo', { size: 16 }), open: openDialog,
     title: 'Revenir à la configuration d’avant un changement fait depuis le dashboard' };
   addTool(tool);
   function updateBadge() {

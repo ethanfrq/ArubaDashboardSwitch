@@ -9,7 +9,7 @@
   const PER_PORT = 4;   // adresses au plus par port (PC et machine virtuelle, téléphone IP et PC derrière…)
   const PING_MAX = 30000, PING_RELOAD = 2000; // ping : attente maximale, relecture de l'état pendant l'attente (ms)
   const NEED_AGENT = 'Allumer un PC à distance demande l’agent 1.4.0 ou plus. Il se met à jour tout seul (mise à jour automatique, quelques minutes) : réessaie ensuite.';
-  const ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>';
+  const ICON = icon('power_settings_new', { size: 16 }); // bouton « Allumer l’appareil » et outil
 
   // ---------------------------------------------------------------- outils
   const obj = (x) => (x && typeof x === 'object' && !Array.isArray(x) ? x : {});

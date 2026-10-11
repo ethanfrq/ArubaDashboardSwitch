@@ -68,13 +68,20 @@
   function changed() { mark(); renderBar(); }
   function toggle(port) { if (sel.has(port)) sel.delete(port); else sel.add(port); changed(); }
   function clear() { if (!sel.size) return; sel.clear(); changed(); }
-  // Surligne les ports sélectionnés (façade et tableau), sans toucher au reste.
+  // Surligne les ports sélectionnés (façade et tableau), sans toucher au reste. Pour les lecteurs d'écran, les prises
+  // de la façade (aria-pressed) disent si elles sont dans la sélection tant qu'elle est utilisée, puis de nouveau si
+  // leur volet est ouvert (classe sel).
   function mark() {
+    const bulk = mode || sel.size > 0;
     for (const root of [$('#faceplate'), $('#portRows')]) {
       if (!root) continue;
       for (const el of root.querySelectorAll('[data-port]')) {
         const on = sel.has(el.dataset.port);
         if (el.classList.contains('bulk-sel') !== on) el.classList.toggle('bulk-sel', on);
+        if (el.hasAttribute('aria-pressed')) {
+          const pressed = String(bulk ? on : el.classList.contains('sel'));
+          if (el.getAttribute('aria-pressed') !== pressed) el.setAttribute('aria-pressed', pressed);
+        }
       }
     }
   }
@@ -85,14 +92,14 @@
       el.textContent = 'Sélection multiple : touche les ports à ajouter ou retirer, puis choisis l’action en bas de l’écran.';
     } else if (baseNote != null) { el.textContent = baseNote; baseNote = null; }
   }
-  const tool = { id: 'bulk', label: 'Sélection multiple', icon: '☑',
+  const tool = { id: 'bulk', label: 'Sélection multiple', icon: icon('select_check_box', { size: 16 }),
     title: 'Sélectionne plusieurs ports d’un simple clic (pratique sur mobile) pour les modifier ensemble. Sur ordinateur : Maj+clic ou Ctrl+clic sur les ports.',
     open: () => setMode(!mode) };
   function setMode(on) {
     mode = Boolean(on) && canOperate();
     tool.badge = mode ? 'activée' : '';
     renderTools(); note(); changed();
-    if (mode) toast('Sélection multiple activée', { sub: 'Touche les ports à sélectionner. Termine avec × dans la barre du bas.', timeout: 3500 });
+    if (mode) toast('Sélection multiple activée', { sub: 'Touche les ports à sélectionner. Pour finir : la croix de la barre du bas.', timeout: 3500 });
   }
   addTool(tool);
 
@@ -140,7 +147,7 @@
   css.textContent = `
 .jack.bulk-sel { outline: 2px solid var(--info); outline-offset: 2px; }
 .jack.sel.bulk-sel { outline-color: var(--accent); }
-.jack.bulk-sel::before { content: "✓"; position: absolute; top: -7px; left: -7px; z-index: 1; width: 16px; height: 16px; border-radius: 50%; background: var(--info); color: #fff; font: 700 10px/16px system-ui, sans-serif; text-align: center; box-shadow: 0 0 0 2px var(--faceplate); }
+.jack.bulk-sel::before { content: ""; position: absolute; top: -7px; left: -7px; z-index: 1; width: 16px; height: 16px; border-radius: 50%; background: var(--info) url("${iconURL('check', '#fff')}") center / 12px no-repeat; box-shadow: 0 0 0 2px var(--faceplate); }
 table.ports tr.bulk-sel td { background: var(--info-soft); }
 table.ports tr.bulk-sel td:first-child { box-shadow: inset 3px 0 0 var(--info); }
 .bulk-bar { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 30; width: min(1100px, calc(100% - 16px));
@@ -195,10 +202,10 @@ body.bulk-on .drawer { bottom: 84px; }
         ${wake ? btn('wake', 'Allumer', '', 'Allume les appareils connus de ces ports (Wake-on-LAN)') : ''}
         ${btn('cable', 'Tester les câbles', '', 'Seulement les ports cuivre sans lien : aucun appareil n’est coupé')}
         <span class="bulk-sep" aria-hidden="true"></span>
-        <button type="button" class="btn small" data-bulk="add-free" title="Ajoute les ports sans lien (hors liens vers d’autres switches et port du PC de l’agent)">+ ports sans lien</button>
-        <button type="button" class="btn small" data-bulk="add-up" title="Ajoute les ports avec un lien établi (hors liens vers d’autres switches et port du PC de l’agent)">+ ports actifs</button>
+        <button type="button" class="btn small" data-bulk="add-free" title="Ajoute les ports sans lien (hors liens vers d’autres switches et port du PC de l’agent)">${icon('add', { size: 14 })}<span class="sr">Ajouter les </span>ports sans lien</button>
+        <button type="button" class="btn small" data-bulk="add-up" title="Ajoute les ports avec un lien établi (hors liens vers d’autres switches et port du PC de l’agent)">${icon('add', { size: 14 })}<span class="sr">Ajouter les </span>ports actifs</button>
       </div>
-      <div class="bulk-end">${n ? '<button type="button" class="btn small" data-bulk="clear">Vider</button>' : ''}<button type="button" class="btn small bulk-x" data-bulk="close" title="Terminer la sélection multiple" aria-label="Terminer la sélection multiple">×</button></div>`);
+      <div class="bulk-end">${n ? '<button type="button" class="btn small" data-bulk="clear">Vider</button>' : ''}<button type="button" class="btn small bulk-x" data-bulk="close" title="Terminer la sélection multiple" aria-label="Terminer la sélection multiple">${icon('close', { size: 16 })}</button></div>`);
   }
 
   function onBar(e) {
@@ -224,7 +231,7 @@ body.bulk-on .drawer { bottom: 84px; }
   }
   const upWarn = (nums, what) => {
     const up = nums.filter((n) => isUplink(portOf(n)));
-    return up.length ? `⚠ ${pl(up, 'Le port', 'Les ports')} ${portsText(up)} ${pl(up, 'relie', 'relient')} un autre switch : ${what}` : '';
+    return up.length ? { warn: `${pl(up, 'Le port', 'Les ports')} ${portsText(up)} ${pl(up, 'relie', 'relient')} un autre switch : ${what}` } : '';
   };
   // Ports du PC qui fait tourner l'agent (règle LLDP de lib/danger.js, nom court comparé comme health.js).
   function agentPorts() {
@@ -249,7 +256,7 @@ body.bulk-on .drawer { bottom: 84px; }
     if (arr(s?.watchPorts).length || s?.notify?.portDown === false) return '';
     const fresh = nums.filter((n) => descOf(n) && !portOf(n)?.desc);
     if (!fresh.length) return '';
-    return `⚠ Ports surveillés en mode Auto : chaque port décrit est surveillé, l’arrêt de son appareil enverra une alerte (${pl(fresh, 'port', 'ports')} ${portsText(fresh)}). Choisis les ports surveillés dans Réglages.`;
+    return { warn: `Ports surveillés en mode Auto : chaque port décrit est surveillé, l’arrêt de son appareil enverra une alerte (${pl(fresh, 'port', 'ports')} ${portsText(fresh)}). Choisis les ports surveillés dans Réglages.` };
   }
   // Confirmation (lignes exactes), sauf si la commande dépasse ce qu'accepte /api/command.
   function ask(title, text, cmd, label, opts) {
@@ -266,7 +273,7 @@ body.bulk-on .drawer { bottom: 84px; }
     if (!nums.length) return;
     const text = [on ? 'Les appareils branchés retrouvent le réseau.' : 'Les appareils branchés perdront le réseau.',
       !on && upWarn(nums, 'tout ce qui passe par ce lien sera coupé.'),
-      done.length && `Déjà ${on ? 'activé' : 'désactivé'}${done.length > 1 ? 's' : ''}, ignoré${done.length > 1 ? 's' : ''} : ${portsText(done)}.`, agent].filter(Boolean).join(' ');
+      done.length && `Déjà ${on ? 'activé' : 'désactivé'}${done.length > 1 ? 's' : ''}, ignoré${done.length > 1 ? 's' : ''} : ${portsText(done)}.`, agent]; // morceaux du texte (confirmCmd : richText)
     ask(`${on ? 'Activer' : 'Désactiver'} ${cnt(nums)} ?`, text, bulkCmd(on ? 'enable' : 'disable', nums),
       named(nums, on ? 'activé' : 'désactivé', on ? 'activés' : 'désactivés'), { ports: asPorts(nums), kind: 'bulk' });
   }
@@ -278,7 +285,7 @@ body.bulk-on .drawer { bottom: 84px; }
     const [nums, agent] = dropAgent(enabled, 'le redémarrer');
     if (!nums.length) return;
     const text = ['Coupure d’environ 3 secondes sur chaque port.', upWarn(nums, 'tout ce qui passe par ce lien sera coupé quelques secondes.'),
-      off.length && `Désactivé${off.length > 1 ? 's' : ''}, ignoré${off.length > 1 ? 's' : ''} : ${portsText(off)}.`, agent].filter(Boolean).join(' ');
+      off.length && `Désactivé${off.length > 1 ? 's' : ''}, ignoré${off.length > 1 ? 's' : ''} : ${portsText(off)}.`, agent];
     ask(`Redémarrer ${cnt(nums)} ?`, text, bulkCmd('bounce', nums), named(nums, 'redémarré', 'redémarrés'), { ports: asPorts(nums), kind: 'bulk' });
   }
   function applyVlan(vid) {
@@ -292,8 +299,8 @@ body.bulk-on .drawer { bottom: 84px; }
     const [nums, agent] = dropAgent(change, 'changer son VLAN');
     if (!nums.length) return;
     const text = ['Les appareils branchés changeront de réseau (ils devront parfois renouveler leur IP).',
-      upWarn(nums, 'le changer de VLAN coupe tout ce qui passe par ce lien.'), skipped.length && `Ignorés : ${skipped.join(' ; ')}.`, agent].filter(Boolean).join(' ');
-    ask(`Mettre ${cnt(nums)} dans le VLAN ${vid} ?`, text, bulkCmd('vlan', nums, vid), `${pl(nums, 'Port', 'Ports')} ${portsText(nums)} → VLAN ${vid}`,
+      upWarn(nums, 'le changer de VLAN coupe tout ce qui passe par ce lien.'), skipped.length && `Ignorés : ${skipped.join(' ; ')}.`, agent];
+    ask(`Mettre ${cnt(nums)} dans le VLAN ${vid} ?`, text, bulkCmd('vlan', nums, vid), `${pl(nums, 'Port', 'Ports')} ${portsText(nums)} dans le VLAN ${vid}`,
       { ports: asPorts(nums), kind: 'bulk' });
   }
   function applyDesc(tpl) {
@@ -302,7 +309,7 @@ body.bulk-on .drawer { bottom: 84px; }
     if (!nums.length) return;
     const t = cliText(tpl);
     const text = [t ? `Modèle « ${t} »${t.includes('{n}') ? ' ({n} = numéro de chaque port)' : ''}.` : 'Les descriptions seront effacées.',
-      watchWarn(nums, (n) => descFor(t, n))].filter(Boolean).join(' ');
+      watchWarn(nums, (n) => descFor(t, n))];
     ask(`Description de ${cnt(nums)}`, text, bulkCmd('desc', nums, t), `Description ${pl(nums, 'port', 'ports')} ${portsText(nums)}`, { ports: asPorts(nums), kind: 'bulk' });
   }
   function wake() {

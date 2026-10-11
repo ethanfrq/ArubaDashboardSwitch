@@ -249,7 +249,7 @@ dialog .bk-pre { padding: 10px; white-space: pre; }
       dlg.className = 'bk-dlg';
       dlg.setAttribute('aria-labelledby', 'bkTitle');
       dlg.innerHTML = `<div class="bk-head"><h3 id="bkTitle">Sauvegardes de la configuration</h3>
-        <button class="btn icon" type="button" data-bk="close" aria-label="Fermer" title="Fermer">×</button></div>
+        <button class="btn icon" type="button" data-bk="close" aria-label="Fermer" title="Fermer">${icon('close')}</button></div>
         <p class="note" style="margin:0">Copie automatique de la configuration du switch toutes les 6 h et quelques minutes après chaque changement fait depuis le dashboard. Une version n’est gardée que si quelque chose a changé (60 versions au plus). Les mots de passe, clés et communautés SNMP sont remplacés par « &lt;masqué&gt; » (sauf les communautés par défaut « public » et « private », gardées pour que le bilan de santé les signale) : un fichier téléchargé ne peut donc pas être recollé tel quel sur le switch.</p>
         <div id="bkTop"></div><div id="bkList"></div><div id="bkView" class="bk-view"></div>
         <div class="section bk-cp" id="bkCp"></div>`;
@@ -436,7 +436,7 @@ dialog .bk-pre { padding: 10px; white-space: pre; }
           ${cp.rows.map((r) => `<tr><td class="mono">${esc(r.name)}</td><td>${esc(r.type || '-')}</td><td class="num">${esc(r.t ? when(r.t) : r.date || '-')}</td>
             <td class="r"><button class="btn small danger" type="button" data-bk-rb="${esc(r.name)}">Revenir à ce point</button></td></tr>`).join('')}
         </tbody></table></div>
-        <details><summary class="note">Sortie brute du switch</summary><pre class="bk-pre">${esc(cp.raw)}</pre></details>`;
+        <details><summary class="note">${icon('expand_more', { size: 16, cls: 'chev' })}Sortie brute du switch</summary><pre class="bk-pre">${esc(cp.raw)}</pre></details>`;
       } else if (!cp.error) {
         body += cp.raw ? `<p class="note" style="margin:0">Présentation en tableau impossible : voici la réponse du switch.</p><pre class="bk-pre">${esc(cp.raw)}</pre>`
           : '<p class="note" style="margin:0">Le switch n’a aucun point de restauration.</p>';
@@ -448,7 +448,7 @@ dialog .bk-pre { padding: 10px; white-space: pre; }
   }
 
   // ---------------------------------------------------------------- branchements
-  addTool({ id: 'backup', label: 'Sauvegardes de la configuration', icon: '🗂', title: 'Sauvegardes de la configuration : historique, différences, téléchargement, points de restauration', open });
+  addTool({ id: 'backup', label: 'Sauvegardes de la configuration', icon: icon('inventory_2', { size: 16 }), title: 'Sauvegardes de la configuration : historique, différences, téléchargement, points de restauration', open });
   HOOK.poll.push(() => { checkWatch(); if (dlg?.open) draw(); });
   HOOK.role.push((ro) => { if (ro && dlg?.open) dlg.close(); });
 })();

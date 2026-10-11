@@ -13,7 +13,7 @@ Ce guide sert de référence, avec plus de détails et des solutions aux problè
 
 [![My Aruba Manager en 30 secondes : façade en direct, appareils branchés, test de câble, VLAN, console et alertes](../public/media/apercu-anime.webp)](../public/media/my-aruba-manager.mp4)
 
-L’animation ci-dessus montre la présentation de 30 secondes (sans son). **▶ [Télécharger la vidéo MP4](../public/media/my-aruba-manager.mp4)**
+L’animation ci-dessus montre la présentation de 30 secondes (sans son). **[Télécharger la vidéo MP4](../public/media/my-aruba-manager.mp4)**
 (7 Mo : sur la page GitHub qui s’ouvre, clique sur « View raw »). Elle se lit aussi dans le dashboard, dans l’assistant de démarrage.
 
 Ce que montre la vidéo : la façade du switch en direct, port par port ; le tableau « qui est branché où »
@@ -67,7 +67,7 @@ Coche chaque ligne avant de commencer :
 
 ## 1. Déployer sur Vercel
 
-⏱ 5 minutes
+Durée : 5 minutes
 
 ### Prépare les trois valeurs
 
@@ -124,7 +124,7 @@ Note son adresse, du type `https://mon-projet.vercel.app` : c’est l’adresse 
 
 ## 2. Ajouter Supabase et redéployer
 
-⏱ 3 minutes · **à faire seulement si Supabase n’a pas été ajouté pendant le déploiement**
+Durée : 3 minutes · **à faire seulement si Supabase n’a pas été ajouté pendant le déploiement**
 
 Pour vérifier : dans ton projet Vercel, ouvre l’onglet **Storage**. Si une base Supabase y apparaît déjà,
 passe à l’[étape 3](#3-première-connexion-et-assistant).
@@ -136,7 +136,7 @@ passe à l’[étape 3](#3-première-connexion-et-assistant).
 3. Garde l’offre **Free**, choisis la région **Paris** (cdg1, eu-west-3), puis **Continue**.
 4. **Connect Project** : relie la base à ton projet, avec l’environnement **Production** coché, puis **Connect**.
    Vercel ajoute tout seul les variables de connexion (dont `POSTGRES_URL`) : il n’y a rien à copier.
-5. **Redéploie** : onglet **Deployments**, menu **⋯** du dernier déploiement, **Redeploy**.
+5. **Redéploie** : onglet **Deployments**, menu aux trois points du dernier déploiement, **Redeploy**.
 
 **Tu dois voir** un nouveau déploiement terminé (pastille verte **Ready**).
 
@@ -148,19 +148,19 @@ dans Supabase. Il n’y a aucun script à lancer.
 
 ## 3. Première connexion et assistant
 
-⏱ 2 minutes
+Durée : 2 minutes
 
 Ouvre l’adresse de ton dashboard (`https://…vercel.app`).
 
 **Si la page affiche « Installation à terminer »**, il manque quelque chose. La carte commence par le lien
-**Voir la présentation (30 s)**, puis liste chaque point avec ✓ ou ✗, et un court tutoriel pour chaque ✗ :
+**Voir la présentation (30 s)**, puis liste chaque point avec son état (**OK**, ou ce qui ne va pas), et un court tutoriel pour chaque point à corriger :
 
 <img src="captures/installation-incomplete.png" width="720" alt="Écran Installation à terminer : le lien vers la présentation en vidéo, la base de données absente est marquée d’une croix et les variables présentes d’une coche, avec le tutoriel pour relier Supabase, le rappel de redéployer et le bouton Revérifier">
 
-- **Base de données** ✗ : fais l’[étape 2](#2-ajouter-supabase-et-redéployer).
-- **Une variable** ✗ (`SESSION_SECRET`, `AGENT_TOKEN` ou `DASHBOARD_PASSWORD`) : ajoute-la dans Vercel
+- **Base de données** marquée **Absente** ou **Injoignable** : fais l’[étape 2](#2-ajouter-supabase-et-redéployer).
+- **Une variable** marquée **Manquante** (`SESSION_SECRET`, `AGENT_TOKEN` ou `DASHBOARD_PASSWORD`) : ajoute-la dans Vercel
   (voir [« Une variable manque »](#une-variable-manque-ou-est-fausse) dans le dépannage).
-- Redéploie le projet (**Deployments**, **⋯**, **Redeploy**), puis clique sur **Revérifier**.
+- Redéploie le projet (**Deployments**, menu aux trois points, **Redeploy**), puis clique sur **Revérifier**.
 
 La page ne montre jamais la valeur d’une variable, seulement son nom.
 
@@ -180,7 +180,7 @@ Le lien **Voir la présentation (30 s)** rouvre la vidéo si tu veux la revoir.
 
 - Clique sur **Commencer**. L’assistant reprend les étapes 3 à 8 de ce guide, numérotées à sa façon :
   de 1 (**Installation**) à 7 (**Inviter l’équipe**). Ce guide cite donc chaque étape de l’assistant par son nom.
-- Chaque étape affiche son état, vérifié en direct : fait ✓, à faire, ou en attente.
+- Chaque étape affiche son état, vérifié en direct : **Fait**, **À faire** ou **En attente**.
 - **Précédent** et **Suivant** permettent de naviguer ; les étapes déjà faites restent consultables.
 - **Plus tard** ferme l’assistant. Tu le retrouves à tout moment dans la barre latérale : entrée **Démarrage**
   (avec ta progression, par exemple « 3/7 »).
@@ -203,7 +203,7 @@ Sans cela, il réessaie tout seul au plus tard une heure après.
 
 ## 4. Sécuriser ton compte
 
-⏱ 3 minutes · dans l’assistant : étape « Sécuriser ton compte »
+Durée : 3 minutes · dans l’assistant : étape « Sécuriser ton compte »
 
 Le dashboard est accessible depuis internet : ton mot de passe et la double authentification le protègent.
 
@@ -228,11 +228,11 @@ Le dashboard est accessible depuis internet : ton mot de passe et la double auth
 
 <img src="captures/profil.png" width="720" alt="Page Mon profil : informations, mot de passe personnel choisi (celui de Vercel reste valable en secours), double authentification activée, début de la carte Sessions">
 
-**Tu dois voir** la double authentification marquée comme active, et les deux points cochés ✓ dans l’assistant.
+**Tu dois voir** la double authentification marquée comme active, et les deux points marqués **Fait** et **Activée** dans l’assistant.
 
 ## 5. Préparer le switch
 
-⏱ 2 minutes · dans l’assistant : étape « Préparer le switch »
+Durée : 2 minutes · dans l’assistant : étape « Préparer le switch »
 
 L’agent se connecte au switch en **SSH**. Il te faut :
 
@@ -305,7 +305,7 @@ l’agent connecté. Deux façons d’y accéder :
 
 ## 6. Installer l’agent sur le PC Windows
 
-⏱ 5 à 10 minutes (selon le téléchargement de Python) · dans l’assistant : étapes « Préparer le PC »,
+Durée : 5 à 10 minutes (selon le téléchargement de Python) · dans l’assistant : étapes « Préparer le PC »,
 « Configurer l’agent » puis « Installer et connecter »
 
 > **Attention** : ce PC doit rester **allumé en permanence** et ne jamais se mettre en veille.
@@ -407,7 +407,7 @@ redémarre tout seul en cas d’erreur et se met à jour tout seul à partir des
 
 ## 7. Vérifier la connexion
 
-⏱ 1 minute · dans l’assistant : étape « Installer et connecter »
+Durée : 1 minute · dans l’assistant : étape « Installer et connecter »
 
 Reviens dans le dashboard. L’assistant affiche **En attente de l’agent…** puis, en moins d’une minute :
 
@@ -423,14 +423,14 @@ Si l’agent reste en attente plus de 2 minutes, ouvre le dépannage de l’assi
 
 ## 8. Inviter l’équipe et régler les alertes
 
-⏱ 3 minutes · facultatif · dans l’assistant : étape « Inviter l’équipe »
+Durée : 3 minutes · facultatif · dans l’assistant : étape « Inviter l’équipe »
 
 ### Créer des comptes
 
 Un compte par personne : chacun a son mot de passe, et ses actions sont signées dans le journal d’activité.
 
 1. Ouvre **Utilisateurs** (barre latérale, ou bouton **Créer des comptes** de l’assistant).
-2. Clique sur **+ Nouvel utilisateur**.
+2. Clique sur **Nouvel utilisateur**.
 3. Indique le **Nom** et l’**Identifiant ou e-mail**.
 4. Choisis le **Rôle** :
    - **Administrateur** : tout, y compris les comptes ;
@@ -443,18 +443,23 @@ Un compte par personne : chacun a son mot de passe, et ses actions sont signées
 
 À sa première connexion, chaque personne voit une fenêtre de bienvenue avec la vidéo et ce que son rôle permet :
 
-<img src="captures/bienvenue-technicien.png" width="720" alt="Fenêtre Bienvenue pour un technicien : la vidéo, Ton rôle avec trois points, et le bouton C’est parti">
+<img src="captures/bienvenue-technicien.png" width="720" alt="Fenêtre Bienvenue pour un technicien : la vidéo, la carte Ton rôle avec les trois actions permises, le rappel de la double authentification et les boutons Sécuriser mon compte et C’est parti">
 
 ### Recevoir les alertes
 
-1. Ouvre **Réglages** (barre latérale, ou bouton **Régler les alertes** de l’assistant).
-2. Remplis **E-mail(s)** et/ou **Webhook** (Teams, Discord, Slack, ntfy pour le téléphone…).
-3. Coche les cas à signaler dans **Prévenir quand…** et choisis les **Ports surveillés**.
-4. Clique sur **Enregistrer** (la fenêtre se ferme).
-5. Rouvre **Réglages** et clique sur **Envoyer un test** : tu dois recevoir le message de test.
-   Le test utilise les réglages enregistrés : enregistre toujours avant de tester.
+1. Ouvre la page **Réglages** : dans la barre latérale, avec le bouton **Régler les alertes** de l’assistant, ou avec
+   le bouton **Réglages** de la carte **Alertes récentes**.
+2. Dans la carte **Où envoyer les alertes**, remplis **E-mail(s)** et/ou **Webhook** (Teams, Discord, Slack, ntfy pour
+   le téléphone…).
+3. Coche les cas à signaler dans **Prévenir quand…**, puis choisis les **Ports surveillés** : **Automatique** (liens
+   vers d’autres switches et ports avec une description) ou **Manuel**, en cliquant sur les ports.
+4. Dès le premier changement, une barre apparaît en bas de la page : clique sur **Enregistrer**
+   (**Annuler** remet les valeurs enregistrées). Si tu quittes la page ou te déconnectes sans enregistrer, le dashboard
+   te demande confirmation.
+5. Clique sur **Envoyer un test**, dans la carte **Où envoyer les alertes** : tu dois recevoir le message de test.
+   Le test utilise les réglages enregistrés : le bouton reste grisé tant qu’il reste des changements à enregistrer.
 
-<img src="captures/alertes.png" width="720" alt="Réglages : e-mails, webhook, cas d’alerte, ports surveillés, site et rythme de l’agent">
+<img src="captures/alertes.png" width="720" alt="Page Réglages : où envoyer les alertes, cas à signaler, ports surveillés, site, rythme de l’agent et vérifications automatiques">
 
 Les alertes par **e-mail** passent par **Resend** : ajoute Resend depuis le Marketplace Vercel, puis redéploie.
 Sans domaine vérifié, Resend n’écrit qu’à l’adresse de ton propre compte Resend (expéditeur par défaut
@@ -464,7 +469,7 @@ Autre variable facultative : `DASHBOARD_URL` (lien inclus dans les alertes). Les
 
 ### Terminer
 
-Dans l’assistant, clique sur **Terminer**. **Tu dois voir** le tableau de bord, et l’entrée **Démarrage** marquée ✓.
+Dans l’assistant, clique sur **Terminer**. **Tu dois voir** le tableau de bord, et l’entrée **Démarrage** marquée d’une coche.
 
 ---
 
@@ -476,7 +481,7 @@ Dans l’assistant, clique sur **Terminer**. **Tu dois voir** le tableau de bord
 
 1. Dans ton projet Vercel : **Settings**, puis **Environment Variables**.
 2. Ajoute ou corrige `DASHBOARD_PASSWORD`, `SESSION_SECRET` ou `AGENT_TOKEN` (garde **All Environments**, ou au moins **Production**).
-3. Redéploie (**Deployments**, **⋯**, **Redeploy**), puis clique sur **Revérifier** dans le dashboard.
+3. Redéploie (**Deployments**, menu aux trois points, **Redeploy**), puis clique sur **Revérifier** dans le dashboard.
 
 > **Attention** : garde `SESSION_SECRET` tel quel une fois l’installation faite : le changer déconnecte tout le monde.
 > Si tu changes `AGENT_TOKEN`, l’agent ne peut plus se connecter : télécharge un nouveau `agent_config.json`
@@ -554,7 +559,7 @@ cela n’arrive que si le PC reste éteint une semaine. Ouvre ton projet sur sup
 
 Rien à faire : il se met à jour tout seul, uniquement à partir des versions publiées sur la page
 [Releases](https://github.com/ethanfrq/ArubaDashboardSwitch/releases). Le bas du dashboard affiche
-« mise à jour auto ✓ ». Détails : [`agent/INSTALLATION-WINDOWS.md`](../agent/INSTALLATION-WINDOWS.md#mise-à-jour-automatique).
+« mise à jour auto » suivi d’une coche verte (un triangle orange si la dernière vérification a échoué). Détails : [`agent/INSTALLATION-WINDOWS.md`](../agent/INSTALLATION-WINDOWS.md#mise-à-jour-automatique).
 
 ### Le dashboard
 

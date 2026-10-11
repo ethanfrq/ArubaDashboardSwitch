@@ -354,7 +354,7 @@
     const pl = r.port ? planOf(r.port) : null;
     return [r.name, r.mac, r.mac.replace(/:/g, ''), r.ip, r.host, r.port && `port ${portNum(r.port)}`, pl?.jack, pl?.room].filter(Boolean).join(' ').toLowerCase();
   }
-  const portHistory = (r) => (r.ports.length > 1 ? `Historique des ports : ${r.ports.map(([p, t]) => `${portNum(p)} (${fmtDate(t, true)})`).join(' → ')}`
+  const portHistory = (r) => (r.ports.length > 1 ? `Historique des ports : ${r.ports.map(([p, t]) => `${portNum(p)} (${fmtDate(t, true)})`).join(', puis ')}`
     : r.ports.length ? `Vu d’abord sur le port ${portNum(r.ports[0][0])} (${fmtDate(r.ports[0][1], true)})` : '');
   function dirRow(r) {
     const pn = r.port ? portNum(r.port) : null, hist = portHistory(r), pl = r.port ? planOf(r.port) : null;
@@ -616,8 +616,7 @@
   }
 
   // ---------------------------------------------------------------- outils et rafraîchissement
-  const ICON_BOOK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h5"/></svg>';
-  const ICON_PRINT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
+  const ICON_BOOK = icon('devices', { size: 16 }), ICON_PRINT = icon('print', { size: 16 });
   addTool({ id: 'devices', label: 'Annuaire des appareils', icon: ICON_BOOK, title: 'Nommer les appareils, voir où et quand chacun a été vu', open: openDirectory });
   addTool({ id: 'devices-export', label: 'Exporter et imprimer', icon: ICON_PRINT, title: 'Tableau des ports pour Excel, annuaire, plan de brassage à imprimer', open: openExport });
 

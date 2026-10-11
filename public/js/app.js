@@ -1,5 +1,5 @@
 // My Aruba Manager : application du dashboard (chargée par index.html avant les extensions de public/js).
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '1.9.1';
 const AGENT_LATEST = '1.4.0'; // dernière version de l'agent publiée avec ce dashboard
 const verNum = (v) => String(v).split('.').reduce((a, x) => a * 1000 + (Number(x) || 0), 0);
 const $ = (s) => document.querySelector(s);
@@ -29,6 +29,7 @@ const IDLE_AFTER = 120;
 let S = null, LOG = [], ALERTS = [], NOW = 0, selected = null, filter = 'all', timer = null, lastTouch = 0;
 let LV = '', AV = ''; // versions du journal et des alertes déjà reçues : le serveur ne les renvoie que si elles changent
 let SETUP = null; // avant connexion : { ok, db, missing, fresh } (installation à terminer, première connexion)
+let EPOCH = 0; // augmente à chaque retour à l'écran de connexion : une lecture de l'état partie avant est ignorée
 
 // ================================================================ extensions (public/js/*.js)
 // Chaque fonction d'administration vit dans son propre fichier et s'accroche ici :
@@ -91,6 +92,7 @@ function stInfo(p) {
 
 // ================================================================ notifications & chargement
 const TOASTS = {};
+const TOAST_IC = { success: 'check_circle', error: 'error', warn: 'warning', info: 'info' };
 function toast(msg, { type = 'info', sub = '', id = null, timeout = 4500, actions = '', spinner = false } = {}) {
   id = id || 'tt' + Math.random().toString(36).slice(2);
   let el = TOASTS[id];
@@ -102,8 +104,8 @@ function toast(msg, { type = 'info', sub = '', id = null, timeout = 4500, action
   }
   clearTimeout(el._t);
   el.className = `toast ${type}`;
-  const icon = spinner ? '<span class="spinner"></span>' : { success: '✓', error: '✕', warn: '!', info: 'i' }[type];
-  el.innerHTML = `<span class="ic">${icon}</span><div><div>${esc(msg)}</div>${sub ? `<div class="sub">${esc(sub)}</div>` : ''}${actions ? `<div class="acts">${actions}</div>` : ''}</div><button class="x" aria-label="Fermer">×</button>`;
+  const ic = spinner ? '<span class="spinner"></span>' : icon(TOAST_IC[type] || 'info');
+  el.innerHTML = `<span class="ic">${ic}</span><div><div>${esc(msg)}</div>${sub ? `<div class="sub">${esc(sub)}</div>` : ''}${actions ? `<div class="acts">${actions}</div>` : ''}</div><button class="x" aria-label="Fermer">${icon('close', { size: 16 })}</button>`;
   if (timeout) el._t = setTimeout(() => dropToast(id), timeout);
   return id;
 }
@@ -173,12 +175,13 @@ function applyRole() {
   hook('role', ro); renderTools();
   if (S) renderPanel(true);
 }
-$('#viewBtn').addEventListener('click', () => {
+$('#viewBtn').addEventListener('click', async () => {
+  if (!MONITOR && window.NAV && !(await NAV.leave('dashboard'))) return; // vue monitoring : Réglages se ferme
   MONITOR = !MONITOR;
   try { localStorage.setItem('aruba-view', MONITOR ? 'monitor' : 'admin'); } catch {}
   applyRole();
 });
-function showLogin() { LV = AV = ''; for (const k of Object.keys(XV)) delete XV[k]; $('#foot').hidden = true; $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
+function showLogin() { EPOCH++; keepSettings(); LV = AV = ''; SAVED = null; for (const k of Object.keys(XV)) delete XV[k]; $('#foot').hidden = true; $('#app').hidden = true; $('#portPanel').hidden = true; $('#login').hidden = false; clearTimeout(timer); }
 function showApp() { $('#login').hidden = true; $('#app').hidden = false; $('#foot').hidden = false; }
 $('#appVersion').textContent = `v${APP_VERSION}`;
 
@@ -191,7 +194,8 @@ $('#loginForm').addEventListener('submit', (e) => {
       if (d.totp) { $('#codeField').hidden = false; $('#code').value = ''; $('#code').focus(); return; } // mot de passe juste : code demandé
       $('#pw').value = $('#code').value = ''; $('#codeField').hidden = true;
       try { localStorage.setItem('lastLogin', $('#loginId').value.trim()); } catch {}
-      showApp(); loadSettings(); poll(); toast('Connecté', { type: 'success', timeout: 2000 });
+      const who = $('#loginId').value;
+      showApp(); loadSettings().then(() => restoreSettings(who)); poll(); toast('Connecté', { type: 'success', timeout: 2000 });
       if (d.recoveryUsed) toast('Code de secours utilisé', { type: 'warn', sub: 'Il ne servira plus. Crée de nouveaux codes de secours dans Mon profil.', timeout: 12000 });
     }
     catch (err) {
@@ -201,14 +205,21 @@ $('#loginForm').addEventListener('submit', (e) => {
     }
   });
 });
-$('#logout').addEventListener('click', (e) => busy(e.currentTarget, async () => { await api('/api/logout', {}).catch(() => {}); showLogin(); }));
+$('#logout').addEventListener('click', async (e) => {
+  const b = e.currentTarget;
+  if (window.NAV && !(await NAV.leave('dashboard'))) return; // réglages non enregistrés : confirmation
+  if (settingsDirty()) fillSettings(true); // changements abandonnés : rien à garder pour la reconnexion
+  busy(b, async () => { await api('/api/logout', {}).catch(() => {}); showLogin(); });
+});
 
 async function poll() {
   clearTimeout(timer);
+  const epoch = EPOCH;
   try {
     const touch = Date.now() - lastTouch > 50000;
     const xv = Object.entries(XV).map(([k, v]) => `${k}:${v}`).join(',');
     const d = await api(`/api/state?lv=${LV}&av=${AV}${xv ? `&xv=${encodeURIComponent(xv)}` : ''}${touch ? '&touch=1' : ''}`);
+    if (epoch !== EPOCH) return; // déconnecté pendant la lecture : ne pas rouvrir l'application
     if (d.auth === false) { SETUP = d.setup || null; showLogin(); hook('login', SETUP); ($('#loginId').value ? $('#pw') : $('#loginId')).focus(); return; }
     if (touch) lastTouch = Date.now();
     ME = d.me || ME;
@@ -222,6 +233,7 @@ async function poll() {
     hook('poll', d);
     runVerify(); maybeDiag(); maybeCableCheck();
   } catch (e) { if (e.message === '401') return; }
+  if (epoch !== EPOCH) return;
   const busyNow = LOG.some((c) => ['pending', 'running', 'confirm'].includes(c.status));
   timer = setTimeout(poll, document.hidden ? 30000 : busyNow ? 1500 : nextRead());
 }
@@ -347,8 +359,8 @@ function runVerify() {
 
 // ================================================================ menus déroulants personnalisés
 // Remplace l'affichage des <select> natifs (impossibles à styler) tout en les gardant pour la valeur et les événements.
-const DD_CHEV = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
-const DD_CHECK = '<svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+const DD_CHEV = icon('expand_more', { cls: 'chev' });
+const DD_CHECK = icon('check', { cls: 'ck' });
 let ddOpen = null, ddSeq = 0, ddType = '', ddTypeT = 0;
 function ddSync(wrap) {
   const sel = wrap.querySelector('select'), o = sel.selectedOptions[0];
@@ -590,8 +602,8 @@ function renderSwitch() {
     ['Adresse MAC', `<span class="mono">${esc(d?.mac || S.base_mac || '-')}</span>`],
     ['N° de série', `<span class="mono">${esc(S.serial || '-')}</span>`],
     ['Firmware', esc(S.version ? `AOS-CX ${S.version}` : '-')],
-    ['Configuration', !d || d.saved == null ? '<span class="muted">-</span>' : d.saved ? '<span class="good">✓ sauvegardée</span>'
-      : '<span class="warn">⚠ non sauvegardée</span> <button class="btn small admin-only" data-save>Sauvegarder</button>'],
+    ['Configuration', !d || d.saved == null ? '<span class="muted">-</span>' : d.saved ? `<span class="good">${icon('check_circle', { size: 16 })} sauvegardée</span>`
+      : `<span class="warn">${icon('warning', { size: 16 })} non sauvegardée</span> <button class="btn small admin-only" data-save>Sauvegarder</button>`],
     ['Spanning-tree', !d ? '-' : !d.stp.enabled ? '<span class="warn">désactivé</span>'
       : `${esc(d.stp.protocol || '')} · ${d.stp.isRoot ? 'ce switch est la racine' : `racine : autre switch${d.stp.rootPort ? ` (via port ${portNum(d.stp.rootPort)})` : ''}`}`
         + (blocked.length ? `<br><span class="bad">port${blocked.length > 1 ? 's' : ''} bloqué${blocked.length > 1 ? 's' : ''} : ${blocked.join(', ')}</span>` : '')],
@@ -639,8 +651,9 @@ function renderAgent() {
   const pill = $('#agentPill');
   const av = S?.agent?.version;
   const maj = S?.agent?.maj, older = !/^\d+\.\d+/.test(String(av)) || verNum(av) < verNum(AGENT_LATEST);
-  $('#agentVersion').textContent = !S?.agent ? '' : (/^\d+\.\d+/.test(String(av)) ? `agent v${av}` : 'agent : version antérieure à 1.0.0')
-    + (maj ? ` · mise à jour auto ${maj.ok ? '✓' : '⚠'}` : older ? ` · v${AGENT_LATEST} disponible` : '');
+  setHTML($('#agentVersion'), !S?.agent ? '' : esc(/^\d+\.\d+/.test(String(av)) ? `agent v${av}` : 'agent : version antérieure à 1.0.0')
+    + (maj ? ` · mise à jour auto ${maj.ok ? icon('check_circle', { size: 14, label: 'réussie', cls: 'ic-good' }) : icon('warning', { size: 14, label: 'en échec', cls: 'ic-warn' })}`
+      : older ? ` · v${AGENT_LATEST} disponible` : ''));
   $('#agentVersion').title = maj ? `${maj.msg || ''} (vérifié ${ago(NOW - (maj.t || 0))})` : older ? 'Mets l’agent à jour : voir agent/INSTALLATION-WINDOWS.md.' : '';
   if (!S) { pill.className = 'pill ko'; pill.lastElementChild.textContent = 'Agent jamais connecté'; return; }
   const age = NOW - (S.received || S.updated);
@@ -677,7 +690,7 @@ function renderKpis() {
     const max = temps.reduce((a, b) => (b.temp > a.temp ? b : a));
     const bad = temps.filter((t) => t.status !== 'normal');
     $('#kTemp').textContent = `${nf.format(max.temp)} °C`;
-    $('#kTempHint').textContent = bad.length ? `⚠ ${bad.length} capteur(s) en alerte` : `tous normaux · air ${nf.format(temps.find((t) => /Inlet/.test(t.sensor))?.temp ?? 0)} °C`;
+    setHTML($('#kTempHint'), bad.length ? `${icon('warning', { size: 14, cls: 'ic-warn' })} ${bad.length} capteur(s) en alerte` : `tous normaux · air ${nf.format(temps.find((t) => /Inlet/.test(t.sensor))?.temp ?? 0)} °C`);
   }
 }
 
@@ -696,17 +709,18 @@ function renderFaceplate() {
     const up = isUplink(p), slow = isSlow(p);
     const meta = st === 'off' ? 'désactivé' : empty ? 'vide'
       : st === 'down' ? (cabCls ? `${cab.len} m` : unk ? 'à vérifier' : 'libre')
-      : st === 'idle' ? `∅ ${durShort(quietFor(p))}` : fmtBps(bps).replace(' ', ' ');
+      : st === 'idle' ? durShort(quietFor(p)) : fmtBps(bps).replace(' ', ' ');
+    const metaIc = st === 'idle' && !empty ? icon('hourglass_empty', { size: 11 }) : '';
     const tip = [`Port ${n}`, stInfo(p).label, unk && unkText(p, unk), p.speed && `${p.speed} Mb/s${slow ? ' (lent)' : ''}`, up && 'lien vers un autre switch',
       p.vlan !== '1' && `VLAN ${p.vlan}`, st === 'idle' && `aucun paquet reçu depuis ${fmtDur(quietFor(p))}`,
       cab && { partial: `test câble : paire${cab.open?.length > 1 ? 's' : ''} ${(cab.open || []).join(', ')} ouverte${cab.open?.length > 1 ? 's' : ''}, autres bonnes (${cab.len} m)`, empty: 'test câble : rien de branché', open: `test câble : câble ${cab.len} m, rien au bout`, good: `test câble : câble ${cab.len} m en bon état, appareil éteint`, fault: `test câble : DÉFAUT vers ${cab.len} m` }[cab.kind], st === 'up' && `${fmtBps(bps)} (charge ${fmtPct(loadPct(Math.max(p.rx_bps || 0, p.tx_bps || 0), p))})`, p.desc, sinceText(p) && `changé ${sinceText(p)}`, DIAG?.ports[p.port]?.transitions != null && `${DIAG.ports[p.port].transitions} coupures depuis le démarrage`, stpBlocked(p) && 'BLOQUÉ par le spanning-tree'].filter(Boolean).join(' · ');
     const cls = ['jack', sfp && 'sfp', empty ? 'nomod' : cabCls || (unk ? 'unk' : st), selected === p.port && 'sel', pendingFor(p.port) && 'busy'].filter(Boolean).join(' ');
-    const tags = (cabCls ? `<span class="tag${cabCls === 'fault' || cabWarn ? ' slow' : ''}">${cabCls === 'fault' || cabWarn ? '⚠' : cab.kind === 'good' ? '↔ ok' : '↔'}</span>` : unk ? '<span class="tag">?</span>' : '')
-      + (stpBlocked(p) ? '<span class="tag stp">STP</span>' : '') + (up ? '<span class="tag">⇅</span>' : '') + (p.vlan !== '1' ? `<span class="tag">V${esc(p.vlan)}</span>` : '')
+    const tags = (cabCls ? `<span class="tag${cabCls === 'fault' || cabWarn ? ' slow' : ''}">${cabCls === 'fault' || cabWarn ? icon('warning', { size: 12 }) : `${icon('settings_ethernet', { size: 12 })}${cab.kind === 'good' ? 'ok' : ''}`}</span>` : unk ? `<span class="tag">${icon('question_mark', { size: 12 })}</span>` : '')
+      + (stpBlocked(p) ? '<span class="tag stp">STP</span>' : '') + (up ? `<span class="tag">${icon('swap_vert', { size: 12 })}</span>` : '') + (p.vlan !== '1' ? `<span class="tag">V${esc(p.vlan)}</span>` : '')
       + (p.up && p.speed ? `<span class="tag${slow ? ' slow' : ''}">${speedTag(Number(p.speed))}</span>` : '');
     return `<button class="${cls}" data-port="${esc(p.port)}" title="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${selected === p.port}">
       <span class="top"><span class="led"></span><span class="n">${n}</span>${tags}</span>
-      <span><span class="meta">${esc(meta)}</span><span class="meter"><i style="width:${st === 'up' ? meterPct(bps) : 0}%"></i></span></span>
+      <span><span class="meta">${metaIc}${esc(meta)}</span><span class="meter"><i style="width:${st === 'up' ? meterPct(bps) : 0}%"></i></span></span>
     </button>`;
   };
   let html = `<div class="fp-brand"><b>aruba</b>${esc((S.model || '').replace(/^\S+\s/, '').replace(/\s*Swch$/, ''))}</div>`;
@@ -715,21 +729,22 @@ function renderFaceplate() {
   setHTML($('#faceplate'), html);
   hook('faceplate');
   const downs = (S.ports || []).filter((p) => pState(p) === 'down').map((p) => cableOf(p.port)).filter(Boolean);
-  const cabled = downs.filter((c) => ['open', 'good', 'partial'].includes(c.kind)), faulty = downs.filter((c) => c.kind === 'fault');
+  const cabled = downs.filter((c) => ['open', 'good'].includes(c.kind)), partial = downs.filter((c) => c.kind === 'partial'), faulty = downs.filter((c) => c.kind === 'fault');
   const unknown = (S.ports || []).filter((p) => pState(p) === 'down' && !cableOf(p.port) && cableUnknown(p)).length;
   const checking = LOG.some((c) => c.kind === 'auto:cable' && ['pending', 'running'].includes(c.status));
   const all = S.ports || [], count = (s) => all.filter((p) => pState(p) === s).length, slow = all.filter(isSlow).length, up = all.filter((p) => p.up).length;
   $('#fpCount').textContent = `${up} branché${up > 1 ? 's' : ''}`;
   $('#fpLegend').innerHTML = `
     <span><i class="sw" style="background:#1f6b34"></i>Actif <b>${count('up')}</b></span>
-    <span><i class="sw" style="background:#6e5313"></i>∅ Lien établi, aucun paquet <b>${count('idle')}</b></span>
-    <span><i class="sw" style="background:#3a3a38"></i>Libre <b>${count('down') - cabled.length - faulty.length - unknown}</b></span>
-    ${unknown ? `<span title="Pas de test de câble valable : jamais testé, ou branché ou débranché depuis le dernier test"><i class="sw" style="background:#32312d;box-shadow:inset 0 0 0 2px rgb(217 180 90 / .6)"></i>? À vérifier <b>${unknown}</b>${checking ? ' <span class="spinner" aria-label="vérification en cours"></span>' : ''}</span>` : ''}
-    <span><i class="sw" style="background:#2c3a4a"></i>↔ Câble branché, pas de lien <b>${cabled.length}</b></span>
-    ${faulty.length ? `<span><i class="sw" style="background:#4a2626;box-shadow:inset 0 0 0 2px #c9302c"></i>Câble en défaut <b>${faulty.length}</b></span>` : ''}
+    <span><i class="sw" style="background:#6e5313"></i>${icon('hourglass_empty', { size: 14 })}Lien établi, aucun paquet <b>${count('idle')}</b></span>
+    <span><i class="sw" style="background:#3a3a38"></i>Libre <b>${count('down') - cabled.length - partial.length - faulty.length - unknown}</b></span>
+    ${unknown ? `<span title="Pas de test de câble valable : jamais testé, ou branché ou débranché depuis le dernier test"><i class="sw" style="background:#32312d;box-shadow:inset 0 0 0 2px rgb(217 180 90 / .6)"></i>${icon('question_mark', { size: 14 })}À vérifier <b>${unknown}</b>${checking ? ' <span class="spinner" aria-label="vérification en cours"></span>' : ''}</span>` : ''}
+    <span><i class="sw" style="background:#2c3a4a"></i>${icon('settings_ethernet', { size: 14 })}Câble branché, pas de lien <b>${cabled.length}</b></span>
+    ${partial.length ? `<span title="Test de câble : une ou plusieurs paires coupées, les autres bonnes"><i class="sw" style="background:#2c3a4a"></i>${icon('warning', { size: 14, cls: 'ic-warn' })}Paires ouvertes <b>${partial.length}</b></span>` : ''}
+    ${faulty.length ? `<span><i class="sw" style="background:#4a2626;box-shadow:inset 0 0 0 2px #c9302c"></i>${icon('warning', { size: 14, cls: 'ic-warn' })}Câble en défaut <b>${faulty.length}</b></span>` : ''}
     <span><i class="sw" style="background:repeating-linear-gradient(135deg,#5a2422 0 3px,#4a1d1b 3px 6px)"></i>Désactivé <b>${count('off')}</b></span>
     ${slow ? `<span><span class="speed-slow mono">10M/100M</span>Vitesse réduite <b>${slow}</b></span>` : ''}
-    <span><span class="mono">⇅</span>Lien vers un autre switch</span><span><span class="mono">V10</span>VLAN autre que 1</span>`;
+    <span>${icon('swap_vert', { size: 14 })}Lien vers un autre switch</span><span><span class="mono">V10</span>VLAN autre que 1</span>`;
 }
 onPick($('#faceplate'));
 
@@ -811,7 +826,7 @@ function sortVal(p, info, key) {
 function renderPortHead() {
   setHTML($('#portHead'), PORT_COLS.map(([k, label, cls]) => {
     const on = portSort.key === k;
-    return `<th data-sort="${k}" class="${cls || ''}" aria-sort="${on ? (portSort.dir > 0 ? 'ascending' : 'descending') : 'none'}" title="Trier par ${label.toLowerCase()}">${label}${on ? `<span class="arrow">${portSort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`;
+    return `<th data-sort="${k}" class="${cls || ''}" aria-sort="${on ? (portSort.dir > 0 ? 'ascending' : 'descending') : 'none'}"><button type="button" class="th-sort" title="Trier par ${label.toLowerCase()}">${label}${on ? icon(portSort.dir > 0 ? 'arrow_drop_up' : 'arrow_drop_down', { size: 16, cls: 'arrow' }) : ''}</button></th>`;
   }).join(''));
 }
 $('#portHead').addEventListener('click', (e) => {
@@ -829,7 +844,7 @@ function portRow(p, info) {
     <td>${stpBlocked(p) ? '<span class="status blocked">Bloqué (STP)</span>' : `<span class="status ${stInfo(p).cls}">${stInfo(p).label}</span>`}${st === 'idle' ? ` <span class="muted">${fmtDur(quietFor(p))}</span>` : sinceText(p) ? ` <span class="muted">${sinceText(p)}</span>` : ''}</td>
     <td class="num">${p.speed ? `<span class="${isSlow(p) ? 'speed-slow' : ''}">${esc(p.speed)} Mb/s</span>` : (p.reason === 'No XCVR installed' ? '<span class="muted">pas de module</span>' : dash)}</td>
     <td class="num">${esc(p.vlan)}${p.mode === 'trunk' ? ' <span class="badge">trunk</span>' : ''}</td>
-    <td class="dev">${info.name ? esc(info.name) : dash}${isUplink(p) ? ' <span class="badge">⇅ switch</span>' : ''}${info.sub ? `<span class="sub">${esc(info.sub)}</span>` : ''}</td>
+    <td class="dev">${info.name ? esc(info.name) : dash}${isUplink(p) ? ` <span class="badge">${icon('swap_vert', { size: 12 })}switch</span>` : ''}${info.sub ? `<span class="sub">${esc(info.sub)}</span>` : ''}</td>
     <td class="mono">${info.ip ? esc(info.ip) + (info.ipMore ? ` <span class="muted">+${info.ipMore}</span>` : '') : dash}</td>
     <td class="mono">${info.mac ? esc(info.mac) + (info.macMore ? ` <span class="muted">+${info.macMore}</span>` : '') : dash}</td>
     <td class="r num">${p.up ? fmtBps(p.rx_bps) : dash}</td>
@@ -840,6 +855,9 @@ function portRow(p, info) {
   </tr>`;
 }
 function renderPorts() {
+  // Au clavier, le focus reste sur l'en-tête ou sur « ports libres » quand le tableau est redessiné.
+  const had = document.activeElement?.closest?.('#portHead [data-sort], #portRows [data-free]');
+  const back = had && (had.dataset.sort ? `#portHead [data-sort="${had.dataset.sort}"] button` : '#portRows [data-free] button');
   renderPortHead();
   const rows = (S.ports || []).map((p) => ({ p, info: portInfo(p) }));
   const hit = rows.filter((r) => !portQuery || r.info.text.includes(portQuery));
@@ -851,9 +869,10 @@ function renderPorts() {
   const main = portQuery || showFree ? hit : hit.filter((r) => !isFree(r));
   const free = hit.filter(isFree);
   let html = main.map((r) => portRow(r.p, r.info)).join('');
-  if (!portQuery && free.length) html += `<tr class="free-toggle" data-free><td colspan="${PORT_COLS.length}">${showFree ? '▲ Replier les ports libres' : `▼ ${free.length} port${free.length > 1 ? 's' : ''} libre${free.length > 1 ? 's' : ''} · afficher`}</td></tr>`;
+  if (!portQuery && free.length) html += `<tr class="free-toggle" data-free><td colspan="${PORT_COLS.length}"><button type="button" aria-expanded="${showFree}">${showFree ? `${icon('expand_less', { size: 15 })}Replier les ports libres` : `${icon('expand_more', { size: 15 })}${free.length} port${free.length > 1 ? 's' : ''} libre${free.length > 1 ? 's' : ''} · afficher`}</button></td></tr>`;
   if (!html) html = `<tr><td colspan="${PORT_COLS.length}" class="empty">Aucun résultat pour « ${esc(portQuery)} ».</td></tr>`;
   setHTML($('#portRows'), html);
+  if (back && document.activeElement === document.body) $(back)?.focus();
   const used = rows.filter((r) => !isFree(r)).length;
   const toCheck = rows.filter((r) => stInfo(r.p).cls === 'unk').length;
   $('#portCount').textContent = portQuery ? `${hit.length} résultat${hit.length > 1 ? 's' : ''}` : `${used - toCheck} utilisés · ${rows.length - used} libres${toCheck ? ` · ${toCheck} à vérifier` : ''}`;
@@ -889,8 +908,7 @@ function ranges(nums) {
 function vlanAssignCmd(nums, vid) {
   return ['configure terminal', ...nums.flatMap((n) => [`interface 1/1/${n}`, `vlan access ${vid}`, 'exit']), 'end'].join('\n');
 }
-const ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
-const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>';
+const ICON_EDIT = icon('edit'), ICON_TRASH = icon('delete'); // boutons « Renommer », « Modifier », « Supprimer » (aussi profiles.js, schedule.js)
 function renderVlans() {
   const v = S.vlans || [];
   $('#vlanCount').textContent = `${v.length}`;
@@ -946,8 +964,8 @@ $('#vlanAssign').addEventListener('click', () => {
   $('#vlanAssignDialog').close();
   const uplinks = nums.filter((n) => { const p = S.ports.find((x) => portNum(x.port) === n); return p && isUplink(p); });
   confirmCmd(`Mettre ${nums.length} port(s) dans le VLAN ${vid} ?`,
-    uplinks.length ? `⚠ Les ports ${uplinks.join(', ')} relient d’autres switches : les changer peut couper le réseau.` : 'Les appareils branchés changeront de réseau (ils devront parfois renouveler leur IP).',
-    vlanAssignCmd(nums, vid), `Ports ${nums.join(', ')} → VLAN ${vid}`, { ports: nums.map((n) => `1/1/${n}`) });
+    uplinks.length ? { warn: `Les ports ${uplinks.join(', ')} relient d’autres switches : les changer peut couper le réseau.` } : 'Les appareils branchés changeront de réseau (ils devront parfois renouveler leur IP).',
+    vlanAssignCmd(nums, vid), `Ports ${nums.join(', ')} dans le VLAN ${vid}`, { ports: nums.map((n) => `1/1/${n}`) });
 });
 
 // ---------------------------------------------------------------- tiroir du port
@@ -1035,6 +1053,7 @@ function cableVerdict(rows, p) {
   if (k.kind === 'partial') return ['amber', `Paire${bad.length > 1 ? 's' : ''} ${bad.map((r) => `${r.pair} ouverte à ${r.dist} m`).join(', ')}, les autres sont bonnes (environ ${len} m). Normal si l’appareil est en 10/100 Mb/s (il n’utilise que 2 paires). Sinon, un fil est coupé : refais la prise ou change le câble, sans quoi le lien ne montera pas à 1 Gb/s.`];
   return ['red', `Défaut détecté : ${bad.map((r) => `${r.pair} ${CABLE_FR[r.status]} à ${r.dist} m`).join(', ')}.`];
 }
+const RXTX = `${icon('arrow_downward', { size: 14, label: 'entrant' })} / ${icon('arrow_upward', { size: 14, label: 'sortant' })}`; // en-têtes « entrant / sortant » du volet
 function renderPanel(force) {
   const p = (S?.ports || []).find((x) => x.port === selected);
   if (!p || $('#portPanel').hidden) return;
@@ -1072,11 +1091,11 @@ function renderPanel(force) {
       <dt>Dernier changement</dt><dd>${DIAG?.ports[p.port]?.last ? `${esc(sinceText(p).replace(/^depuis /, 'il y a '))} <span class="muted">(${new Date(DIAG.ports[p.port].last * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })})</span>` : '-'}</dd>
       <dt>Coupures</dt><dd>${flapCell(p, true)}</dd>
       <dt>Spanning-tree</dt><dd>${DIAG?.ports[p.port]?.stp ? `${esc(STP_FR[DIAG.ports[p.port].stp.role] || DIAG.ports[p.port].stp.role)} · ${esc(STP_FR[DIAG.ports[p.port].stp.state] || DIAG.ports[p.port].stp.state)}` : '-'}</dd>
-      <dt>Débit ↓ / ↑</dt><dd class="num">${fmtBps(p.rx_bps)} / ${fmtBps(p.tx_bps)}</dd>
-      <dt>Charge du lien ↓ / ↑</dt><dd class="num">${fmtPct(loadPct(p.rx_bps, p))} / ${fmtPct(loadPct(p.tx_bps, p))}</dd>
-      <dt>Total ↓ / ↑</dt><dd class="num">${fmtBytes(p.rx_bytes)} / ${fmtBytes(p.tx_bytes)}</dd>
+      <dt>Débit ${RXTX}</dt><dd class="num">${fmtBps(p.rx_bps)} / ${fmtBps(p.tx_bps)}</dd>
+      <dt>Charge du lien ${RXTX}</dt><dd class="num">${fmtPct(loadPct(p.rx_bps, p))} / ${fmtPct(loadPct(p.tx_bps, p))}</dd>
+      <dt>Total ${RXTX}</dt><dd class="num">${fmtBytes(p.rx_bytes)} / ${fmtBytes(p.tx_bytes)}</dd>
       <dt>Erreurs · CRC</dt><dd class="num">${nf0.format((p.rx_errors || 0) + (p.tx_errors || 0))} · ${nf0.format(p.crc || 0)}</dd>
-      <dt>Pertes ↓ / ↑</dt><dd class="num">${nf0.format(p.rx_drops || 0)} / ${nf0.format(p.tx_drops || 0)}</dd>
+      <dt>Pertes ${RXTX}</dt><dd class="num">${nf0.format(p.rx_drops || 0)} / ${nf0.format(p.tx_drops || 0)}</dd>
       <dt>Appareils</dt><dd>${macs.length ? macs.map((m) => `<span class="mono">${esc(m.mac)}</span>${ips[m.mac] ? ` · <b class="mono">${esc(ips[m.mac].ip)}</b>${ips[m.mac].name ? ` (${esc(ips[m.mac].name)})` : ''}` : ''}`).join('<br>') : '-'}</dd>
       ${lldp.length ? `<dt>${p.up ? 'LLDP' : 'Dernier vu (LLDP)'}</dt><dd>${lldp.map((l) => esc(l.name || l.chassis)).join('<br>')}</dd>` : ''}
     </dl>
@@ -1124,16 +1143,16 @@ $('#ppBody').addEventListener('click', (e) => {
   if (e.target.id === 'ppHist') { $('#chartPort').value = selected; ddSyncAll(); if (chartRange === '1h') setRange('24h'); else loadChart(); $('#chart').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
   const b = e.target.closest('[data-act]'); if (!b) return;
   const p = S.ports.find((x) => x.port === selected), n = portNum(p.port), base = `configure terminal\ninterface ${p.port}\n`, opt = { ports: [p.port] };
-  const warn = isUplink(p) ? '⚠ Ce port relie un autre switch : tout ce qui passe par lui sera coupé. ' : '';
-  if (b.dataset.act === 'shut') confirmCmd(`Désactiver le port ${n} ?`, warn + 'L’appareil branché perdra le réseau.', base + 'shutdown\nend', `Port ${n} désactivé`, opt);
+  const warn = isUplink(p) ? { warn: 'Ce port relie un autre switch : tout ce qui passe par lui sera coupé.' } : '';
+  if (b.dataset.act === 'shut') confirmCmd(`Désactiver le port ${n} ?`, [warn, 'L’appareil branché perdra le réseau.'], base + 'shutdown\nend', `Port ${n} désactivé`, opt);
   if (b.dataset.act === 'noshut') confirmCmd(`Activer le port ${n} ?`, '', base + 'no shutdown\nend', `Port ${n} activé`, opt);
-  if (b.dataset.act === 'bounce') confirmCmd(`Redémarrer le port ${n} ?`, warn + 'Coupure d’environ 3 secondes.', base + 'shutdown\nno shutdown\nend', `Port ${n} redémarré`, opt);
+  if (b.dataset.act === 'bounce') confirmCmd(`Redémarrer le port ${n} ?`, [warn, 'Coupure d’environ 3 secondes.'], base + 'shutdown\nno shutdown\nend', `Port ${n} redémarré`, opt);
   if (b.dataset.act === 'desc') {
     const d = $('#ppDesc').value.trim().replace(/[\r\n]/g, ' ');
     confirmCmd(`Description du port ${n}`, '', base + (d ? `description ${d}` : 'no description') + '\nend', `Description port ${n}`, opt);
   }
-  if (b.dataset.act === 'vlan') { const vid = $('#ppVlan').value; confirmCmd(`Port ${n} → VLAN ${vid} ?`, warn + 'L’appareil branché changera de réseau.', base + `vlan access ${vid}\nend`, `Port ${n} → VLAN ${vid}`, opt); }
-  if (b.dataset.act === 'cable') confirmCmd(`Tester le câble du port ${n} ?`, warn + 'Le port sera coupé 5 à 10 secondes pendant la mesure.',
+  if (b.dataset.act === 'vlan') { const vid = $('#ppVlan').value; confirmCmd(`Mettre le port ${n} dans le VLAN ${vid} ?`, [warn, 'L’appareil branché changera de réseau.'], base + `vlan access ${vid}\nend`, `Port ${n} dans le VLAN ${vid}`, opt); }
+  if (b.dataset.act === 'cable') confirmCmd(`Tester le câble du port ${n} ?`, [warn, 'Le port sera coupé 5 à 10 secondes pendant la mesure.'],
     `diagnostics\ndiag cable-diagnostic test ${p.port}\ny\ndiag cable-diagnostic show ${p.port}`, `Test câble port ${n}`, { ...opt, kind: `cable:${p.port}` });
 });
 
@@ -1147,9 +1166,13 @@ function dangerStage(on) {
   $('#cfYes').dataset.lock = on ? '1' : '';
   $('#cfYes').disabled = on;
 }
+// Texte d'une confirmation : une chaîne, ou une liste de morceaux (chaînes, et { warn: '…' } précédé de l'icône
+// « warning »). Tout est échappé ; les morceaux vides sont ignorés.
+const richText = (t) => (Array.isArray(t) ? t : [t]).filter(Boolean)
+  .map((x) => (typeof x === 'object' ? `${icon('warning', { size: 15, label: 'Attention', cls: 'ic-warn' })} ${esc(x.warn)}` : esc(x))).join(' ');
 function confirmCmd(title, text, cmd, label, opts = {}) {
   if (!canOperate()) return toast(ROLE === 'viewer' ? 'Lecture seule' : 'Vue monitoring', { type: 'warn', sub: ROLE === 'viewer' ? 'Ce compte ne peut rien modifier.' : 'Repasse en vue normale pour agir sur le switch.' });
-  $('#cfTitle').textContent = title; $('#cfText').textContent = text; $('#cfCmd').textContent = cmd;
+  $('#cfTitle').textContent = title; $('#cfText').innerHTML = richText(text); $('#cfCmd').textContent = cmd;
   pendingConfirm = { cmd, label, ...opts }; dangerStage(false);
   if (!$('#confirm').open) $('#confirm').showModal();
 }
@@ -1250,83 +1273,211 @@ function renderTerm(force) {
   const stLabel = { pending: 'en attente', running: 'en cours', done: 'ok', error: 'erreur', confirm: 'question' };
   box.innerHTML = items.length ? items.map((c) => `
     <div class="term-entry">
-      <div class="term-cmd"><span class="st ${Object.hasOwn(stLabel, c.status) ? c.status : ''}">${['pending', 'running'].includes(c.status) ? '<span class="spinner" style="width:9px;height:9px;border-width:1.5px"></span>' : ''}${Object.hasOwn(stLabel, c.status) ? stLabel[c.status] : esc(c.status)}</span><span>${esc(c.label ? `${c.label} : ` : '')}${esc(c.cmd.replace(/\n/g, ' ⏎ '))}</span></div>
+      <div class="term-cmd"><span class="st ${Object.hasOwn(stLabel, c.status) ? c.status : ''}">${['pending', 'running'].includes(c.status) ? '<span class="spinner" style="width:9px;height:9px;border-width:1.5px"></span>' : ''}${Object.hasOwn(stLabel, c.status) ? stLabel[c.status] : esc(c.status)}</span><span>${esc(c.label ? `${c.label} : ` : '')}${String(c.cmd).split('\n').map(esc).join(` ${icon('keyboard_return', { size: 13, label: 'puis' })} `)}</span></div>
       ${OUT[c.id] ? `<div class="term-out">${esc(OUT[c.id])}</div>` : ''}
       ${c.status === 'confirm' ? `<div class="term-ask">${esc(c.question || 'Confirmer ?')} <button class="btn small primary" data-answer="y" data-answer-id="${esc(c.id)}">Oui</button><button class="btn small" data-answer="n" data-answer-id="${esc(c.id)}">Non</button></div>` : ''}
     </div>`).join('') : '<div class="muted">Aucune commande pour l’instant. Les sorties s’afficheront ici.</div>';
   if (atBottom || force) box.scrollTop = box.scrollHeight;
 }
 
-// ================================================================ alertes
-let SETTINGS = null, EMAIL_OK = false, watchSel = null, CRON = null;
-async function loadSettings() {
+// ================================================================ réglages (page de l'administrateur) et alertes
+// Page #view-settings (ancre #reglages) : où et quand prévenir, ports surveillés, site, rythme de l'agent.
+// SAVED garde les réglages tels qu'affichés au dernier remplissage : la barre d'enregistrement n'apparaît que s'il reste
+// des changements, et account.js (NAV.leave) demande confirmation avant de quitter la page sans enregistrer.
+let SETTINGS = null, EMAIL_OK = false, watchSel = null, CRON = null, SAVED = null;
+async function loadSettings(report = false) {
   try {
     const d = await api('/api/settings'); SETTINGS = d.settings; EMAIL_OK = d.emailAvailable; CRON = d.cron || null;
     fillSettings(); renderAlerts();
-  } catch {}
+  } catch (err) { if (report && err.message !== '401') toast('Réglages indisponibles', { type: 'error', sub: err.message }); }
 }
 function autoWatch() { return (S?.ports || []).filter((p) => isUplink(p) || p.desc).map((p) => p.port); }
 
-function fillSettings() {
+// Valeurs de la page, dans la forme attendue par POST /api/settings.
+function settingsBody() {
+  const v = (s) => $(s).value, on = (s) => $(s).checked;
+  return {
+    email: v('#alEmail'), webhook: v('#alHook'), tempMax: v('#alTempMax'),
+    watchPorts: watchSel ? [...watchSel].sort((a, b) => portNum(a) - portNum(b)) : null, autoCable: on('#alAutoCable'),
+    siteName: v('#alSite'), tz: v('#alTz'),
+    agent: { hot: v('#alHot'), warm: v('#alWarm'), idle: v('#alIdleSync') },
+    notify: { portDown: on('#alPortDown'), temp: on('#alTemp'), agentOffline: on('#alAgent'), slowLink: on('#alSlow'), idleLink: on('#alIdle'), newDevice: on('#alNewDev') },
+  };
+}
+function settingsDirty() { return SAVED !== null && JSON.stringify(settingsBody()) !== SAVED; }
+
+// Remplit la page. Une saisie en cours n'est pas écrasée par une relecture, sauf force (enregistrement, annulation,
+// départ de la page sans enregistrer).
+function fillSettings(force = false) {
   const c = $('#alCron'); c.hidden = !(CRON && !CRON.ok);
-  if (!c.hidden) c.textContent = `La vérification toutes les 5 minutes n’a pas pu être programmée dans Supabase (${CRON.error || 'erreur inconnue'}) : alerte « agent hors ligne », actions planifiées et sauvegardes automatiques ne fonctionnent pas. Active les extensions pg_cron et pg_net dans Supabase (Database > Extensions), puis recharge le dashboard.`;
-  const s = SETTINGS; if (!s) return;
-  $('#alEmail').value = s.email || ''; $('#alEmail').disabled = !EMAIL_OK;
+  if (!c.hidden) c.textContent = `La vérification toutes les 5\u00a0minutes n’a pas pu être programmée dans Supabase (${CRON.error || 'erreur inconnue'}) : alerte «\u00a0agent hors ligne\u00a0», actions planifiées et sauvegardes automatiques ne fonctionnent pas. Active les extensions pg_cron et pg_net dans Supabase (Database > Extensions), puis recharge le dashboard.`;
+  $('#alEmail').disabled = !EMAIL_OK;
   $('#alEmailNote').textContent = EMAIL_OK ? 'Sans domaine vérifié chez Resend, les e-mails partent de onboarding@resend.dev et ne peuvent aller qu’à l’adresse du compte Resend.' : 'E-mail indisponible : l’intégration Resend n’est pas encore activée sur Vercel.';
+  const s = SETTINGS;
+  if (!s || (!force && settingsDirty())) return syncSettings();
+  putSettings(s);
+  document.querySelectorAll('#alertForm [aria-invalid]').forEach((x) => x.removeAttribute('aria-invalid'));
+  $('#alErr').textContent = '';
+  renderWatch();
+  SAVED = JSON.stringify(settingsBody());
+  syncSettings();
+}
+// Écrit des réglages dans les champs : ceux du serveur, ou une saisie gardée (même forme, celle de settingsBody()).
+function putSettings(s) {
+  $('#alEmail').value = s.email || '';
   $('#alHook').value = s.webhook || '';
   $('#alPortDown').checked = s.notify.portDown; $('#alTemp').checked = s.notify.temp; $('#alAgent').checked = s.notify.agentOffline;
-  $('#alSlow').checked = s.notify.slowLink; $('#alIdle').checked = s.notify.idleLink; $('#alTempMax').value = s.tempMax;
+  $('#alSlow').checked = s.notify.slowLink; $('#alIdle').checked = s.notify.idleLink; $('#alNewDev').checked = Boolean(s.notify.newDevice);
+  $('#alTempMax').value = s.tempMax; $('#alTempMax').disabled = !s.notify.temp;
   $('#alAutoCable').checked = s.autoCable !== false;
-  $('#alNewDev').checked = Boolean(s.notify.newDevice);
   $('#alSite').value = s.siteName || ''; $('#alTz').value = s.tz || 'Europe/Paris';
   $('#alHot').value = s.agent?.hot ?? 10; $('#alWarm').value = s.agent?.warm ?? 30; $('#alIdleSync').value = s.agent?.idle ?? 60;
   watchSel = s.watchPorts?.length ? new Set(s.watchPorts) : null; // liste vide = mode Auto, comme l'agent
-  renderWatch();
 }
+// Session expirée avec des changements non enregistrés (showLogin) : la saisie est gardée, puis remise si le même compte
+// se reconnecte ; un autre compte retrouve les réglages enregistrés.
+let KEPT = null;
+function keepSettings() { KEPT = SAVED !== null && settingsDirty() ? { login: String(ME?.login || '').toLowerCase(), body: settingsBody() } : null; }
+function restoreSettings(login) {
+  const k = KEPT; KEPT = null;
+  if (!k || k.login !== String(login || '').trim().toLowerCase() || SAVED === null) return;
+  putSettings(k.body); renderWatch(); syncSettings();
+}
+// Barre d'enregistrement et test : le test part avec les réglages enregistrés, pas avec la saisie en cours.
+function syncSettings() {
+  const dirty = settingsDirty(), t = $('#alertTest'), bar = $('#alBar'), appear = dirty && bar.hidden;
+  bar.hidden = !dirty;
+  if (!dirty) $('#alErr').textContent = ''; // erreur d'un envoi précédent : plus d'actualité
+  if (appear) { // la barre arrive par-dessus la page : la case ou le champ en cours reste visible au-dessus d'elle
+    fitBar();
+    const el = document.activeElement;
+    if (el && el !== document.body && !bar.contains(el)) el.scrollIntoView({ block: 'nearest' });
+  }
+  t.dataset.lock = dirty ? '1' : '';
+  if (!t.classList.contains('loading')) t.disabled = dirty;
+  $('#alTestNote').textContent = dirty ? 'Enregistre d’abord tes modifications : le test part avec les réglages enregistrés.'
+    : 'Envoie une notification de test aux adresses et au webhook enregistrés.';
+}
+
+// Ports surveillés, comme la façade : impairs en haut, pairs en bas ; 1 à 12, 13 à 24, puis les SFP 25 à 28.
+$('#alPorts').innerHTML = [[1, 12, 'Ports 1 à 12'], [13, 24, 'Ports 13 à 24'], [25, 28, 'Ports SFP 25 à 28']].map(([a, b, label], i) =>
+  `<div class="wp-g${i === 2 ? ' sfp' : ''}" role="group" aria-label="${label}">${Array.from({ length: b - a + 1 }, (_, k) =>
+    `<button type="button" class="wp" data-wp="1/1/${a + k}" aria-pressed="false">${a + k}</button>`).join('')}</div>`).join('');
 function renderWatch() {
-  const auto = new Set(autoWatch()), cur = watchSel || auto;
-  $('#alPorts').innerHTML = Array.from({ length: 28 }, (_, i) => `1/1/${i + 1}`).map((p) => `<button type="button" class="chip${cur.has(p) ? ' on' : ''}" data-wp="${p}">${portNum(p)}</button>`).join('');
-  $('#alPortsNote').textContent = watchSel ? `${cur.size} port(s) choisis à la main.` : `Auto : liens vers d’autres switches et ports avec une description (${[...auto].map(portNum).join(', ') || 'aucun pour l’instant'}).`;
-  $('#alAuto').classList.toggle('primary', !watchSel);
+  const auto = autoWatch(), cur = watchSel || new Set(auto);
+  const ports = Object.fromEntries((S?.ports || []).map((p) => [p.port, p]));
+  const setText = (el, t) => { if (el.textContent !== t) el.textContent = t; }; // relu à chaque mise à jour : pas de nouvelle annonce
+  for (const b of document.querySelectorAll('#alPorts [data-wp]')) {
+    const p = ports[b.dataset.wp], on = String(cur.has(b.dataset.wp));
+    if (b.getAttribute('aria-pressed') !== on) b.setAttribute('aria-pressed', on);
+    const label = [`Port ${portNum(b.dataset.wp)}`, p?.desc, p && isUplink(p) && 'lien vers un autre switch'].filter(Boolean).join(', ');
+    if (b.title !== label) { b.title = label; b.setAttribute('aria-label', label); }
+  }
+  for (const b of document.querySelectorAll('#alMode [data-mode]')) {
+    const on = (b.dataset.mode === 'manual') === Boolean(watchSel);
+    b.classList.toggle('on', on); if (b.getAttribute('aria-pressed') !== String(on)) b.setAttribute('aria-pressed', String(on));
+  }
+  setText($('#alPortsCount'), String(cur.size));
+  const name = `Ports du switch, ${cur.size} surveillé${cur.size > 1 ? 's' : ''}`;
+  if ($('#alPorts').getAttribute('aria-label') !== name) $('#alPorts').setAttribute('aria-label', name);
+  setText($('#alPortsNote'), !watchSel
+    ? `Les liens vers d’autres switches et les ports qui ont une description${auto.length ? ` : en ce moment ${auto.map(portNum).join(', ')}` : ' (aucun pour l’instant)'}. Clique sur un port pour choisir à la main.`
+    : watchSel.size ? 'Clique sur un port pour l’ajouter ou le retirer.' : 'Aucun port choisi : à l’enregistrement, le choix automatique reprend.');
 }
 $('#alPorts').addEventListener('click', (e) => {
   const b = e.target.closest('[data-wp]'); if (!b) return;
   watchSel = watchSel || new Set(autoWatch());
   watchSel.has(b.dataset.wp) ? watchSel.delete(b.dataset.wp) : watchSel.add(b.dataset.wp);
-  renderWatch();
+  renderWatch(); syncSettings();
 });
-$('#alAuto').addEventListener('click', () => { watchSel = null; renderWatch(); });
+$('#alMode').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-mode]'); if (!b) return;
+  watchSel = b.dataset.mode === 'auto' ? null : watchSel || new Set(autoWatch());
+  renderWatch(); syncSettings();
+});
+$('#alertForm').addEventListener('input', (e) => {
+  if (e.target.getAttribute?.('aria-invalid')) { e.target.removeAttribute('aria-invalid'); $('#alErr').textContent = ''; } // champ en cours de correction
+  syncSettings();
+});
+$('#alertForm').addEventListener('change', (e) => {
+  if (e.target.id === 'alTemp') {
+    const t = $('#alTempMax');
+    // alerte décochée avec un seuil faux ou vide : le champ grisé échapperait à la vérification, la valeur enregistrée revient
+    if (!e.target.checked && !t.checkValidity()) { t.value = SETTINGS?.tempMax ?? 70; t.removeAttribute('aria-invalid'); }
+    t.disabled = !e.target.checked;
+  }
+  syncSettings();
+});
+// Barre collée en bas : la page garde sa hauteur en réserve, un champ atteint au clavier ne passe pas dessous (WCAG 2.4.11).
+function fitBar() {
+  const h = $('#alBar').offsetHeight; // 0 quand la barre (ou la page) est cachée
+  document.documentElement.style.scrollPaddingBottom = h ? `${h + 24}px` : '';
+}
+const barSize = 'ResizeObserver' in window ? new ResizeObserver(fitBar) : null; // barre affichée, cachée, agrandie par un message
+barSize?.observe($('#alBar'));
+
+const tzOk = (z) => { try { new Intl.DateTimeFormat('fr-FR', { timeZone: z }); return Boolean(z); } catch { return false; } };
+const SET_NUMS = [['#alTempMax', 'Seuil de température', '°C'], ['#alHot', 'Dashboard ouvert', 's'], ['#alWarm', 'Écran lecture seule', 's'], ['#alIdleSync', 'Aucune page ouverte', 's']];
 $('#alertForm').addEventListener('submit', (e) => {
   e.preventDefault();
+  if (!settingsDirty()) return;
+  const bad = (el, msg) => { el.setAttribute('aria-invalid', 'true'); $('#alErr').textContent = msg; fitBar(); el.focus(); }; // barre agrandie par le message : réserve à jour avant le focus
+  $('#alErr').textContent = '';
+  for (const [sel, name, unit] of SET_NUMS) {
+    const el = $(sel);
+    if (!el.disabled && !el.checkValidity()) return bad(el, `${name} : un nombre entier de ${el.min} à ${el.max}\u00a0${unit}.`);
+  }
+  if (!tzOk($('#alTz').value.trim())) return bad($('#alTz'), 'Fuseau horaire inconnu : choisis-en un dans la liste, par exemple Europe/Paris.');
+  const body = settingsBody(), sent = JSON.stringify(body);
   busy($('#alSave'), async () => {
     try {
-      const d = await api('/api/settings', {
-        email: $('#alEmail').value, webhook: $('#alHook').value, tempMax: $('#alTempMax').value,
-        watchPorts: watchSel ? [...watchSel] : null, autoCable: $('#alAutoCable').checked,
-        siteName: $('#alSite').value, tz: $('#alTz').value,
-        agent: { hot: $('#alHot').value, warm: $('#alWarm').value, idle: $('#alIdleSync').value },
-        notify: { portDown: $('#alPortDown').checked, temp: $('#alTemp').checked, agentOffline: $('#alAgent').checked, slowLink: $('#alSlow').checked, idleLink: $('#alIdle').checked, newDevice: $('#alNewDev').checked },
-      });
-      SETTINGS = d.settings; fillSettings(); renderAlerts(); $('#alertDialog').close();
+      const d = await api('/api/settings', body);
+      SETTINGS = d.settings;
+      if (JSON.stringify(settingsBody()) === sent) fillSettings(true);
+      else { SAVED = sent; syncSettings(); } // saisie faite pendant l'enregistrement : gardée, encore à enregistrer
+      renderAlerts();
+      if (S) document.title = `${SETTINGS.siteName || 'My Aruba Manager'} · ${S.hostname || 'switch'}`;
+      if ($('#alBar').hidden) $('#setTitle').focus({ preventScroll: true }); // la barre (et son bouton) disparaît : le focus revient au titre
       toast('Réglages enregistrés', { type: 'success', sub: 'L’agent applique les alertes à sa prochaine mise à jour.' });
-    } catch (err) { if (err.message !== '401') toast('Impossible d’enregistrer', { type: 'error', sub: err.message }); }
+    } catch (err) {
+      if (err.message === '401') return;
+      $('#alErr').textContent = err.message;
+      const field = /e-mail/i.test(err.message) ? '#alEmail' : /webhook/i.test(err.message) ? '#alHook' : null;
+      if (field) $(field).setAttribute('aria-invalid', 'true');
+    }
   });
 });
+$('#alReset').addEventListener('click', () => {
+  fillSettings(true); $('#setTitle').focus({ preventScroll: true });
+  toast('Modifications annulées', { timeout: 2500 });
+  loadSettings(); // et relecture des réglages du serveur (un autre administrateur a pu les changer)
+});
 $('#alertTest').addEventListener('click', (e) => busy(e.currentTarget, async () => {
+  if (settingsDirty()) return;
   try { const r = await api('/api/alerts/test', {}); toast('Notification de test envoyée', { type: 'success', sub: `Via : ${r.sent.join(' + ')}` }); setTimeout(poll, 800); }
   catch (err) { if (err.message !== '401') toast('Le test a échoué', { type: 'error', sub: err.message, timeout: 9000 }); }
 }));
-function openAlertSettings(e) { e?.preventDefault?.(); if (!canAdmin()) return; loadSettings(); $('#alertDialog').showModal(); }
-$('#settingsBtn').addEventListener('click', openAlertSettings);
+// Ouvre la page Réglages (bouton de la carte Alertes récentes, assistant de démarrage).
+function openAlertSettings(e) {
+  e?.preventDefault?.();
+  if (!canAdmin() || !window.NAV) return;
+  history.replaceState(null, '', '#reglages');
+  NAV.show('settings', { focus: true });
+}
 $('#alertSettingsBtn').addEventListener('click', openAlertSettings);
-$('#alClose').addEventListener('click', () => $('#alertDialog').close());
-$('#bellBtn').addEventListener('click', () => {
-  if (window.NAV) NAV.show('dashboard');
+$('#alertChannels').addEventListener('click', (e) => { if (e.target.closest('[data-go-settings]')) openAlertSettings(e); });
+// Fermer l'onglet ou recharger avec des changements non enregistrés : le navigateur demande confirmation.
+addEventListener('beforeunload', (e) => { if (window.NAV?.current === 'settings' && settingsDirty()) { e.preventDefault(); e.returnValue = ''; } });
+$('#bellBtn').addEventListener('click', async () => {
+  if (window.NAV) { if (!(await NAV.leave('dashboard'))) return; history.replaceState(null, '', '#alertes'); NAV.show('dashboard'); } // rechargement : même carte
   const sec = $('#sec-alertes'); sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
   sec.classList.remove('flash'); void sec.offsetWidth; sec.classList.add('flash');
   try { localStorage.setItem('alertsSeen', String(Date.now() / 1000)); } catch (e) {}
   renderAlerts();
 });
+// Niveau d'une alerte en toutes lettres pour les lecteurs d'écran (la pastille n'est que couleur et forme), mêmes
+// mots que les e-mails et webhooks (lib/notify.js).
+const ALERT_LVL = { critical: 'Critique', warning: 'Attention', ok: 'Rétabli', info: 'Info' };
 function renderAlerts() {
   let seen = 0; try { seen = Number(localStorage.getItem('alertsSeen')) || 0; } catch (e) {}
   const fresh = ALERTS.filter((a) => a.t > seen && a.t > NOW - 86400 && ['critical', 'warning'].includes(a.level)).length;
@@ -1335,13 +1486,14 @@ function renderAlerts() {
   $('#bellBtn').setAttribute('aria-label', $('#bellBtn').title);
   $('#navAlertCount').hidden = !fresh; $('#navAlertCount').textContent = $('#bellCount').textContent;
   $('#alertCount').textContent = ALERTS.length ? `${ALERTS.length}` : '';
-  setHTML($('#alertList'), ALERTS.length ? ALERTS.slice(0, 12).map((a) => `<div class="alert-item"><span class="lvl ${esc(a.level)}"></span>
-    <div>${esc(a.text)}<div class="ch">${arr(a.sent).length ? `envoyé par ${esc(arr(a.sent).join(' + '))}` : 'non envoyé'}${arr(a.errors).length ? ` · ⚠ ${esc(arr(a.errors).join(' · '))}` : ''}</div></div>
+  setHTML($('#alertList'), ALERTS.length ? ALERTS.slice(0, 12).map((a) => `<div class="alert-item"><span class="lvl ${esc(a.level)}">${Object.hasOwn(ALERT_LVL, a.level) ? `<span class="sr">${ALERT_LVL[a.level]} : </span>` : ''}</span>
+    <div>${esc(a.text)}<div class="ch">${arr(a.sent).length ? `envoyé par ${esc(arr(a.sent).join(' + '))}` : 'non envoyé'}${arr(a.errors).length ? ` · ${icon('warning', { size: 13, label: 'Erreur d’envoi', cls: 'ic-warn' })} ${esc(arr(a.errors).join(' · '))}` : ''}</div></div>
     <span class="when">${new Date(a.t * 1000).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div>`).join('')
     : '<div class="empty" style="padding:16px 0">Aucune alerte pour l’instant.</div>');
   const ch = SETTINGS ? [SETTINGS.email && 'e-mail', SETTINGS.webhook && 'webhook'].filter(Boolean) : null;
-  $('#alertChannels').innerHTML = !ch ? '' : ch.length ? `Envoi par ${ch.join(' et ')}.` : '<span style="color:var(--warn)">Aucun canal configuré : les alertes ne sont envoyées nulle part.</span> Ouvre les réglages pour ajouter un e-mail ou un webhook.';
-  if (SETTINGS && !watchSel && $('#alertDialog').open) renderWatch();
+  setHTML($('#alertChannels'), !ch ? '' : ch.length ? `Envoi par ${ch.join(' et ')}.` : `<span style="color:var(--warn)">Aucun canal configuré : les alertes ne sont envoyées nulle part.</span> ${canAdmin()
+    ? '<a href="#reglages" data-go-settings>Ajoute un e-mail ou un webhook dans Réglages</a>.' : 'Un administrateur peut en ajouter dans Réglages.'}`);
+  if (SETTINGS && !watchSel) renderWatch(); // mode Auto : la liste suit les descriptions et les liens du switch
 }
 
 // ================================================================ graphique

@@ -1,5 +1,103 @@
 # Historique des versions
 
+## 1.9.1 (2026-10-11)
+
+### Réglages : une vraie page
+- **Réglages** s’ouvre maintenant comme les autres entrées de la barre latérale (adresse `#reglages`), à la place de
+  la longue fenêtre qui défilait. La page est rangée en cartes : où envoyer les alertes (avec **Envoyer un test**),
+  quand prévenir, ports surveillés, site, rythme de l’agent et vérifications automatiques.
+- Une ligne claire par alerte ; le seuil de température a son propre petit champ (unité °C à côté), grisé quand
+  l’alerte est décochée. Les champs nombre ne coupent plus les chiffres, en clair comme en sombre, sur ordinateur
+  comme sur téléphone.
+- **Ports surveillés** : choix **Automatique** ou **Manuel**, avec la liste automatique expliquée, et une
+  grille disposée comme la façade (impairs en haut, pairs en bas, ports SFP à part) ; un port choisi est surligné
+  discrètement au lieu d’un bloc orange vif.
+- **Site** : « Nom du site » et « Fuseau horaire » ont un libellé visible ; un fuseau inconnu est signalé au lieu
+  d’être ignoré sans rien dire.
+- **Enregistrer** : une barre apparaît en bas de l’écran dès qu’un champ change (« Modifications non
+  enregistrées », **Annuler**, **Enregistrer**) ; les erreurs s’affichent à côté du bouton. Quitter la page ou se
+  déconnecter sans enregistrer demande confirmation ; si la session expire pendant la saisie, les changements sont
+  remis après la reconnexion avec le même compte. Le test d’alerte utilise les réglages enregistrés : il attend
+  l’enregistrement des changements.
+- Réservée à l’administrateur : pour un technicien ou un compte lecture seule, `#reglages` ramène au tableau de bord.
+- Accessibilité : un champ atteint au clavier ne passe plus sous la barre d’enregistrement ; contour du focus plus
+  foncé (contraste 3:1) dans tout le dashboard ; texte « avertissement » orangé plus foncé (4,5:1) ; menu du téléphone
+  fermé retiré de la tabulation ; sur téléphone, le tableau de la page Utilisateurs défile dans sa carte au lieu
+  d’élargir la page.
+
+### Icônes Google à la place des emojis
+- Toute l’interface utilise maintenant une seule famille d’icônes, **Google Material Symbols** (style Rounded, contour) :
+  barre latérale, en-tête, thème, déconnexion, outils de la carte Administration, notifications, façade, tableau des
+  ports, volet d’un port, console, assistant de démarrage, page de connexion et installation à terminer. Elles
+  remplacent les emojis, les signes Unicode (triangle d’avertissement, coches, croix, flèches, pictogrammes des outils)
+  et les anciens dessins faits à la main, y compris ceux du schéma « Comment tout est relié ». Les blocs dépliables
+  (« Ce que montre la vidéo », « Ça ne se connecte pas ? », vérifications OK du Bilan de santé, sortie brute des
+  sauvegardes) ont un chevron à la place du triangle du navigateur.
+- Le logo garde son carré orange, avec l’icône « réseau » à l’intérieur ; l’icône de l’onglet du navigateur suit, en
+  version pleine pour rester lisible en 16 pixels.
+- Les icônes prennent la couleur du texte, à des tailles proches de celles d’avant : 16 px dans les boutons (les
+  outils passent de 14 ou 15 px à 16 px), 14 px dans les petits boutons, 12 px pour les étiquettes des prises de la
+  façade. Elles sont décoratives pour les lecteurs d’écran, sauf quand elles portent un sens : « entrant » et
+  « sortant » dans le volet d’un port, « Attention » dans les fenêtres de confirmation, « puis » entre les lignes
+  d’une commande de la console, « Erreur d’envoi » dans la liste des alertes, « trois points » (menu de Vercel) dans
+  l’installation à terminer et l’assistant, état de la mise à jour automatique de l’agent en bas de page.
+- Les flèches de phrase deviennent des mots (« Port 5 dans le VLAN 10 », « historique des ports : 3, puis 5 ») : un
+  lecteur d’écran les lisait « flèche droite ».
+- Intégrées au site (`public/js/icons.js`, seulement les icônes utilisées) : ni police d’icônes, ni CDN, aucun appel
+  à Google. Licence Apache 2.0, voir `THIRD-PARTY-NOTICES.md`.
+- Bas de page : « mise à jour auto » est suivi d’une coche verte, ou d’un triangle orange si la dernière vérification
+  de l’agent a échoué.
+
+### Notifications sans emoji
+- E-mails et webhooks : le niveau est écrit en toutes lettres au début de chaque ligne et du sujet, au lieu des ronds
+  de couleur qu’un texte brut n’affiche pas toujours : « [Critique] », « [Attention] », « [Rétabli] », « [Info] »
+  (par exemple « [Critique] SWITCH-DEMO : Port 23 est tombé »). Le test d’alerte est marqué « [Info] ».
+
+### Sécurité
+- Un compte dont la double authentification est exigée mais pas encore activée ne peut plus agir sur le switch en
+  présentant une commande comme un « relevé automatique » : seuls les vrais relevés (vérifiés ligne par ligne, ou
+  uniquement des lectures `show`) passent. Une action réelle marquée « automatique » est aussi inscrite au journal
+  d’activité, et la réponse à une question du switch demande la double authentification.
+
+### Corrections
+- Boutons rouges (« Désactiver » de la double authentification, « Les déconnecter », « Supprimer » d’un compte,
+  « Désactiver » d’un port ou de la sélection multiple, « Oublier », « Revenir à ce point », boutons de suppression) :
+  ils ne prennent plus l’allure de l’encadré rouge des secondes confirmations (marge, fond rose, bordure). Texte rouge,
+  fond rose au survol seulement.
+- Mon profil : « Nouveaux codes de secours » et « Désactiver » ne sont plus collés l’un à l’autre.
+- Bilan de santé : les pastilles « À corriger », « À surveiller » gardent leur hauteur au lieu de s’étirer sur toute
+  la ligne.
+- Façade : les étiquettes d’une prise (lien vers un autre switch, VLAN, vitesse, câble) passent sur une seconde ligne
+  quand la prise est étroite (fenêtre réduite, téléphone) au lieu de déborder sur la prise voisine ; au-delà de deux
+  lignes elles restent dans l’info-bulle. La légende explique le triangle orange : « Câble en défaut » et « Paires
+  ouvertes » (câble branché dont une paire est coupée).
+- Assistant de démarrage : une étape ou une vérification « Facultatif » garde la même mise en page que les autres
+  (elle prenait le style des listes d’alertes des Réglages).
+- Seconde confirmation et « Cette étape se coche toute seule » : l’icône reste sur la première ligne quand le texte
+  passe sur deux lignes (téléphone).
+- Se déconnecter juste après Démarrage, Utilisateurs ou Journal d’activité ne provoque plus d’erreurs 401 dans la
+  console : une lecture de l’état partie avant la déconnexion est ignorée.
+
+### Accessibilité
+- Rôles et droits : les lignes barrées sont annoncées « Non autorisé : … » par les lecteurs d’écran.
+- Tableau des ports : le tri des colonnes et « ports libres · afficher » se font aussi au clavier (vrais boutons,
+  état replié ou déplié annoncé) ; le focus reste en place quand le tableau se redessine.
+- Sélection multiple : une prise sélectionnée est annoncée comme enfoncée ; « Ajouter les ports sans lien » et
+  « Ajouter les ports actifs » gardent le mot « Ajouter » pour les lecteurs d’écran.
+- Alertes du tableau de bord : le niveau (Critique, Attention, Rétabli, Info) est lu avant le texte, comme dans les
+  e-mails et les webhooks.
+- « Affecter des ports à un VLAN » : la consigne nomme les liens vers d’autres switches au lieu de renvoyer à une
+  icône.
+
+### Documentation
+- Guide, README et documentation de l’agent sans emoji ni pictogramme : « Durée : 5 minutes », états cités par leur
+  libellé (« Fait », « Manquante »…), « menu aux trois points » de Vercel, flèches du schéma en texte.
+- Captures du guide et des README (`docs/captures`) refaites avec les nouvelles icônes. Le tableau des ports y montre
+  toutes ses colonnes (« Erreurs » restait cachée à droite) et aucune ligne de texte n’est plus tranchée en bas d’image.
+
+### Passer de la 1.9.0 à la 1.9.1
+Rien à faire : les réglages enregistrés sont repris tels quels. Agent : rien à faire (version 1.4.0 inchangée).
+
 ## 1.9.0 (2026-10-11)
 
 Le projet est open source : une personne qui le récupère est maintenant accompagnée de la vidéo de présentation
@@ -96,13 +194,13 @@ Projet indépendant, sans lien avec HPE ni Aruba Networks.
 - Upstash Redis et QStash sont remplacés par **une seule base Supabase** (Postgres, offre gratuite), ajoutée en un clic
   depuis l’onglet **Storage** du projet Vercel. Les tables sont créées toutes seules au premier lancement.
 - La vérification toutes les 5 min (agent hors ligne, actions planifiées, alertes) est programmée automatiquement dans
-  Supabase (pg_cron) : plus de planification QStash à créer. Son état s’affiche dans ⚙ Réglages en cas de problème.
+  Supabase (pg_cron) : plus de planification QStash à créer. Son état s’affiche dans Réglages en cas de problème.
 - Tables protégées : l’API publique de Supabase n’y a aucun accès, seul le serveur du dashboard lit et écrit.
 - Fonctions Vercel à Paris (cdg1), près de la base.
 
 ### Sécurité
 - **Double authentification** pour l’administrateur (application d’authentification, code à 6 chiffres) avec
-  8 codes de secours à usage unique, à activer dans ⚙ Réglages.
+  8 codes de secours à usage unique, à activer dans Réglages.
 - **Politique de sécurité du contenu (CSP)** stricte : aucun script en ligne n’est exécuté par la page. Le code de
   l’application est sorti de `index.html` (`public/js/app.js`), les boutons Oui / Non des questions du switch n’ont plus
   de code dans le HTML.
@@ -125,7 +223,7 @@ Projet indépendant, sans lien avec HPE ni Aruba Networks.
    `vercel env pull .env.migration --environment=production --yes`, puis
    `node --env-file=.env.migration scripts/migrate-from-upstash.mjs`, puis supprimer `.env.migration`.
    Sans cette étape, le dashboard repart de zéro (le mot de passe administrateur, lui, ne change pas).
-3. Redéployer, ouvrir le dashboard et vérifier qu’aucune alerte « vérification automatique » n’apparaît dans ⚙ Réglages.
+3. Redéployer, ouvrir le dashboard et vérifier qu’aucune alerte « vérification automatique » n’apparaît dans Réglages.
 4. Supprimer la planification QStash, puis retirer Upstash et QStash du projet Vercel.
 5. Agent : rien à faire. Le programme de mise à jour du PC installe cette version, puis ne suit plus que les releases.
 
@@ -200,7 +298,7 @@ Tout se gère depuis l’interface : nouvelle carte **Administration**.
 ## 1.4.0 (2026-10-09)
 
 ### Deux accès
-- **Mot de passe lecture seule** pour un écran de supervision, défini dans ⚙ Réglages (8 caractères minimum, différent de celui de l’administrateur).
+- **Mot de passe lecture seule** pour un écran de supervision, défini dans Réglages (8 caractères minimum, différent de celui de l’administrateur).
   À la connexion, le mot de passe administrateur donne tous les droits, le mot de passe lecture seule donne l’affichage seul.
 - Lecture seule **imposée par le serveur** : aucune commande (seuls les relevés et tests de câble automatiques, vérifiés ligne par ligne),
   pas de réglages, pas d’historique des commandes, destinataires des alertes et différences de configuration masqués.

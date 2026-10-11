@@ -26,20 +26,12 @@
   const say = (msg) => { const el = $('#obSay'); el.textContent = ''; setTimeout(() => { el.textContent = msg; }, 50); }; // annonce aux lecteurs d'écran
 
   // ---------------------------------------------------------------- icônes et petits blocs
-  const svg = (d) => `<svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  // Icônes Google Material Symbols (public/js/icons.js), taille réglée par la classe ob-svg selon l'endroit.
+  const ic = (name) => icon(name, { size: 16, cls: 'ob-svg' });
   const IC = {
-    ok: svg('<path d="M5 12l5 5L20 7"/>'),
-    ko: svg('<path d="M18 6 6 18M6 6l12 12"/>'),
-    wait: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
-    todo: svg('<circle cx="12" cy="12" r="8" stroke-dasharray="3.2 3"/>'),
-    opt: svg('<circle cx="12" cy="12" r="8"/><path d="M9 12h6"/>'),
-    play: svg('<path d="M7 4v16l13-8z" fill="currentColor"/>'),
-    copy: svg('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>'),
-    ext: svg('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
-    down: svg('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
-    warn: svg('<path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/>'),
-    info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
-    zoom: svg('<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>'),
+    ok: ic('check'), ko: ic('close'), wait: ic('hourglass_top'), todo: ic('radio_button_unchecked'), opt: ic('do_not_disturb_on'),
+    play: ic('play_arrow'), copy: ic('content_copy'), ext: ic('open_in_new'), down: ic('download'), warn: ic('warning'),
+    info: ic('info'), zoom: ic('open_in_full'),
   };
   // Statuts : toujours une icône et un texte, jamais la couleur seule.
   const ST = { ok: ['Fait', 'good'], todo: ['À faire', ''], wait: ['En attente', 'warn'], ko: ['À corriger', 'bad'], opt: ['Facultatif', 'info'] };
@@ -204,7 +196,7 @@
         <div class="ob-sec" id="obInstEnv" hidden><div class="ob-row"><div><h4>Ajoute les variables manquantes</h4>
           <ol class="ob-ol"><li>Sur vercel.com, ouvre ton projet, puis <b>Settings</b> et <b>Environment Variables</b>.</li>
             <li>Ajoute <b id="obInstEnvNames"></b> pour tous les environnements (<b>All Environments</b>, ou au moins <b>Production</b>).</li>
-            <li>Redéploie le projet : <b>Deployments</b>, <b>⋯</b>, <b>Redeploy</b>.</li></ol></div>
+            <li>Redéploie le projet : <b>Deployments</b>, <b>${icon('more_horiz', { size: 16, label: 'trois points' })}</b>, <b>Redeploy</b>.</li></ol></div>
           ${fig('vercel-env', 'Vercel : Settings, puis Environment Variables, avec DASHBOARD_PASSWORD, SESSION_SECRET et AGENT_TOKEN (valeurs masquées).', 'Settings, Environment Variables : une ligne par variable.')}</div></div>
         <div class="ob-sec" id="obInstCron" hidden><div class="ob-row"><div><h4>Active la vérification automatique</h4>
           <p>Sans elle, l’alerte « agent hors ligne », les actions planifiées et les sauvegardes automatiques ne fonctionnent pas.</p>
@@ -321,7 +313,7 @@
         <div class="ob-row"><div><h4 class="ob-n" data-n="3">Attends la connexion</h4>
           <div class="ob-wait" id="obWait"><span class="ob-ci" id="obWaitIc"></span><div><b id="obWaitTitle" aria-live="polite"></b><p id="obWaitSub"></p></div>
             <button type="button" class="btn small" data-ob="check" id="obCheckNow">Vérifier maintenant</button></div></div></div>
-        <details class="ob-details ob-sec"><summary>Ça ne se connecte pas ?</summary><ul class="ob-list">
+        <details class="ob-details ob-sec"><summary>${icon('expand_more', { cls: 'chev' })}Ça ne se connecte pas ?</summary><ul class="ob-list">
           <li><b>Le PC s’est mis en veille</b> : règle la mise en veille sur « Jamais » (Paramètres, Système, Alimentation).</li>
           <li><b>Le pare-feu ou l’antivirus bloque Python</b> : autorise <code>python.exe</code> à sortir vers Internet (HTTPS).</li>
           <li><b>Mauvaise adresse du switch</b> : vérifie <code>switch_host</code> dans agent_config.json, et que le PC arrive à faire un <code>ping</code> vers le switch.</li>
@@ -420,14 +412,14 @@
     qsa('#obStep [data-main]').forEach((b) => b.classList.toggle('primary', mainFirst && b === main));
     $('#obNext').classList.toggle('primary', !mainFirst);
   }
-  // Pastille du menu : progression « 3/7 », ou ✓ une fois l'assistant terminé.
+  // Pastille du menu : progression « 3/7 », ou une coche une fois l'assistant terminé.
   function updateNav() {
     const el = $('#navSetupN');
     el.hidden = !SD;
     if (!SD) return;
     const done = Boolean(SD.onboarding?.done), n = doneCount();
     el.className = `n ${done ? 'ok' : 'prog'}`;
-    setHTML(el, done ? '<span aria-hidden="true">✓</span><span class="sr">, terminé</span>' : `${n}/7<span class="sr"> étapes faites</span>`);
+    setHTML(el, done ? `${icon('check', { size: 13 })}<span class="sr">, terminé</span>` : `${n}/7<span class="sr"> étapes faites</span>`);
   }
 
   function go(i) {

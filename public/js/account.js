@@ -19,10 +19,10 @@
   const rolePill = (r) => `<span class="pill ${ROLE_PILL[r] || ''}">${esc(ROLE_FR[r] || r)}</span>`;
 
   // ------------------------------------------------------------ confirmation simple (actions sur les comptes)
-  function ask(title, text, yes = 'Confirmer', danger = false) {
+  function ask(title, text, yes = 'Confirmer', danger = false, no = 'Annuler') {
     return new Promise((resolve) => {
       const d = $('#askDialog');
-      $('#akTitle').textContent = title; $('#akText').textContent = text;
+      $('#akTitle').textContent = title; $('#akText').textContent = text; $('#akNo').textContent = no;
       const y = $('#akYes'); y.textContent = yes; y.className = `btn ${danger ? 'dangerous' : 'primary'}`;
       const done = (v) => { d.close(); y.onclick = $('#akNo').onclick = null; resolve(v); };
       y.onclick = () => done(true); $('#akNo').onclick = () => done(false);
@@ -32,11 +32,11 @@
   }
 
   // ------------------------------------------------------------ navigation
-  const VIEWS = ['dashboard', 'users', 'roles', 'activity', 'profile', 'setup'];
-  const ADMIN_VIEWS = new Set(['users', 'activity', 'setup']);
+  const VIEWS = ['dashboard', 'settings', 'users', 'roles', 'activity', 'profile', 'setup'];
+  const ADMIN_VIEWS = new Set(['settings', 'users', 'activity', 'setup']);
   const HASH = { 'tableau-de-bord': ['dashboard', 'top'], ports: ['dashboard', 'sec-facade'], alertes: ['dashboard', 'sec-alertes'],
     debit: ['dashboard', 'sec-debit'], journal: ['dashboard', 'sec-logs'], vlan: ['dashboard', 'sec-vlan'], outils: ['dashboard', 'sec-admin'],
-    console: ['dashboard', 'sec-console'], utilisateurs: ['users'], roles: ['roles'], activite: ['activity'], profil: ['profile'], demarrage: ['setup'] };
+    console: ['dashboard', 'sec-console'], reglages: ['settings'], utilisateurs: ['users'], roles: ['roles'], activite: ['activity'], profil: ['profile'], demarrage: ['setup'] };
   let current = 'dashboard';
   const links = () => qsa('#sideNav a[data-view]');
 
@@ -45,7 +45,11 @@
   }
   function show(view, { target = null, link = null, focus = false } = {}) {
     if (!VIEWS.includes(view)) view = 'dashboard';
-    if (ADMIN_VIEWS.has(view) && !canAdmin()) view = 'dashboard';
+    if (ADMIN_VIEWS.has(view) && !canAdmin()) { // page réservée à l'administrateur : retour au tableau de bord, adresse comprise
+      view = 'dashboard'; target = null;
+      if (ADMIN_VIEWS.has(HASH[decodeURIComponent(location.hash.slice(1))]?.[0])) history.replaceState(null, '', '#tableau-de-bord');
+    }
+    if (current === 'settings' && view !== 'settings' && settingsDirty()) fillSettings(true); // changements abandonnés
     const changed = view !== current;
     current = view;
     for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
@@ -62,17 +66,26 @@
       LOAD[view]?.();
     }
   }
-  window.NAV = { show, get current() { return current; } };
+  // Quitter Réglages avec des changements non enregistrés : confirmation. Sinon la navigation n'est pas gênée.
+  async function leave(view) {
+    if (current !== 'settings' || view === 'settings' || !settingsDirty()) return true;
+    return ask('Quitter sans enregistrer ?', 'Tes changements dans Réglages ne sont pas enregistrés : ils seront perdus.', 'Quitter', true, 'Rester');
+  }
+  window.NAV = { show, leave, get current() { return current; } };
 
-  $('#sideNav').addEventListener('click', (e) => {
+  $('#sideNav').addEventListener('click', async (e) => {
     const a = e.target.closest('a[data-view]');
     if (!a) return;
     e.preventDefault();
+    if (!(await leave(a.dataset.view))) return;
     history.replaceState(null, '', a.getAttribute('href'));
     show(a.dataset.view, { target: a.dataset.target, link: a, focus: true });
   });
-  $('#need2faBanner a').addEventListener('click', (e) => { e.preventDefault(); history.replaceState(null, '', '#profil'); show('profile', { focus: true }); });
-  $('#settingsBtn').addEventListener('click', () => closeMenu());
+  $('#need2faBanner a').addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!(await leave('profile'))) return;
+    history.replaceState(null, '', '#profil'); show('profile', { focus: true });
+  });
 
   // Section visible du tableau de bord : l'entrée correspondante du menu est mise en avant.
   const spy = 'IntersectionObserver' in window && new IntersectionObserver((entries) => {
@@ -100,11 +113,16 @@
   $('#sideOpen').addEventListener('click', openMenu);
   $('#sideClose').addEventListener('click', () => { closeMenu(); $('#sideOpen').focus(); });
   $('#sideScrim').addEventListener('click', closeMenu);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) { closeMenu(); $('#sideOpen').focus(); } });
+  // Échap dans une fenêtre ouverte depuis le menu (confirmation de sortie…) : la fenêtre se ferme, le menu reste ouvert.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.body.classList.contains('menu-open') && !document.querySelector('dialog[open]')) { closeMenu(); $('#sideOpen').focus(); }
+  });
 
-  function fromHash() {
+  async function fromHash() {
     const h = HASH[decodeURIComponent(location.hash.slice(1))];
-    if (h) show(h[0], { target: h[1] });
+    if (!h) return;
+    if (!(await leave(h[0]))) return history.replaceState(null, '', '#reglages'); // on reste sur Réglages
+    show(h[0], { target: h[1] });
   }
   addEventListener('hashchange', fromHash);
 
@@ -124,9 +142,9 @@
     if (d.need2fa && !warned2fa) { warned2fa = true; show('profile'); }
     if (!d.need2fa) warned2fa = false;
     if (firstState) { firstState = false; fromHash(); }
-    if (ADMIN_VIEWS.has(current) && !canAdmin()) show('dashboard');
+    if (ADMIN_VIEWS.has(current) && !canAdmin()) show(current); // renvoie au tableau de bord
   });
-  HOOK.role.push(() => { if (ADMIN_VIEWS.has(current) && !canAdmin()) show('dashboard'); });
+  HOOK.role.push(() => { if (ADMIN_VIEWS.has(current) && !canAdmin()) show(current); });
   $('#sideVersion').textContent = `v${APP_VERSION}`;
 
   // ------------------------------------------------------------ mon profil
@@ -414,7 +432,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
-  const LOAD = { users: loadUsers, activity: loadAudit, profile: loadProfile, setup: () => ADMIN.setupOpen?.() }; // setup : onboarding.js
+  const LOAD = { settings: () => loadSettings(true), users: loadUsers, activity: loadAudit, profile: loadProfile, setup: () => ADMIN.setupOpen?.() }; // settings : app.js, setup : onboarding.js
   // Les pages ouvertes se rafraîchissent toutes seules (comptes en ligne, nouvelles entrées du journal).
   setInterval(() => { if (!document.hidden && !$('#app').hidden && (current === 'users' || current === 'activity')) LOAD[current](); }, 30000);
 

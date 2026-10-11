@@ -1,5 +1,5 @@
 // Diagnostic d'un port (section du volet du port) et outil « Un appareil ne marche pas ? ».
-// Les étapes (✓ ⚠ ✕) sont recalculées à chaque affichage à partir de l'état du switch : le diagnostic suit
+// Les étapes (fait, attention, problème) sont recalculées à chaque affichage à partir de l'état du switch : le diagnostic suit
 // en direct le test du câble ou le ping lancés pour lui. Rien côté serveur : la page n'envoie que des commandes
 // déjà prévues (test de câble, ping de l'agent), et seulement en vue administrateur.
 // Fourni : ADMIN.diagnose(port), ADMIN.diagnoseReport(port), ADMIN.findDevice(texte), ADMIN.switchError(sortie),
@@ -107,10 +107,10 @@
     // l'agent ne répond pas (le test partira plus tard, le port aura peut-être un lien) : confirmation.
     const live = fresh();
     if (!p.up && !sensitive(p) && live) return void send(cableCmd(p.port), label, opts).catch(() => {});
-    const warn = isSwitchLink(p) ? '⚠ Ce port relie un autre switch : tout ce qui passe par lui sera coupé. '
-      : isAgentPort(p.port) ? '⚠ C’est le port du PC de l’agent : le dashboard perdra le contact quelques secondes. ' : '';
-    const late = live ? '' : `⚠ L’agent ne répond pas depuis ${fmtDur(Math.max(0, agentAge()))} : le test partira à son retour. Si un appareil a été branché entre-temps, il perdra le réseau 5 à 10 secondes pendant la mesure. `;
-    confirmCmd(`Tester le câble du port ${n} ?`, `${warn}${late}${p.up ? 'Le port sera coupé 5 à 10 secondes pendant la mesure : l’appareil branché perdra le réseau quelques instants.' : 'Mesure chaque paire du câble.'}`, cableCmd(p.port), label, opts);
+    const warn = isSwitchLink(p) ? { warn: 'Ce port relie un autre switch : tout ce qui passe par lui sera coupé.' }
+      : isAgentPort(p.port) ? { warn: 'C’est le port du PC de l’agent : le dashboard perdra le contact quelques secondes.' } : '';
+    const late = live ? '' : { warn: `L’agent ne répond pas depuis ${fmtDur(Math.max(0, agentAge()))} : le test partira à son retour. Si un appareil a été branché entre-temps, il perdra le réseau 5 à 10 secondes pendant la mesure.` };
+    confirmCmd(`Tester le câble du port ${n} ?`, [warn, late, p.up ? 'Le port sera coupé 5 à 10 secondes pendant la mesure : l’appareil branché perdra le réseau quelques instants.' : 'Mesure chaque paire du câble.'], cableCmd(p.port), label, opts);
   }
 
   // ---------------------------------------------------------------- ping depuis le PC de l'agent
@@ -388,7 +388,7 @@
   }
 
   // ---------------------------------------------------------------- section du volet du port
-  const IC = { ok: '✓', warn: '⚠', bad: '✕', info: 'i', na: '?' };
+  const IC = { ok: 'check', warn: 'warning', bad: 'close', info: 'info_i', na: 'question_mark' }; // icônes des étapes
   const btnHTML = (b, port) => `<button class="btn small${b.cls ? ` ${b.cls}` : ''} admin-only" type="button" data-diagnose-act="${esc(b.act)}" data-diagnose-port="${esc(port)}">${esc(b.label)}</button>`;
   function panelHTML(p) {
     if (!S || !p || !PORT_RE.test(p.port)) return '';
@@ -400,7 +400,7 @@
     }
     const r = report(p.port);
     if (!r) return '';
-    const steps = r.steps.map((s) => `<li class="diagnose-step ${s.st}"><span class="diagnose-ic" aria-hidden="true">${s.st === 'run' ? '<span class="spinner"></span>' : IC[s.st]}</span>
+    const steps = r.steps.map((s) => `<li class="diagnose-step ${s.st}"><span class="diagnose-ic" aria-hidden="true">${s.st === 'run' ? '<span class="spinner"></span>' : icon(IC[s.st] || 'question_mark', { size: 14 })}</span>
       <div><b>${esc(s.title)}</b>${s.detail ? `<span class="diagnose-d">${esc(s.detail)}</span>` : ''}${s.btns.length ? `<div class="row">${s.btns.map((b) => btnHTML(b, p.port)).join('')}</div>` : ''}</div></li>`).join('');
     const seen = new Set(r.steps.flatMap((s) => s.btns.map((b) => b.act)));
     const btns = r.btns.filter((b) => !seen.has(b.act)); // pas deux fois le même bouton
@@ -437,10 +437,10 @@
     if (!p) return;
     if (!canOperate()) return toast(ROLE === 'viewer' ? 'Lecture seule' : 'Vue monitoring', { type: 'warn', sub: ROLE === 'viewer' ? 'Ce compte ne peut rien modifier.' : 'Repasse en vue normale pour agir sur le switch.' });
     const n = portNum(port), base = `configure terminal\ninterface ${port}\n`, opt = { ports: [port] };
-    const warn = isSwitchLink(p) ? '⚠ Ce port relie un autre switch : tout ce qui passe par lui sera coupé. '
-      : isAgentPort(port) ? '⚠ C’est le port du PC de l’agent : le dashboard perdra le contact quelques secondes. ' : '';
+    const warn = isSwitchLink(p) ? { warn: 'Ce port relie un autre switch : tout ce qui passe par lui sera coupé.' }
+      : isAgentPort(port) ? { warn: 'C’est le port du PC de l’agent : le dashboard perdra le contact quelques secondes.' } : '';
     if (a === 'noshut') confirmCmd(`Activer le port ${n} ?`, 'L’appareil branché retrouvera le réseau en quelques secondes.', `${base}no shutdown\nend`, `Port ${n} activé`, opt);
-    else if (a === 'bounce') confirmCmd(`Redémarrer le port ${n} ?`, `${warn}Coupure d’environ 3 secondes.`, `${base}shutdown\nno shutdown\nend`, `Port ${n} redémarré`, opt);
+    else if (a === 'bounce') confirmCmd(`Redémarrer le port ${n} ?`, [warn, 'Coupure d’environ 3 secondes.'], `${base}shutdown\nno shutdown\nend`, `Port ${n} redémarré`, opt);
     else if (a === 'rearm') {
       // port déjà coupé par le switch : shutdown puis no shutdown le réarme sans rien couper de plus
       const why = guardOf(p);
@@ -582,7 +582,7 @@
   HOOK.render.push(() => { if (DG.dlg?.open) renderFind(); });
   addTool({
     id: 'diagnose', label: 'Un appareil ne marche pas ?', title: 'Retrouve un appareil (nom, IP, MAC, port) et diagnostique son port',
-    icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M11 8v3l2 2"/></svg>',
+    icon: icon('troubleshoot', { size: 16 }),
     open: openFind,
   });
 

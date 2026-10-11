@@ -380,7 +380,7 @@
     setHTML(HL.body, `<div class="diagnose-hsum">${sum}</div>
       <p class="note" style="margin:0 0 6px">${cfgLine(admin)}</p>
       <div class="diagnose-hlist">${rest.map((c) => rowHTML(c, admin)).join('') || '<div class="alert green" style="margin:8px 0">Rien à corriger : le switch est en bonne santé.</div>'}</div>
-      ${okList.length ? `<details class="diagnose-hok"${HL.okOpen ? ' open' : ''}><summary>${okList.length} ${plural(okList.length, 'vérification')} OK</summary><div class="diagnose-hlist">${okList.map((c) => rowHTML(c, admin)).join('')}</div></details>` : ''}`);
+      ${okList.length ? `<details class="diagnose-hok"${HL.okOpen ? ' open' : ''}><summary>${icon('expand_more', { size: 16, cls: 'chev' })}${okList.length} ${plural(okList.length, 'vérification')} OK</summary><div class="diagnose-hlist">${okList.map((c) => rowHTML(c, admin)).join('')}</div></details>` : ''}`);
   }
   function openDlg() {
     if (!canAdmin()) return;
@@ -464,20 +464,20 @@
 .diagnose-hb .note { overflow-wrap: anywhere; }
 .diagnose-hb .alert { margin: 2px 0 0; }
 .diagnose-hb .row { flex-wrap: wrap; margin-top: 2px; }
-.diagnose-hst { justify-self: start; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; background: var(--surface-2); color: var(--text-3); }
+.diagnose-hst { justify-self: start; align-self: start; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; background: var(--surface-2); color: var(--text-3); }
 .diagnose-hst.ok { background: var(--good-soft); color: var(--good); }
 .diagnose-hst.watch { background: var(--warn-soft); color: var(--warn); }
 .diagnose-hst.fix { background: var(--bad-soft); color: var(--bad); }
 .diagnose-hports { display: flex; flex-wrap: wrap; gap: 4px; }
 .diagnose-hports .chip { min-width: 30px; text-align: center; }
 .diagnose-hok { margin-top: 8px; }
-.diagnose-hok summary { cursor: pointer; font-size: 12.5px; color: var(--text-2); padding: 6px 0; }
+.diagnose-hok summary { font-size: 12.5px; color: var(--text-2); padding: 6px 0; }
 .diagnose-health .warn { color: var(--warn); }
 @media (max-width: 560px) { .diagnose-hc { grid-template-columns: minmax(0, 1fr); gap: 6px; } }`;
   document.head.append(css);
 
   HL.tool = { id: 'health', label: 'Bilan de santé', title: 'Vérifie la configuration et l’état du switch, et propose les corrections', open: openDlg,
-    icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>' };
+    icon: icon('monitor_heart', { size: 16 }) };
   addTool(HL.tool);
   HOOK.render.push(() => { if (ROLE === 'admin') { warnRefused(); refresh(); } }); // écran lecture seule : rien à calculer
   HOOK.poll.push((d) => {

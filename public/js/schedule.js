@@ -17,7 +17,7 @@
   const DAY_F = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
   const MAX = 30, TIME = /^([01]\d|2[0-3]):[0-5]\d$/, PORT = /^1\/1\/([1-9]|1\d|2[0-8])$/;
   const BULK = 8; // couper ou redémarrer autant de ports d'un coup : seconde confirmation (même seuil que lib/danger.js)
-  const ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  const ICON = icon('schedule', { size: 16 });
   let dlg = null, body = null, view = 'list', draft = null, delAsk = null, delTimer = 0, skew = 0, dropNote = '', listError = '';
   let pressing = 0, cf = null; // pressing : heure (ms) de l'appui en cours dans la fenêtre, 0 si aucun
 
@@ -218,9 +218,9 @@
       </div>
       <div class="sched-meta"><b>${esc(TAG[s.action] || s.action)}</b> à <span class="mono">${esc(s.time)}</span>, ${esc(daysText(s.days))} · ${esc(portsText(s.ports))}</div>
       <div class="sched-meta">${!on ? 'Suspendue : ne s’exécute pas.' : nx ? `Prochaine : <b>${esc(whenText(nx))}</b> <span class="muted">(${esc(inText(nx - nowS()))})</span>` : 'Aucune exécution prévue.'}</div>
-      ${on && s.action === 'wol' && !agentHas('wol') ? '<div class="sched-meta" style="color:var(--warn)">⚠ L’agent actuel ne sait pas allumer les PC : nécessite l’agent 1.4.0.</div>' : ''}
-      ${on && unconfirmed(s) ? `<div class="sched-meta" style="color:var(--warn)">⚠ ${nums(s.ports).length} ports d’un coup sans seconde confirmation : elle ne sera pas exécutée. Modifie-la et enregistre-la en tapant CONFIRMER.</div>` : ''}
-      ${missed(s) ? `<div class="sched-meta" style="color:var(--warn)">⚠ Pas exécutée à l’heure prévue (${esc(whenText(prevRun(s)))}). Si cela se répète, vérifie que le passage automatique du serveur (QStash, toutes les 5 min) fonctionne.</div>` : ''}
+      ${on && s.action === 'wol' && !agentHas('wol') ? `<div class="sched-meta" style="color:var(--warn)">${icon('warning', { size: 15 })} L’agent actuel ne sait pas allumer les PC : nécessite l’agent 1.4.0.</div>` : ''}
+      ${on && unconfirmed(s) ? `<div class="sched-meta" style="color:var(--warn)">${icon('warning', { size: 15 })} ${nums(s.ports).length} ports d’un coup sans seconde confirmation : elle ne sera pas exécutée. Modifie-la et enregistre-la en tapant CONFIRMER.</div>` : ''}
+      ${missed(s) ? `<div class="sched-meta" style="color:var(--warn)">${icon('warning', { size: 15 })} Pas exécutée à l’heure prévue (${esc(whenText(prevRun(s)))}). Si cela se répète, vérifie que le passage automatique du serveur (QStash, toutes les 5 min) fonctionne.</div>` : ''}
       ${lastHtml(s)}
     </div>`;
   }
@@ -235,7 +235,7 @@
       ${listError ? `<div class="alert red" style="margin:10px 0 0"><b>Refusé par le serveur.</b> ${esc(listError)}</div>` : ''}
       <div class="actions"><span class="note" style="margin-right:auto;align-self:center">${l.length} / ${MAX}</span>
         <button type="button" class="btn" data-sched="close">Fermer</button>
-        <button type="button" class="btn primary" data-sched="new"${l.length >= MAX ? ' disabled title="30 planifications au maximum"' : ''}>+ Nouvelle</button></div>`;
+        <button type="button" class="btn primary" data-sched="new"${l.length >= MAX ? ' disabled title="30 planifications au maximum"' : ''}>${icon('add', { size: 16 })}Nouvelle</button></div>`;
   }
   // Redessinée aussi à chaque lecture de l'état (passive : « dans N min » change chaque minute), mais jamais pendant un
   // appui (le clic serait perdu ; 5 s au plus si le relâchement n'est pas vu). Le bouton qui avait le focus le retrouve.
@@ -361,7 +361,7 @@
       cf.setAttribute('aria-labelledby', 'schCfTitle');
       cf.innerHTML = `<h3 id="schCfTitle">Seconde confirmation</h3>
         <p class="note" style="margin:0">L’action sera faite par le serveur à l’heure prévue, sans autre confirmation, même si personne ne regarde le dashboard.</p>
-        <div class="danger"><div class="danger-head">⚠ Planification sensible : seconde confirmation obligatoire</div>
+        <div class="danger"><div class="danger-head">${icon('warning')}Planification sensible : seconde confirmation obligatoire</div>
           <ul id="schCfReasons"></ul>
           <label for="schCfWord">Pour l’enregistrer quand même, tape <b>CONFIRMER</b> :</label>
           <input id="schCfWord" type="text" autocomplete="off" spellcheck="false" autocapitalize="characters"></div>

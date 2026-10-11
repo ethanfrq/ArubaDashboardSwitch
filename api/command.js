@@ -14,13 +14,12 @@ export default async function handler(req, res) {
   const r = store();
   const admin = s.role === 'admin', staff = s.staff;
   const denied = (msg) => res.status(403).json({ error: msg || (staff ? 'Commande réservée à un administrateur.' : 'Accès en lecture seule : aucune modification possible.') });
-  // Double authentification exigée mais pas encore activée : seuls les relevés automatiques passent.
-  const need2fa = s.need2fa && !isAutoKind(String(req.body?.kind ?? ''));
-  if (need2fa) return res.status(403).json({ error: 'Active d’abord la double authentification dans « Mon profil ».', need2fa: true });
+  const no2fa = () => res.status(403).json({ error: 'Active d’abord la double authentification dans « Mon profil ».', need2fa: true });
 
   // Réponse à une question oui/non posée par le switch.
   if (req.body?.answer_to) {
     if (!staff) return denied();
+    if (s.need2fa) return no2fa();
     const answer = req.body.answer === 'y' ? 'y' : 'n';
     await r.set(K.answer(String(req.body.answer_to)), answer, { ex: 180 });
     await r.set(K.busy, 1, { ex: 90 });
@@ -38,6 +37,12 @@ export default async function handler(req, res) {
   }
   const kind = String(req.body?.kind ?? '').slice(0, 40);
   const state = await r.get(K.state);
+  // Relevé automatique du dashboard : le « kind » vient de la page, il ne suffit pas. Il faut aussi que la commande
+  // soit un vrai relevé (vérifié ligne par ligne comme pour un écran lecture seule) ou uniquement des lectures.
+  const lines = cmd.split('\n').map((l) => l.trim()).filter(Boolean);
+  const autoRead = isAutoKind(kind) && (viewerCommandOk(cmd, kind, state) || lines.every((l) => /^show [\w .:/|-]{1,100}$/.test(l)));
+  // Double authentification exigée mais pas encore activée : seuls les vrais relevés automatiques passent.
+  if (s.need2fa && !autoRead) return no2fa();
   // Lecture seule : uniquement les relevés automatiques du dashboard, vérifiés ligne par ligne.
   // Technicien : actions sur les ports d'accès (voir techCommandOk).
   if (s.role === 'viewer' && !viewerCommandOk(cmd, kind, state)) return denied();
@@ -50,7 +55,7 @@ export default async function handler(req, res) {
   const need = cmd.split('\n').map((l) => l.trim().match(/^#(\w+)/)?.[1]?.toLowerCase()).filter(Boolean);
   if (need.some((c) => !caps.includes(c))) return res.status(409).json({ error: 'L’agent installé sur le PC est trop ancien pour cette action (agent 1.4.0 ou plus).' });
   // Relevés automatiques : un seul à la fois, même avec plusieurs pages ouvertes.
-  if (kind.startsWith('auto:')) {
+  if (autoRead && kind.startsWith('auto:')) {
     const now = Date.now() / 1000;
     const same = [].concat((await r.get(K.log)) || []).find((c) => c.kind === kind && ['pending', 'running'].includes(c.status) && now - c.created < 180);
     if (same) return res.json({ ...same, dedup: true });
@@ -73,7 +78,7 @@ export default async function handler(req, res) {
   const id = crypto.randomUUID(), label = String(req.body?.label ?? '');
   const wrapped = staff ? await wrapCommand({ r, id, cmd, kind, label, reasons, state }) : { cmd, meta: null };
   const rec = await enqueue({ id, cmd: wrapped.cmd, label, kind, meta: wrapped.meta, realtime: staff, by: s.user.name });
-  if (staff && !isAutoKind(kind)) await audit(s.user, label || 'Commande', label ? cmd.split('\n').find((l) => !/^(configure terminal|end|exit)$/.test(l.trim()))?.slice(0, 120) || '' : cmd.slice(0, 160), req);
+  if (staff && !autoRead) await audit(s.user, label || 'Commande', label ? cmd.split('\n').find((l) => !/^(configure terminal|end|exit)$/.test(l.trim()))?.slice(0, 120) || '' : cmd.slice(0, 160), req);
   res.json(rec);
 }
 

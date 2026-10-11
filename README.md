@@ -4,7 +4,7 @@
 
 [![My Aruba Manager in 30 seconds: live front panel, connected devices, cable test, VLANs, console and alerts](public/media/apercu-anime.webp)](public/media/my-aruba-manager.mp4)
 
-The animation above plays the 30-second presentation (no sound). **▶ [Download the MP4 video](public/media/my-aruba-manager.mp4)**
+The animation above plays the 30-second presentation (no sound). **[Download the MP4 video](public/media/my-aruba-manager.mp4)**
 (7 MB: on the GitHub page that opens, click "View raw"). It also plays inside the dashboard, in the setup assistant.
 
 A web dashboard for **HPE Aruba Networking CX** switches (AOS-CX): live front panel, throughput and history,
@@ -66,7 +66,7 @@ It runs on the free plans of Vercel and Supabase and relies on a small Python ag
 - One-click configuration save.
 
 ### Administration without touching the code
-Everything is set from the **Administration** card and the ⚙ settings:
+Everything is set from the **Administration** card and the **Settings** page (**Réglages**):
 - **Undo a change**: before each change, the dashboard creates a restore point on the switch.
   You see what will be undone, then roll back in one click (by typing CONFIRMER). For a sensitive change
   (management IP, link to another switch, and so on), the switch **rolls back on its own after 5 minutes** unless you confirm
@@ -86,7 +86,8 @@ Everything is set from the **Administration** card and the ⚙ settings:
 - **Port diagnosis** (clear steps and a one-sentence conclusion) and a **"device not working?"** troubleshooting guide.
 - **Health check**: unsaved configuration, protections on user ports, NTP, default SNMP community,
   unused ports, cables, slow or unstable ports, and more, with one-click fixes.
-- **Settings**: site name, time zone, agent pace, alerts.
+- **Settings**: a page of its own in the sidebar, laid out in cards: where to send alerts (with a test message), when to
+  notify, monitored ports, site name, time zone, agent pace. The Save bar appears as soon as a field changes.
 - **Sidebar** to move between the dashboard, the tools and the account pages, on a computer or a phone.
 
 ### User accounts and roles
@@ -159,9 +160,11 @@ cable state to be checked (amber outline).
 
 ![VLAN card and management console](docs/captures/vlan-console.png)
 
-**Settings**: e-mail and/or webhook alerts, monitored ports, temperature threshold, automatic cable checks.
+**Settings**: a page of cards for e-mail and/or webhook alerts (with a test message), the events to report and the
+temperature threshold, the monitored ports (automatic, or picked on a front panel layout), the site, the agent pace and
+the automatic cable checks.
 
-![Alert settings](docs/captures/alertes.png)
+![Settings page](docs/captures/alertes.png)
 
 **Setup assistant**: the video, then each installation step checked live.
 
@@ -178,12 +181,12 @@ cable state to be checked (amber outline).
 
 ```
 ┌──────────┐   SSH    ┌───────────────────┐ HTTPS (outbound) ┌──────────────────┐
-│  Switch  │ ◄──────► │  Python agent     │ ───────────────► │  Vercel          │ ◄── browser
-│ Aruba CX │          │  (PC on the LAN)  │ ◄─────────────── │  page + API      │
+│  Switch  │ <──────> │  Python agent     │ ───────────────> │  Vercel          │ <── browser
+│ Aruba CX │          │  (PC on the LAN)  │ <─────────────── │  page + API      │
 └──────────┘          └───────────────────┘     commands     └─────────┬────────┘
-                                                                       ▲
+                                                                       ^
                                                                        │ data
-                                                                       ▼
+                                                                       v
                                                           ┌─────────────────────────┐
                                                           │  Supabase (Postgres)    │
                                                           │  5-min job (pg_cron)    │
@@ -238,7 +241,7 @@ In the dashboard, the **setup assistant** repeats the same steps and checks each
    On Windows without `openssl`, the [guide](docs/GUIDE.en.md#1-deploy-on-vercel) gives the equivalent PowerShell command.
 2. **Add Supabase**: the button offers to add it during the deployment (Free plan, Paris region).
    Otherwise: **Storage** tab of the Vercel project, **Create Database**, **Supabase**, then **redeploy** (**Deployments** tab,
-   ⋯ menu of the latest deployment, **Redeploy**). On first launch, the dashboard creates its tables and schedules
+   three-dot menu of the latest deployment, **Redeploy**). On first launch, the dashboard creates its tables and schedules
    the 5-minute check in Supabase: there is no script to run.
 3. **Log in** with the identifier **`admin`** and `DASHBOARD_PASSWORD`: the setup assistant opens.
 4. **Secure the account** in **Mon profil** (my profile): your own password and **two-factor authentication**.
@@ -383,7 +386,7 @@ You may use, modify and redistribute it, including commercially, provided that y
 keep the copyright notices and the [`NOTICE`](NOTICE) file, and state which files you changed.
 The license grants no rights to names or trademarks.
 
-Third-party components (postgres, qrcode-generator, paramiko, and others) remain under their own licenses:
+Third-party components (postgres, qrcode-generator, Google Material Symbols icons, paramiko, and others) remain under their own licenses:
 see [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 ## Trademarks

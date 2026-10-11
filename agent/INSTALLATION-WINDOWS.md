@@ -74,7 +74,7 @@ Il n’y a rien d’autre à faire.
 - Les fichiers téléchargés sont vérifiés, et les scripts Python sont compilés avant d’être installés.
 - L’ancienne version est gardée dans `.sauvegarde`. Si le nouvel agent ne redémarre pas correctement,
   elle est remise en place automatiquement et la version fautive n’est plus retentée tant qu’une nouvelle version n’est pas publiée.
-- Le résultat de la dernière vérification s’affiche en bas du dashboard (« mise à jour auto ✓ »).
+- Le résultat de la dernière vérification s’affiche en bas du dashboard (« mise à jour auto » suivi d’une coche verte, ou d’un triangle orange en cas d’échec).
 - Vérifier tout de suite (et réinstaller les deux tâches) : clic droit sur `mettre-a-jour.bat`, « Exécuter en tant qu’administrateur ».
 
 Pour valider chaque version toi-même avant de l’installer, mets `auto_update` à `false` dans `agent_config.json`,
@@ -100,7 +100,7 @@ La configuration et le mot de passe enregistré sont conservés. Ensuite, tout e
 
 ## Ce que fait l’agent
 - envoie l’état du switch toutes les 10 s quand le dashboard administrateur est ouvert, 30 s pour un écran
-  lecture seule, 60 s sinon (réglable dans ⚙ Réglages, 120 s au plus) ;
+  lecture seule, 60 s sinon (réglable dans Réglages, 120 s au plus) ;
 - relève le débit, les appareils et le CPU à chaque envoi, l’état des liens et le journal du switch toutes les 30 s
   (dashboard ouvert), le spanning-tree et la configuration sauvegardée toutes les 2 min, le reste plus rarement ;
 - espace tous ces relevés si le CPU du switch dépasse 60 % (deux fois) ou 80 % (quatre fois) ;
