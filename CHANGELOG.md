@@ -1,5 +1,69 @@
 # Historique des versions
 
+## 1.9.0 (2026-10-11)
+
+Le projet est open source : une personne qui le récupère est maintenant accompagnée de la vidéo de présentation
+jusqu’au switch connecté, dans le dashboard comme dans le dépôt GitHub.
+
+### Prise en main guidée
+- **Installation à terminer** : tant qu’il manque la base de données ou une variable Vercel (`SESSION_SECRET`,
+  `AGENT_TOKEN`, `DASHBOARD_PASSWORD`), la page affiche à la place du formulaire de connexion ce qui manque (noms
+  seulement, jamais une valeur), un court tutoriel illustré pour chaque point et un bouton « Revérifier ». Une base
+  absente ou injoignable ne provoque plus d’erreur.
+- **Première connexion** : sur une installation neuve, un encadré rappelle l’identifiant `admin` et le mot de passe
+  `DASHBOARD_PASSWORD`, avec un lien vers la vidéo de présentation (30 s).
+- **Assistant de démarrage** (administrateur) : nouvelle entrée **Démarrage** dans la barre latérale, avec la
+  progression. Il s’ouvre tout seul à la première connexion et guide pas à pas : vidéo de bienvenue, installation
+  (base, variables, vérification automatique), sécurité du compte (mot de passe personnel, double authentification),
+  préparation du switch (commandes AOS-CX à copier), préparation du PC Windows, configuration et installation de
+  l’agent, équipe et alertes. Chaque étape est vérifiée en direct ; « Plus tard » le referme, le menu le rouvre.
+- **Fichier `agent_config.json` pré-rempli** : l’assistant le génère avec l’adresse du dashboard et le jeton de
+  l’agent ; il ne reste qu’à indiquer l’IP du switch (et, si tu veux, le réseau à scanner, de /22 à /30 : l’agent ne
+  cherche pas au-delà de 1024 adresses). Réservé à l’administrateur, jamais mis en cache, noté dans le
+  journal d’activité (sans le jeton). Le mot de passe SSH du switch n’y figure jamais.
+- **Arrivée de l’agent en direct** : « En attente de l’agent… » puis « Agent connecté » avec le nom du switch, son
+  nombre de ports et la version de l’agent, et un dépannage pas à pas.
+- **Fenêtre de bienvenue** pour chaque nouveau compte : la vidéo, ce que son rôle permet, et un raccourci pour
+  activer la double authentification.
+
+### Documentation
+- **Guide d’installation illustré**, en français (`docs/GUIDE.md`) et en anglais (`docs/GUIDE.en.md`) : la vidéo,
+  ce qu’il faut, 8 étapes avec leur durée et ce qu’on doit voir à la fin de chacune, un dépannage et la mise à jour.
+- **Illustrations** des écrans de Vercel, Supabase, Windows et Python (`public/onboarding/`), communes au guide et à
+  l’assistant.
+- **Captures d’écran** refaites avec la barre latérale, et nouvelles captures de la connexion, de l’assistant, des
+  utilisateurs, du profil et de la fenêtre de bienvenue.
+- Le bouton **Deploy with Vercel** propose maintenant d’ajouter la base Supabase pendant le déploiement (l’ajout à
+  la main depuis l’onglet **Storage** reste décrit).
+- README : la vidéo en tête (aperçu animé qui se lit directement sur GitHub), l’encadré « Démarrer en 20 minutes » et une installation résumée qui renvoie au guide.
+- Agent : `agent_config.json` se télécharge pré-rempli depuis l’assistant ; la méthode manuelle reste décrite.
+- La vidéo de présentation est déplacée dans `public/media/` : la page la sert elle-même.
+
+### Corrections
+- Plusieurs fonctions qui démarrent en même temps (juste après un déploiement, ou à la connexion) ne s’interbloquent
+  plus en créant les tables : plus de réponse « Erreur interne » à ce moment-là.
+- Vérification automatique en échec : « Revérifier » dans l’assistant relance aussitôt sa programmation (une fois
+  par minute au plus) dès que `pg_cron` et `pg_net` sont activés, au lieu d’attendre une heure.
+- Connexion sans `SESSION_SECRET` : message clair au lieu d’une erreur interne.
+- Accessibilité : texte discret plus contrasté en thème clair (4.5:1 au moins) et boutons d’icône de 44 px sur téléphone.
+- Installation de l’agent : la fenêtre de `installer-service.bat` n’affiche plus de ligne « ERREUR » trompeuse à la
+  première installation (arrêt d’une tâche qui n’existe pas encore).
+
+### Sécurité
+- `agent_config.json` : l’adresse du dashboard vient de `DASHBOARD_URL` ou de l’adresse de production Vercel, jamais
+  de l’en-tête `Host` de la requête (hors développement local) ; sans l’une ou l’autre, un message demande d’ajouter
+  `DASHBOARD_URL`.
+- « Terminer » l’assistant demande la double authentification quand un administrateur l’exige (« Plus tard » reste
+  possible avant).
+- Avant connexion, l’état de l’installation est gardé quelques secondes en mémoire : une rafale de visites ne
+  sollicite plus la base à chaque fois.
+
+### Passer de la 1.8.0 à la 1.9.0
+Rien à faire, et personne n’est déconnecté. À la prochaine connexion d’un administrateur, l’assistant de démarrage
+s’ouvre une fois : les étapes déjà faites sont cochées, « Terminer » ou « Plus tard » le referme. Chaque compte voit
+une fois la fenêtre de bienvenue, sauf l’administrateur qui passe par l’assistant (il commence déjà par la vidéo).
+Agent : rien à faire (version 1.4.0 inchangée).
+
 ## 1.8.0 (2026-10-10)
 
 ### Barre latérale et comptes utilisateurs

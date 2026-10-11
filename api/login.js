@@ -8,6 +8,8 @@ import { loadUsers, updateUsers, checkLogin, findInvite, checkNewPassword, audit
 // d'invitation ou de nouveau mot de passe : { action: 'invite-info' | 'invite-accept', token, password }.
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+  // Installation incomplète : sans SESSION_SECRET, aucune session ne peut être signée (la page affiche ce qu'il manque).
+  if (!process.env.SESSION_SECRET) return res.status(503).json({ error: 'Installation à terminer : ajoute SESSION_SECRET dans les variables du projet Vercel, puis redéploie.' });
   const ip = (req.headers['x-forwarded-for'] || 'inconnu').split(',')[0].trim();
   const r = store();
   const tries = await r.incr(K.tries(ip));

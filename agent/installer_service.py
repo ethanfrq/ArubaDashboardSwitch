@@ -44,9 +44,12 @@ UPDATE = dict(desc="Mise a jour automatique de l'agent My Aruba Manager (version
               limit="PT15M", restart="", script="mise_a_jour.py")
 
 
-def sch(*args, check=True):
+def sch(*args, check=True, quiet=False):
+    """quiet : n'affiche rien si la commande échoue (ex. arrêter une tâche qui n'existe pas encore, à la première
+    installation : « ERREUR : le fichier spécifié est introuvable » inquiéterait pour rien)."""
     r = subprocess.run(["schtasks", *args], capture_output=True, text=True, errors="replace")
-    print((r.stdout + r.stderr).strip())
+    if not (quiet and r.returncode):
+        print((r.stdout + r.stderr).strip())
     if check and r.returncode:
         sys.exit(r.returncode)
     return r
@@ -72,7 +75,7 @@ def tasks():
 def install():
     if not (HERE / "agent_secret.bin").exists():
         sys.exit("Enregistre d'abord le mot de passe du switch : python agent.py --set-password")
-    sch("/End", "/TN", TASK, check=False)
+    sch("/End", "/TN", TASK, check=False, quiet=True)
     tasks()
     sch("/Run", "/TN", TASK)
     print("\nService installé et démarré. Journal : " + str(HERE / "agent.log"))
@@ -94,7 +97,7 @@ if __name__ == "__main__":
     elif action == "taches":
         tasks()
     elif action == "restart":
-        sch("/End", "/TN", TASK, check=False)
+        sch("/End", "/TN", TASK, check=False, quiet=True)
         sch("/Run", "/TN", TASK)
     else:
         sch("/Query", "/TN", TASK, "/V", "/FO", "LIST", check=False)

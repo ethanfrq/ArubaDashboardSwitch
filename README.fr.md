@@ -2,6 +2,11 @@
 
 **Superviser et piloter un switch HPE Aruba Networking CX depuis n’importe où, dans le navigateur, sans ouvrir un seul port sur le réseau.**
 
+[![My Aruba Manager en 30 secondes : façade en direct, appareils branchés, test de câble, VLAN, console et alertes](public/media/apercu-anime.webp)](public/media/my-aruba-manager.mp4)
+
+L’animation ci-dessus montre la présentation de 30 secondes (sans son). **▶ [Télécharger la vidéo MP4](public/media/my-aruba-manager.mp4)**
+(7 Mo : sur la page GitHub qui s’ouvre, clique sur « View raw »). Elle se lit aussi dans le dashboard, dans l’assistant de démarrage.
+
 Un tableau de bord web pour les switches **HPE Aruba Networking CX** (AOS-CX) : façade en direct, débits et historique,
 appareils connectés avec leur IP, VLANs, test de câble, console de commandes, alertes et outils d’administration.
 Pensé pour les écoles, les formations réseau (BTS SIO, BTS CIEL, IUT) et les petites structures, avec une interface en français.
@@ -18,9 +23,17 @@ Il fonctionne avec les offres gratuites de Vercel et de Supabase et s’appuie s
 > Projet indépendant, non affilié à HPE ni approuvé par HPE.
 > Aruba, HPE Aruba Networking et AOS-CX sont des marques de Hewlett Packard Enterprise.
 
-[![Vidéo de présentation (30 s)](docs/video/apercu.jpg)](docs/video/my-aruba-manager.mp4)
-
-[![Déployer sur Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch&env=DASHBOARD_PASSWORD,SESSION_SECRET,AGENT_TOKEN&envDescription=Mot%20de%20passe%20du%20dashboard%2C%20cl%C3%A9%20de%20session%20et%20jeton%20de%20l%27agent&project-name=my-aruba-manager)
+> **Démarrer en 20 minutes**
+>
+> 1. Clique sur le bouton **Deploy** ci-dessous (déployer sur Vercel) et colle les trois valeurs demandées
+>    ([comment les créer](docs/GUIDE.md#1-déployer-sur-vercel)) : Vercel copie le projet dans ton compte
+>    et y ajoute la base Supabase.
+> 2. Ouvre ton dashboard et connecte-toi avec l’identifiant `admin` : l’**assistant de démarrage** te guide
+>    jusqu’au switch connecté, en vérifiant chaque étape en direct.
+>
+> Tout est expliqué avec des images dans le **[guide d’installation pas à pas](docs/GUIDE.md)**.
+>
+> [![Déployer sur Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch&env=DASHBOARD_PASSWORD,SESSION_SECRET,AGENT_TOKEN&envDescription=Mot%20de%20passe%20du%20dashboard%2C%20cl%C3%A9%20de%20session%20et%20jeton%20de%20l%27agent&envLink=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch%2Fblob%2Fmain%2Fdocs%2FGUIDE.md%231-d%C3%A9ployer-sur-vercel&project-name=my-aruba-manager&repository-name=my-aruba-manager&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22supabase%22%2C%22productSlug%22%3A%22supabase%22%7D%5D)
 
 ---
 
@@ -101,6 +114,17 @@ Un compte par personne, chacun avec son mot de passe, et chaque action signée d
 - **Vérification après chaque modification** : le dashboard contrôle dans l’état suivant du switch que le changement
   est bien appliqué (port activé ou coupé, VLAN, description, VLAN créé ou supprimé, configuration sauvegardée) et prévient sinon.
 
+### Prise en main
+- **Installation à terminer** : tant qu’il manque la base ou une variable Vercel, la page de connexion l’indique
+  (noms seulement, jamais une valeur) avec un court tutoriel illustré pour chaque point et un bouton « Revérifier ».
+- **Assistant de démarrage** : au premier lancement, l’administrateur est guidé pas à pas (vidéo, installation,
+  sécurité du compte, switch, PC Windows, agent, équipe et alertes). Chaque étape est vérifiée en direct, et
+  l’arrivée de l’agent s’affiche dès sa première connexion.
+- **Fichier `agent_config.json` pré-rempli** : téléchargé depuis l’assistant (adresse du dashboard et jeton de l’agent
+  déjà remplis), il ne reste qu’à indiquer l’IP du switch.
+- **Fenêtre de bienvenue** pour chaque nouveau compte : la vidéo, ce que son rôle permet, et un raccourci pour
+  activer la double authentification.
+
 ---
 
 ## Captures d’écran
@@ -139,9 +163,18 @@ Un compte par personne, chacun avec son mot de passe, et chaque action signée d
 
 ![Réglages des alertes](docs/captures/alertes.png)
 
+**Assistant de démarrage** : la vidéo, puis chaque étape de l’installation vérifiée en direct.
+
+![Assistant de démarrage, étape Bienvenue](docs/captures/onboarding-bienvenue.png)
+
 ---
 
 ## Comment ça marche
+
+<img src="public/onboarding/architecture.svg" width="720" alt="Schéma : le switch Aruba et le PC de l’agent sur le réseau local, l’agent parle au switch en SSH et envoie l’état à Vercel en HTTPS sortant, Vercel garde les données dans Supabase, le navigateur ouvre le dashboard depuis n’importe où">
+
+<details>
+<summary>Version texte du schéma</summary>
 
 ```
 ┌──────────┐   SSH    ┌───────────────────┐ HTTPS (sortant) ┌──────────────────┐
@@ -156,6 +189,8 @@ Un compte par personne, chacun avec son mot de passe, et chaque action signée d
                                                          │  tâche 5 min (pg_cron)  │
                                                          └─────────────────────────┘
 ```
+
+</details>
 
 Le switch a une adresse privée, Vercel ne peut donc pas le joindre. Un **agent** installé sur un PC du réseau
 lit le switch en SSH, envoie l’état au dashboard et exécute les commandes demandées.
@@ -180,61 +215,52 @@ développement n’est jamais installé. En cas d’échec, l’ancienne version
 
 ## Installation
 
+Tout est expliqué pas à pas, avec des images, dans le **[guide d’installation](docs/GUIDE.md)** (environ 20 minutes).
+Dans le dashboard, l’**assistant de démarrage** reprend les mêmes étapes et vérifie chacune en direct.
+
 ### Ce qu’il faut
-- Un switch **HPE Aruba Networking CX** avec une IP de gestion et le SSH activé (`ssh server vrf default`).
+- Un switch **HPE Aruba Networking CX** avec une IP de gestion, le SSH activé et son compte SSH (souvent `admin`).
 - Un **PC allumé en permanence** sur le même réseau que le switch, avec accès à internet.
   Windows est recommandé : l’agent s’y installe en service et le guide pas à pas est écrit pour lui.
   L’agent fonctionne aussi sous macOS et Linux.
-- Un compte **Vercel** (offre gratuite Hobby). La base **Supabase** (offre gratuite) s’y ajoute en un clic.
-  Il n’y a rien d’autre à souscrire.
+- Un compte **GitHub** et un compte **Vercel** (offre gratuite Hobby). La base **Supabase** (offre gratuite)
+  s’ajoute depuis Vercel. Il n’y a rien d’autre à souscrire.
 
-### 1. Déployer le dashboard
-1. Clique sur **Déployer sur Vercel** ci-dessus. Vercel copie le projet dans ton compte GitHub (ou GitLab, Bitbucket),
-   puis demande les trois variables suivantes :
+### En bref
+1. **Déployer sur Vercel** avec le bouton en haut de cette page. Vercel demande trois variables :
 
    | Variable | Rôle | Exemple pour la générer |
    |---|---|---|
-   | `DASHBOARD_PASSWORD` | mot de passe administrateur de la page | un mot de passe solide et unique |
+   | `DASHBOARD_PASSWORD` | mot de passe du compte `admin` | un mot de passe solide et unique |
    | `SESSION_SECRET` | clé de signature des sessions | `openssl rand -base64 32` |
    | `AGENT_TOKEN` | jeton partagé avec l’agent | `openssl rand -hex 32` |
 
-2. Laisse le premier déploiement se terminer : le dashboard ne sera complet qu’une fois la base ajoutée (étape 2).
-
-### 2. Ajouter la base Supabase
-1. Dans le projet Vercel, onglet **Storage**, choisis **Supabase** (Marketplace Vercel) avec l’offre gratuite.
-2. Choisis la région **Paris (cdg1)** pour garder les données en Europe, puis relie la base au projet.
-   Les variables de connexion Supabase sont ajoutées automatiquement au projet : il n’y a rien à copier.
-3. Conseillé : vérifie que les fonctions Vercel tournent dans la même région
-   (**Settings > Functions > Function Region** : Paris, cdg1).
-4. **Redéploie** le projet (onglet **Deployments**, menu ⋯ du dernier déploiement, **Redeploy**)
-   pour qu’il prenne en compte les nouvelles variables.
-
-Au premier lancement, le dashboard crée ses tables et programme la vérification toutes les 5 minutes dans Supabase.
-Il n’y a pas de script à lancer.
+   Sous Windows sans `openssl`, le [guide](docs/GUIDE.md#1-déployer-sur-vercel) donne la commande PowerShell équivalente.
+2. **Ajouter Supabase** : le bouton propose de l’ajouter pendant le déploiement (offre Free, région Paris).
+   Sinon : onglet **Storage** du projet Vercel, **Create Database**, **Supabase**, puis **redéploie** (onglet **Deployments**,
+   menu ⋯ du dernier déploiement, **Redeploy**). Au premier lancement, le dashboard crée ses tables et programme
+   la vérification toutes les 5 minutes dans Supabase : il n’y a aucun script à lancer.
+3. **Se connecter** avec l’identifiant **`admin`** et `DASHBOARD_PASSWORD` : l’assistant de démarrage s’ouvre.
+4. **Sécuriser le compte** dans **Mon profil** : ton propre mot de passe et la **double authentification**.
+5. **Préparer le switch** : SSH actif (`ssh server vrf default`, ou `ssh server vrf mgmt` si l’agent passe par le
+   port de gestion), IP de gestion joignable depuis le PC de l’agent.
+6. **Installer l’agent** sur le PC Windows : Python 3, le paquet `aruba-agent-x.y.z.zip` de la
+   [dernière version](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest), le fichier
+   `agent_config.json` **téléchargé pré-rempli depuis l’assistant**, puis `installer-service.bat` en administrateur.
+   Détails et méthode manuelle : [`agent/INSTALLATION-WINDOWS.md`](agent/INSTALLATION-WINDOWS.md)
+   (en anglais : [`agent/INSTALL-WINDOWS.md`](agent/INSTALL-WINDOWS.md)).
+7. **Inviter l’équipe et régler les alertes** depuis **Utilisateurs** et **Réglages**.
 
 **Alertes par e-mail (facultatif)** : ajoute **Resend** depuis le Marketplace Vercel, puis redéploie.
-Variables facultatives : `ALERT_FROM` (expéditeur des e-mails, ex. `Switch <alertes@mon-domaine.fr>`)
-et `DASHBOARD_URL` (lien inclus dans les alertes). Les alertes par webhook ne demandent aucun service supplémentaire.
-
-### 3. Installer l’agent
-Télécharge l’agent prêt à l’emploi depuis la [dernière version](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest)
-(fichier `aruba-agent-x.y.z.zip`). Tout est expliqué pas à pas dans [`agent/INSTALLATION-WINDOWS.md`](agent/INSTALLATION-WINDOWS.md)
-(en anglais : [`agent/INSTALL-WINDOWS.md`](agent/INSTALL-WINDOWS.md)). En résumé :
-1. Python 3 puis `pip install -r requirements.txt` dans le dossier de l’agent.
-2. Créer `agent_config.json` à partir de `agent_config.example.json`
-   (IP du switch, URL du dashboard, `AGENT_TOKEN`, réseau à scanner pour trouver les IP).
-3. Test : `demarrer-agent.bat`, puis installation en service avec `installer-service.bat` (en administrateur).
-   L’agent démarre alors avec Windows, sans fenêtre, redémarre tout seul en cas d’erreur
-   et se met à jour tout seul à partir des versions publiées sur GitHub.
-
-### 4. Premiers réglages
-Ouvre l’URL de ton projet Vercel et connecte-toi avec l’identifiant **`admin`** et `DASHBOARD_PASSWORD`. Puis :
-- dans **Mon profil** : indique ton nom et ton e-mail, choisis ton propre mot de passe et **active la double
-  authentification** (scanne le QR code, range les codes de secours en lieu sûr, chacun ne sert qu’une fois) ;
-- dans **Réglages** : règle les alertes (e-mail, webhook, ports surveillés, seuil de température) ;
-- dans **Utilisateurs** : crée un compte par personne, et un compte lecture seule pour un écran de supervision.
+Sans domaine vérifié, Resend n’écrit qu’à l’adresse de ton propre compte Resend : pour écrire à d’autres adresses,
+vérifie ton domaine dans Resend, puis mets `ALERT_FROM` (expéditeur des e-mails, ex. `Switch <alertes@mon-domaine.fr>`)
+sur ce domaine. Autre variable facultative : `DASHBOARD_URL` (lien inclus dans les alertes).
+Les alertes par webhook ne demandent aucun service supplémentaire.
 
 `DASHBOARD_PASSWORD` reste valable pour le compte `admin` comme **mot de passe de secours** : garde-le long et secret.
+
+Problème pendant l’installation, mise à jour du dashboard : voir les sections
+[Dépannage](docs/GUIDE.md#dépannage) et [Mettre à jour](docs/GUIDE.md#mettre-à-jour) du guide.
 
 ---
 
@@ -263,6 +289,10 @@ Ouvre l’URL de ton projet Vercel et connecte-toi avec l’identifiant **`admin
   piégé ne puisse pas s’exécuter dans la page. La page ne peut pas être affichée dans le cadre d’un autre site.
 - L’agent ne se met à jour qu’à partir des **versions publiées** (releases GitHub), jamais à partir du code en cours.
 - Aucun secret n’est versionné (`.env*`, `agent_config.json` et `agent_secret.bin` sont exclus).
+- Avant connexion, la page n’indique que le **nom** des variables manquantes, jamais leur valeur.
+- Le fichier `agent_config.json` pré-rempli contient le jeton de l’agent : seul un administrateur peut le télécharger
+  (double authentification exigée respectée), la réponse n’est jamais mise en cache et le téléchargement est noté
+  dans le journal d’activité, sans le jeton. Le mot de passe SSH du switch n’y figure jamais.
 - Les données restent dans tes propres comptes Vercel et Supabase : l’auteur du projet n’y a pas accès.
 
 ### Téléphone perdu (double authentification)
@@ -322,11 +352,13 @@ Prochaines étapes prévues, sans date :
 | `public/index.html` | l’interface (une seule page, sans framework) |
 | `public/js/` | les fonctions d’administration côté page, une par fichier |
 | `public/vendor/` | bibliothèque tierce servie avec la page (QR code de la double authentification) |
+| `public/media/` | vidéo de présentation et son affiche |
+| `public/onboarding/` | illustrations de l’assistant de démarrage et du guide |
 | `api/` | fonctions Vercel (Node 24) |
-| `lib/` | base de données (Supabase, Postgres), comptes, rôles (administrateur, technicien, lecture seule), double authentification, journal d’activité, notifications |
+| `lib/` | base de données (Supabase, Postgres), comptes, rôles (administrateur, technicien, lecture seule), double authentification, journal d’activité, notifications, installation et assistant de démarrage |
 | `lib/features/` | la partie serveur des fonctions d’administration |
 | `agent/` | l’agent Python, sa mise à jour automatique et son installation en service Windows |
-| `docs/` | captures d’écran et vidéo de présentation |
+| `docs/` | [guide d’installation](docs/GUIDE.md) (français et anglais) et captures d’écran |
 
 ---
 

@@ -4,26 +4,40 @@
 
 Le PC doit rester allumé, être sur le même réseau que le switch, pouvoir le joindre en SSH et avoir accès à internet.
 
+Guide illustré complet, du déploiement sur Vercel jusqu’à l’agent connecté :
+[docs/GUIDE.md](https://github.com/ethanfrq/ArubaDashboardSwitch/blob/main/docs/GUIDE.md#6-installer-lagent-sur-le-pc-windows).
+Dans le dashboard, l’assistant **Démarrage** reprend ces étapes et vérifie chacune en direct.
+
 ## 1. Préparer
-1. Installer Python 3 depuis https://www.python.org/downloads/ (cocher « Add python.exe to PATH »).
+1. Installer Python 3 depuis https://www.python.org/downloads/ : prendre l’installateur classique
+   (lien « standalone installer », fichier `python-3.x.x-amd64.exe`), cocher « Add python.exe to PATH »
+   sur le premier écran, puis « Install Now ».
 2. Télécharger l’agent depuis la [dernière version](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest)
-   (fichier `aruba-agent-x.y.z.zip`) et le décompresser dans un dossier, par exemple `C:\aruba-agent`.
-3. Dans une invite de commandes ouverte dans ce dossier : `pip install -r requirements.txt`
-4. Copier `agent_config.example.json` en `agent_config.json` et le compléter :
+   (fichier `aruba-agent-x.y.z.zip`). Le zip contient un dossier `aruba-agent-x.y.z` : clic droit, « Extraire tout… »
+   vers `C:\`, puis renommer `C:\aruba-agent-x.y.z` en `C:\aruba-agent`. Les fichiers (`agent.py`,
+   `installer-service.bat`…) doivent être directement dans ce dossier.
+3. Dans une invite de commandes ouverte dans ce dossier (taper `cmd` dans la barre d’adresse de l’Explorateur) :
+   `python -m pip install -r requirements.txt` (ou `pip install -r requirements.txt`).
+4. Mettre le fichier `agent_config.json` dans le dossier de l’agent :
+   - **le plus simple** : dans le dashboard, assistant **Démarrage**, étape « Configurer l’agent » : indiquer l’IP
+     du switch, puis cliquer sur « Télécharger agent_config.json » (réservé à un administrateur). Le fichier est
+     pré-rempli (adresse du dashboard, jeton de l’agent, rythme, mise à jour automatique) : le placer dans le dossier
+     de l’agent, sous ce nom exact ;
+   - **méthode manuelle** : copier `agent_config.example.json` en `agent_config.json` et le compléter :
 
-   | Clé | Valeur |
-   |---|---|
-   | `switch_host` | IP de gestion du switch |
-   | `switch_user` | compte SSH du switch (souvent `admin`) |
-   | `dashboard_url` | URL de ton dashboard Vercel |
-   | `agent_token` | valeur de la variable `AGENT_TOKEN` définie sur Vercel |
-   | `scan_subnet` | réseau à scanner pour trouver les IP des appareils, par exemple `192.168.1.0/24` |
-   | `auto_update` | `true` : mise à jour automatique à partir des versions publiées sur GitHub (voir plus bas), `false` pour la couper |
+     | Clé | Valeur |
+     |---|---|
+     | `switch_host` | IP de gestion du switch |
+     | `switch_user` | compte SSH du switch (souvent `admin`) |
+     | `dashboard_url` | URL de ton dashboard Vercel |
+     | `agent_token` | valeur de la variable `AGENT_TOKEN` définie sur Vercel |
+     | `scan_subnet` | réseau à scanner pour trouver les IP des appareils, par exemple `192.168.1.0/24` (1024 adresses au plus : /22 à /30) |
+     | `auto_update` | `true` : mise à jour automatique à partir des versions publiées sur GitHub (voir plus bas), `false` pour la couper |
 
-   Laisse `switch_password` vide : le mot de passe est demandé à l’installation et enregistré chiffré.
+   Dans les deux cas, `switch_password` reste vide : le mot de passe est demandé à l’installation et enregistré chiffré.
    Ne publie jamais `agent_config.json` : il contient le jeton de l’agent.
 
-## 2. Tester à la main
+## 2. Tester à la main (facultatif)
 Double-clic sur `demarrer-agent.bat`, puis saisis le mot de passe SSH du switch.
 Le dashboard doit afficher « Agent en ligne ». Ferme ensuite la fenêtre (Ctrl+C) : un seul agent peut tourner à la fois.
 
@@ -35,8 +49,17 @@ Clic droit sur `installer-service.bat`, puis « Exécuter en tant qu’administr
 - Il crée la tâche « ArubaDashboardMiseAJour » : la mise à jour automatique (voir ci-dessous).
 - Journaux : `agent.log` et `mise_a_jour.log` dans le dossier de l’agent.
 
+La fenêtre doit afficher « Service installé et démarré ». En moins d’une minute, le dashboard affiche « Agent en ligne »
+(et l’assistant **Démarrage**, « Agent connecté »).
+
 Désinstaller : `desinstaller-service.bat` (en administrateur).
-Vérifier : `python installer_service.py status`. Redémarrer : `python installer_service.py restart`.
+
+Redémarrer l’agent (par exemple après avoir remplacé `agent_config.json`) : relancer `installer-service.bat`
+(clic droit, « Exécuter en tant qu’administrateur ») et appuyer sur Entrée sans rien taper quand le mot de passe
+est demandé : le mot de passe enregistré est gardé, le service est arrêté puis relancé.
+Vérifier ou redémarrer en ligne de commande : dans une invite de commandes ouverte **en administrateur** (menu
+Démarrer, taper `cmd`, clic droit sur « Invite de commandes », « Exécuter en tant qu’administrateur »), taper
+`cd /d C:\aruba-agent`, puis `python installer_service.py status` ou `python installer_service.py restart`.
 
 Pour un fonctionnement 24 h/24, règle la mise en veille du PC sur « Jamais ».
 
@@ -57,8 +80,9 @@ Il n’y a rien d’autre à faire.
 Pour valider chaque version toi-même avant de l’installer, mets `auto_update` à `false` dans `agent_config.json`,
 puis lance `mettre-a-jour.bat` quand tu le décides.
 
-Pour un PC de test qui doit suivre le code en développement (branche principale), ajoute `"update_channel": "main"`
-dans `agent_config.json`. À ne pas faire sur le PC relié au switch en service.
+Pour un PC de test qui doit suivre le code en développement (branche principale), remplace la valeur de
+`update_channel` par `"main"` dans `agent_config.json` (la clé y est déjà, avec `"releases"`). À ne pas faire sur le PC
+relié au switch en service.
 
 Si tu publies ta propre version de l’agent, souviens-toi que les PC installent automatiquement ce qui est publié en release :
 protège le compte GitHub (double authentification) et ne publie que des versions testées.

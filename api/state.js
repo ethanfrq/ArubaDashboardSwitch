@@ -4,14 +4,31 @@ import { isAutoKind } from '../lib/readonly.js';
 import { stateExtras } from '../lib/features/index.js';
 import { ensureCron } from '../lib/store.js';
 import { USERS, SEEN, publicUser, shortAgent, loadUsers } from '../lib/users.js';
+import { publicSetup, cachedSetup } from '../lib/setup.js';
+
+export default async function handler(req, res) {
+  // Pas de 401 ici : c'est le premier appel de la page, il sert juste à savoir s'il faut afficher la connexion, ou
+  // ce qu'il manque à l'installation (base, variables Vercel : noms seulement, jamais une valeur).
+  res.setHeader('Cache-Control', 'no-store');
+  const loggedOut = async () => res.json({ auth: false, setup: await cachedSetup() });
+  const c = readSession(req);
+  if (!c) return loggedOut();
+  try {
+    return await withSession(req, res, c, loggedOut);
+  } catch (e) {
+    // Base absente ou injoignable : la session ne peut pas être vérifiée, la page montre l'installation à terminer.
+    // Relu sans la mémoire de cachedSetup : la base vient peut-être de tomber.
+    const setup = await publicSetup();
+    if (!setup.db) return res.json({ auth: false, setup });
+    console.error('state', e);
+    return res.status(500).json({ error: 'Erreur interne.' });
+  }
+}
 
 // Une seule lecture groupée (MGET) par rafraîchissement. Le journal des commandes, les alertes et les données
 // des fonctions d'administration ne sont renvoyés que s'ils ont changé depuis la dernière lecture de la page.
 // La page envoie les versions qu'elle connaît : lv (journal), av (alertes), xv=nom:version,… (extensions).
-export default async function handler(req, res) {
-  // Pas de 401 ici : c'est le premier appel de la page, il sert juste à savoir s'il faut afficher la connexion.
-  const c = readSession(req);
-  if (!c) return res.json({ auth: false });
+async function withSession(req, res, c, loggedOut) {
   const r = store();
   await ensureCron();
   const keys = [K.state, K.hot, K.warm, K.ver(K.log), K.ver(K.alerts), USERS, K.viewer];
@@ -22,7 +39,7 @@ export default async function handler(req, res) {
   const [state, hot, warm, logv, alertsv, usersDoc, viewerRec] = vals;
   const doc = usersDoc?.users?.length ? usersDoc : (await loadUsers()).doc; // premier lancement : comptes créés
   const s = resolveSession(c, doc, viewerRec);
-  if (!s) return res.json({ auth: false }); // compte désactivé, mot de passe changé, sessions fermées
+  if (!s) return loggedOut(); // compte désactivé, mot de passe changé, sessions fermées
   const staff = s.staff;
   const extras = all.map((x, i) => ({ ...x, v: vals[keys.length + i] })).filter((x) => staff || x.viewer);
   // Dashboard d'un administrateur ou technicien ouvert (« hot ») : l'agent passe en temps réel (10 s) pendant 2 min.
@@ -43,6 +60,5 @@ export default async function handler(req, res) {
     // En lecture seule, le journal ne contient que les relevés automatiques (ni les commandes ni leur texte).
     if (out.log && !staff) out.log = out.log.filter((cmd) => isAutoKind(cmd.kind));
   }
-  res.setHeader('Cache-Control', 'no-store');
   res.json(out);
 }

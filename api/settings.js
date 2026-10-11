@@ -4,6 +4,7 @@ import { hashPassword } from '../lib/passwords.js';
 import { findAction } from '../lib/features/index.js';
 import { getTotp, totpInfo, totpAction } from '../lib/totp.js';
 import { loadUsers, updateUsers, userAction, publicUser, audit, checkNewPassword, AUDIT, SEEN, fail } from '../lib/users.js';
+import { setupChecks, saveOnboarding, agentConfig } from '../lib/setup.js';
 
 const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 // Actions des fonctions d'administration permises au technicien (annuaire des appareils, plan de brassage).
@@ -23,7 +24,14 @@ export default async function handler(req, res) {
     const action = String(b.action || '');
     if (/^totp-(start|confirm|disable|recovery)$/.test(action)) return res.json(await totpAction(action, b, s.user, req));
     if (/^profile-/.test(action)) return res.json(await profileAction(action, b, s, req, res));
+    // Assistant de démarrage : « Plus tard » reste permis avant la double authentification exigée, « Terminer » non
+    // (l'assistant fait justement activer la double authentification).
+    if (action === 'onboarding-save' && !(s.need2fa && b.done)) return res.json(await saveOnboarding(b, adminOnly(s), req));
     if (s.need2fa) throw fail('Active d’abord la double authentification dans « Mon profil ».', 403, { need2fa: true });
+    if (action === 'agent-config') {
+      res.setHeader('Cache-Control', 'no-store'); // contient le jeton de l'agent
+      return res.json(await agentConfig(b, adminOnly(s), req));
+    }
     if (/^user-/.test(action)) {
       if (s.role !== 'admin') throw fail('Gestion des comptes réservée à un administrateur.', 403);
       return res.json(await userAction(action, b, s.user, req));
@@ -44,6 +52,11 @@ export default async function handler(req, res) {
     console.error('settings', e);
     return res.status(500).json({ error: 'Erreur interne.' });
   }
+}
+
+function adminOnly(s) {
+  if (s.role !== 'admin') throw fail(s.staff ? 'Action réservée à un administrateur.' : 'Accès en lecture seule : aucune modification possible.', 403);
+  return s;
 }
 
 function detailOf(action, b) {
@@ -73,6 +86,10 @@ async function read(req, res, s, r) {
     const { doc } = await loadUsers();
     const seen = doc.users.length ? await r.mget(...doc.users.map((u) => SEEN(u.id))) : [];
     return res.json({ online: doc.users.map((u, i) => seen[i] && { id: u.id, name: u.name, role: u.role, ...seen[i] }).filter(Boolean) });
+  }
+  if (part === 'setup') { // assistant de démarrage : permis avant la double authentification exigée
+    if (s.role !== 'admin') throw fail('Réservé à un administrateur.', 403);
+    return res.json(await setupChecks(s, req));
   }
   if (part === 'audit') {
     if (s.role !== 'admin') throw fail('Réservé à un administrateur.', 403);
@@ -123,6 +140,14 @@ async function profileAction(action, b, s, req, res) {
     });
     setSession(res, u); // cette session reste ouverte, les autres sont fermées
     await audit(u, 'Mot de passe changé', '', req);
+    return { ok: true, me: publicUser(u) };
+  }
+  if (action === 'profile-welcomed') { // fenêtre de bienvenue vue (première connexion)
+    const u = await updateUsers((doc) => {
+      const t = doc.users.find((x) => x.id === me.id);
+      t.prefs = { ...(t.prefs || {}), welcomed: true };
+      return t;
+    });
     return { ok: true, me: publicUser(u) };
   }
   if (action === 'profile-logout-others') {

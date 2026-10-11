@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" role="img" aria-labelledby="vercel-env-t vercel-env-d" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<title id="vercel-env-t">Variables d’environnement du projet sur Vercel</title>
+<desc id="vercel-env-d">Projet Vercel my-aruba-manager. 1 : onglet Settings. 2 : menu Environment Variables. 3 : les trois variables DASHBOARD_PASSWORD, SESSION_SECRET et AGENT_TOKEN, pour tous les environnements, valeurs masquées. Après une modification, redéploie le projet : Deployments, menu ⋯, Redeploy.</desc>
+<rect x="1" y="1" width="718" height="398" rx="16" fill="#fcfcfb" stroke="#e2e1da" stroke-width="2"/>
+<rect x="24" y="24" width="672" height="352" rx="10" fill="#ffffff"/>
+<path d="M24 56V34a10 10 0 0 1 10-10H686a10 10 0 0 1 10 10V56Z" fill="#efeee9"/>
+<line x1="24" y1="56" x2="696" y2="56" stroke="#e2e1da" stroke-width="1.5"/>
+<rect x="24" y="24" width="672" height="352" rx="10" fill="none" stroke="#d4d3cb" stroke-width="2"/>
+<circle cx="40" cy="40" r="4" fill="#d4d3cb"/>
+<circle cx="53" cy="40" r="4" fill="#d4d3cb"/>
+<circle cx="66" cy="40" r="4" fill="#d4d3cb"/>
+<rect x="86" y="30" width="596" height="20" rx="10" fill="#ffffff" stroke="#e2e1da" stroke-width="1"/>
+<text x="98" y="45" font-size="13" fill="#52514e">vercel.com/mon-equipe/my-aruba-manager/settings/environment-variables</text>
+<path d="M52 73.2L60 86.4H44Z" fill="#0b0b0b"/>
+<text x="68" y="86" font-size="15" fill="#0b0b0b" font-weight="600">my-aruba-manager</text>
+<!-- Onglets du projet -->
+<text x="44" y="116" font-size="13" fill="#52514e">Overview</text>
+<text x="130" y="116" font-size="13" fill="#52514e">Deployments</text>
+<text x="238" y="116" font-size="13" fill="#52514e">Logs</text>
+<text x="290" y="116" font-size="13" fill="#52514e">Storage</text>
+<rect x="358" y="94" width="84" height="32" rx="8" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<text x="372" y="116" font-size="13" fill="#0b0b0b" font-weight="600">Settings</text>
+<circle cx="456" cy="110" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="456" y="115" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">1</text>
+<line x1="24" y1="128" x2="696" y2="128" stroke="#e2e1da" stroke-width="1.5"/>
+<!-- Menu des réglages -->
+<text x="44" y="162" font-size="13" fill="#52514e">General</text>
+<text x="44" y="190" font-size="13" fill="#52514e">Domains</text>
+<text x="44" y="246" font-size="13" fill="#52514e">Git</text>
+<text x="44" y="274" font-size="13" fill="#52514e">Security</text>
+<rect x="32" y="198" width="204" height="32" rx="8" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<text x="44" y="219" font-size="13" fill="#0b0b0b" font-weight="600">Environment Variables</text>
+<circle cx="238" cy="214" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="238" y="219" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">2</text>
+<!-- Liste des variables -->
+<text x="264" y="164" font-size="17" fill="#0b0b0b" font-weight="600">Environment Variables</text>
+<rect x="260" y="176" width="424" height="152" rx="12" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<rect x="264" y="180" width="416" height="144" rx="10" fill="#ffffff" stroke="#e2e1da" stroke-width="1.5"/>
+<text x="280" y="201" font-size="13" fill="#0b0b0b" font-weight="600" font-family="ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace">DASHBOARD_PASSWORD</text>
+<text x="280" y="219" font-size="13" fill="#52514e">All Environments</text>
+<rect x="470" y="191" width="146" height="26" rx="6" fill="#f4f4f1" stroke="#e2e1da" stroke-width="1"/>
+<text x="480" y="209" font-size="13" fill="#0b0b0b">••••••••••</text>
+<path d="M592 204c4-6 14-6 18 0c-4 6-14 6-18 0Z" fill="none" stroke="#52514e" stroke-width="1.4"/>
+<circle cx="601" cy="204" r="2.2" fill="#52514e"/>
+<circle cx="644" cy="204" r="1.8" fill="#52514e"/>
+<circle cx="650" cy="204" r="1.8" fill="#52514e"/>
+<circle cx="656" cy="204" r="1.8" fill="#52514e"/>
+<line x1="264" y1="228" x2="680" y2="228" stroke="#e2e1da" stroke-width="1.5"/>
+<text x="280" y="249" font-size="13" fill="#0b0b0b" font-weight="600" font-family="ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace">SESSION_SECRET</text>
+<text x="280" y="267" font-size="13" fill="#52514e">All Environments</text>
+<rect x="470" y="239" width="146" height="26" rx="6" fill="#f4f4f1" stroke="#e2e1da" stroke-width="1"/>
+<text x="480" y="257" font-size="13" fill="#0b0b0b">••••••••••</text>
+<path d="M592 252c4-6 14-6 18 0c-4 6-14 6-18 0Z" fill="none" stroke="#52514e" stroke-width="1.4"/>
+<circle cx="601" cy="252" r="2.2" fill="#52514e"/>
+<circle cx="644" cy="252" r="1.8" fill="#52514e"/>
+<circle cx="650" cy="252" r="1.8" fill="#52514e"/>
+<circle cx="656" cy="252" r="1.8" fill="#52514e"/>
+<line x1="264" y1="276" x2="680" y2="276" stroke="#e2e1da" stroke-width="1.5"/>
+<text x="280" y="297" font-size="13" fill="#0b0b0b" font-weight="600" font-family="ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace">AGENT_TOKEN</text>
+<text x="280" y="315" font-size="13" fill="#52514e">All Environments</text>
+<rect x="470" y="287" width="146" height="26" rx="6" fill="#f4f4f1" stroke="#e2e1da" stroke-width="1"/>
+<text x="480" y="305" font-size="13" fill="#0b0b0b">••••••••••</text>
+<path d="M592 300c4-6 14-6 18 0c-4 6-14 6-18 0Z" fill="none" stroke="#52514e" stroke-width="1.4"/>
+<circle cx="601" cy="300" r="2.2" fill="#52514e"/>
+<circle cx="644" cy="300" r="1.8" fill="#52514e"/>
+<circle cx="650" cy="300" r="1.8" fill="#52514e"/>
+<circle cx="656" cy="300" r="1.8" fill="#52514e"/>
+<circle cx="680" cy="182" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="680" y="187" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">3</text>
+<text x="264" y="356" font-size="13" fill="#b45200">Ensuite, redéploie : <tspan font-weight="600">Deployments, ⋯, Redeploy</tspan></text>
+</svg>

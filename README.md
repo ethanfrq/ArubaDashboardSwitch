@@ -2,6 +2,11 @@
 
 **Monitor and manage an HPE Aruba Networking CX switch from anywhere, in your browser, without opening a single port on your network.**
 
+[![My Aruba Manager in 30 seconds: live front panel, connected devices, cable test, VLANs, console and alerts](public/media/apercu-anime.webp)](public/media/my-aruba-manager.mp4)
+
+The animation above plays the 30-second presentation (no sound). **▶ [Download the MP4 video](public/media/my-aruba-manager.mp4)**
+(7 MB: on the GitHub page that opens, click "View raw"). It also plays inside the dashboard, in the setup assistant.
+
 A web dashboard for **HPE Aruba Networking CX** switches (AOS-CX): live front panel, throughput and history,
 connected devices with their IP addresses, VLANs, cable tests, command console, alerts and administration tools.
 Built for schools, networking courses (such as the French BTS SIO, BTS CIEL and IUT programs) and small organizations.
@@ -19,9 +24,17 @@ It runs on the free plans of Vercel and Supabase and relies on a small Python ag
 > Independent project, not affiliated with or endorsed by HPE.
 > Aruba, HPE Aruba Networking and AOS-CX are trademarks of Hewlett Packard Enterprise.
 
-[![Presentation video (30 s)](docs/video/apercu.jpg)](docs/video/my-aruba-manager.mp4)
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch&env=DASHBOARD_PASSWORD,SESSION_SECRET,AGENT_TOKEN&envDescription=Dashboard%20password%2C%20session%20key%20and%20agent%20token&project-name=my-aruba-manager)
+> **Get started in 20 minutes**
+>
+> 1. Click the **Deploy** button below (deploy with Vercel) and paste the three requested values
+>    ([how to create them](docs/GUIDE.en.md#1-deploy-on-vercel)): Vercel copies the project into your account
+>    and adds the Supabase database to it.
+> 2. Open your dashboard and log in with the identifier `admin`: the **setup assistant** guides you
+>    until the switch is connected, checking each step live.
+>
+> Everything is explained with pictures in the **[step-by-step installation guide](docs/GUIDE.en.md)**.
+>
+> [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch&env=DASHBOARD_PASSWORD,SESSION_SECRET,AGENT_TOKEN&envDescription=Dashboard%20password%2C%20session%20key%20and%20agent%20token&envLink=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch%2Fblob%2Fmain%2Fdocs%2FGUIDE.en.md%231-deploy-on-vercel&project-name=my-aruba-manager&repository-name=my-aruba-manager&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22supabase%22%2C%22productSlug%22%3A%22supabase%22%7D%5D)
 
 ---
 
@@ -101,6 +114,17 @@ One account per person, each with their own password, and every action signed in
 - **Check after each change**: the dashboard verifies in the next switch reading that the change
   was actually applied (port enabled or shut down, VLAN, description, VLAN created or deleted, configuration saved) and warns you otherwise.
 
+### Getting started
+- **Installation to finish**: as long as the database or a Vercel variable is missing, the login page says so
+  (names only, never a value) with a short illustrated tutorial for each item and a "Revérifier" (check again) button.
+- **Setup assistant**: on first launch, the administrator is guided step by step (video, installation,
+  account security, switch, Windows PC, agent, team and alerts). Each step is checked live, and
+  the agent shows up as soon as it connects for the first time.
+- **Pre-filled `agent_config.json` file**: downloaded from the assistant (dashboard address and agent token
+  already filled in), it only needs the switch IP.
+- **Welcome window** for each new account: the video, what their role allows, and a shortcut to
+  enable two-factor authentication.
+
 ---
 
 ## Screenshots
@@ -139,9 +163,18 @@ cable state to be checked (amber outline).
 
 ![Alert settings](docs/captures/alertes.png)
 
+**Setup assistant**: the video, then each installation step checked live.
+
+![Setup assistant, welcome step](docs/captures/onboarding-bienvenue.png)
+
 ---
 
 ## How it works
+
+<img src="public/onboarding/architecture.svg" width="720" alt="Diagram: the Aruba switch and the agent PC on the local network; the agent talks to the switch over SSH and sends the state to Vercel over outbound HTTPS; Vercel keeps the data in Supabase; the browser opens the dashboard from anywhere">
+
+<details>
+<summary>Text version of the diagram</summary>
 
 ```
 ┌──────────┐   SSH    ┌───────────────────┐ HTTPS (outbound) ┌──────────────────┐
@@ -156,6 +189,8 @@ cable state to be checked (amber outline).
                                                           │  5-min job (pg_cron)    │
                                                           └─────────────────────────┘
 ```
+
+</details>
 
 The switch has a private address, so Vercel cannot reach it. An **agent** installed on a PC of the local network
 reads the switch over SSH, sends its state to the dashboard and runs the requested commands.
@@ -180,61 +215,52 @@ in development is never installed. If an update fails, the previous version is r
 
 ## Installation
 
+Everything is explained step by step, with pictures, in the **[installation guide](docs/GUIDE.en.md)** (about 20 minutes).
+In the dashboard, the **setup assistant** repeats the same steps and checks each one live.
+
 ### What you need
-- An **HPE Aruba Networking CX** switch with a management IP and SSH enabled (`ssh server vrf default`).
+- An **HPE Aruba Networking CX** switch with a management IP, SSH enabled and its SSH account (often `admin`).
 - A **PC that stays on** in the same network as the switch, with internet access.
   Windows is recommended: the agent installs there as a service, and the step-by-step guide is written for it.
   The agent also runs on macOS and Linux.
-- A **Vercel** account (free Hobby plan). The **Supabase** database (free plan) is added to it in one click.
-  Nothing else to sign up for.
+- A **GitHub** account and a **Vercel** account (free Hobby plan). The **Supabase** database (free plan)
+  is added from Vercel. Nothing else to sign up for.
 
-### 1. Deploy the dashboard
-1. Click **Deploy with Vercel** above. Vercel copies the project into your GitHub (or GitLab, Bitbucket) account,
-   then asks for these three variables:
+### In short
+1. **Deploy on Vercel** with the button at the top of this page. Vercel asks for three variables:
 
    | Variable | Purpose | How to generate it |
    |---|---|---|
-   | `DASHBOARD_PASSWORD` | administrator password for the page | a strong, unique password |
+   | `DASHBOARD_PASSWORD` | password of the `admin` account | a strong, unique password |
    | `SESSION_SECRET` | key used to sign sessions | `openssl rand -base64 32` |
    | `AGENT_TOKEN` | token shared with the agent | `openssl rand -hex 32` |
 
-2. Let the first deployment finish: the dashboard will only be complete once the database is added (step 2).
-
-### 2. Add the Supabase database
-1. In the Vercel project, open the **Storage** tab and choose **Supabase** (Vercel Marketplace) with the free plan.
-2. Choose the **Paris (cdg1)** region to keep the data in Europe, then connect the database to the project.
-   The Supabase connection variables are added to the project automatically: there is nothing to copy.
-3. Recommended: make sure the Vercel functions run in the same region
-   (**Settings > Functions > Function Region**: Paris, cdg1).
-4. **Redeploy** the project (**Deployments** tab, ⋯ menu of the latest deployment, **Redeploy**)
-   so that it picks up the new variables.
-
-On first launch, the dashboard creates its tables and schedules the 5-minute check in Supabase.
-There is no script to run.
+   On Windows without `openssl`, the [guide](docs/GUIDE.en.md#1-deploy-on-vercel) gives the equivalent PowerShell command.
+2. **Add Supabase**: the button offers to add it during the deployment (Free plan, Paris region).
+   Otherwise: **Storage** tab of the Vercel project, **Create Database**, **Supabase**, then **redeploy** (**Deployments** tab,
+   ⋯ menu of the latest deployment, **Redeploy**). On first launch, the dashboard creates its tables and schedules
+   the 5-minute check in Supabase: there is no script to run.
+3. **Log in** with the identifier **`admin`** and `DASHBOARD_PASSWORD`: the setup assistant opens.
+4. **Secure the account** in **Mon profil** (my profile): your own password and **two-factor authentication**.
+5. **Prepare the switch**: SSH enabled (`ssh server vrf default`, or `ssh server vrf mgmt` if the agent goes through
+   the management port), management IP reachable from the agent's PC.
+6. **Install the agent** on the Windows PC: Python 3, the `aruba-agent-x.y.z.zip` package from the
+   [latest release](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest), the `agent_config.json` file
+   **downloaded pre-filled from the assistant**, then `installer-service.bat` as administrator.
+   Details and manual method: [`agent/INSTALL-WINDOWS.md`](agent/INSTALL-WINDOWS.md)
+   (in French: [`agent/INSTALLATION-WINDOWS.md`](agent/INSTALLATION-WINDOWS.md)).
+7. **Invite your team and set up alerts** from **Utilisateurs** (users) and **Réglages** (settings).
 
 **E-mail alerts (optional)**: add **Resend** from the Vercel Marketplace, then redeploy.
-Optional variables: `ALERT_FROM` (e-mail sender, for example `Switch <alerts@my-domain.com>`)
-and `DASHBOARD_URL` (link included in the alerts). Webhook alerts need no additional service.
-
-### 3. Install the agent
-Download the ready-to-use agent from the [latest release](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest)
-(file `aruba-agent-x.y.z.zip`). Everything is explained step by step in [`agent/INSTALL-WINDOWS.md`](agent/INSTALL-WINDOWS.md)
-(in French: [`agent/INSTALLATION-WINDOWS.md`](agent/INSTALLATION-WINDOWS.md)). In short:
-1. Python 3, then `pip install -r requirements.txt` in the agent's folder.
-2. Create `agent_config.json` from `agent_config.example.json`
-   (switch IP, dashboard URL, `AGENT_TOKEN`, network to scan to find device IP addresses).
-3. Test with `demarrer-agent.bat`, then install it as a service with `installer-service.bat` (as administrator).
-   The agent then starts with Windows, without a window, restarts by itself after an error
-   and updates itself from the versions published on GitHub.
-
-### 4. First settings
-Open the URL of your Vercel project and log in with the identifier **`admin`** and `DASHBOARD_PASSWORD`. Then:
-- in **Mon profil** (my profile): enter your name and e-mail, choose your own password and **enable two-factor
-  authentication** (scan the QR code, keep the recovery codes somewhere safe; each one works only once);
-- in **Réglages** (settings): set up the alerts (e-mail, webhook, monitored ports, temperature threshold);
-- in **Utilisateurs** (users): create one account per person, and a read-only account for a monitoring screen.
+Without a verified domain, Resend only writes to the address of your own Resend account: to write to other addresses,
+verify your domain in Resend, then set `ALERT_FROM` (e-mail sender, for example `Switch <alerts@my-domain.com>`)
+to that domain. Other optional variable: `DASHBOARD_URL` (link included in the alerts).
+Webhook alerts need no additional service.
 
 `DASHBOARD_PASSWORD` stays valid for the `admin` account as a **backup password**: keep it long and secret.
+
+Problem during installation, updating the dashboard: see the [Troubleshooting](docs/GUIDE.en.md#troubleshooting)
+and [Updating](docs/GUIDE.en.md#updating) sections of the guide.
 
 ---
 
@@ -263,6 +289,10 @@ Open the URL of your Vercel project and log in with the identifier **`admin`** a
   cannot run in the page. The page cannot be displayed inside a frame on another site.
 - The agent only updates from **published versions** (GitHub releases), never from work in progress.
 - No secret is committed (`.env*`, `agent_config.json` and `agent_secret.bin` are excluded).
+- Before login, the page only shows the **names** of missing variables, never their values.
+- The pre-filled `agent_config.json` file contains the agent token: only an administrator can download it
+  (required two-factor authentication is enforced), the response is never cached and the download is recorded
+  in the activity log, without the token. The switch SSH password is never in it.
 - Your data stays in your own Vercel and Supabase accounts: the author of the project has no access to it.
 
 ### Lost phone (two-factor authentication)
@@ -322,11 +352,13 @@ Planned next steps, with no set date:
 | `public/index.html` | the user interface (a single page, no framework) |
 | `public/js/` | the administration features on the page side, one per file |
 | `public/vendor/` | third-party library served with the page (QR code for two-factor authentication) |
+| `public/media/` | presentation video and its poster |
+| `public/onboarding/` | illustrations of the setup assistant and the guide |
 | `api/` | Vercel functions (Node 24) |
-| `lib/` | database (Supabase, Postgres), accounts, roles (administrator, technician, read-only), two-factor authentication, activity log, notifications |
+| `lib/` | database (Supabase, Postgres), accounts, roles (administrator, technician, read-only), two-factor authentication, activity log, notifications, installation and setup assistant |
 | `lib/features/` | the server side of the administration features |
 | `agent/` | the Python agent, its automatic update and its installation as a Windows service |
-| `docs/` | screenshots and presentation video |
+| `docs/` | [installation guide](docs/GUIDE.en.md) (English and French) and screenshots |
 
 ---
 

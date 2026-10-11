@@ -1,5 +1,5 @@
 // My Aruba Manager : application du dashboard (chargée par index.html avant les extensions de public/js).
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.9.0';
 const AGENT_LATEST = '1.4.0'; // dernière version de l'agent publiée avec ce dashboard
 const verNum = (v) => String(v).split('.').reduce((a, x) => a * 1000 + (Number(x) || 0), 0);
 const $ = (s) => document.querySelector(s);
@@ -28,6 +28,7 @@ const IDLE_AFTER = 120;
 
 let S = null, LOG = [], ALERTS = [], NOW = 0, selected = null, filter = 'all', timer = null, lastTouch = 0;
 let LV = '', AV = ''; // versions du journal et des alertes déjà reçues : le serveur ne les renvoie que si elles changent
+let SETUP = null; // avant connexion : { ok, db, missing, fresh } (installation à terminer, première connexion)
 
 // ================================================================ extensions (public/js/*.js)
 // Chaque fonction d'administration vit dans son propre fichier et s'accroche ici :
@@ -37,11 +38,12 @@ let LV = '', AV = ''; // versions du journal et des alertes déjà reçues : le 
 //   HOOK.portName.push(fn)    fn(port, {name, sub, macs, lldp}) -> {name?, sub?} pour renommer l'appareil d'un port
 //   HOOK.poll.push(fn)        après chaque lecture de l'état (X contient les données des extensions)
 //   HOOK.role.push(fn)        quand on passe en lecture seule ou en vue admin
+//   HOOK.login.push(fn)       avant connexion : fn(setup), état de l'installation renvoyé par /api/state (onboarding.js)
 //   addTool({ id, label, icon, title, open })   bouton dans la carte Administration
 //   ADMIN.xxx                 fonctions partagées entre extensions (ADMIN.wake, ADMIN.profiles…)
 // HTML brut (jamais de donnée du switch ou de l'utilisateur sans esc()) : le HTML renvoyé par HOOK.panel, icon d'addTool,
 // actions de toast(). La page interdit tout script dans le HTML (CSP) : écouteurs addEventListener ou data-* seulement.
-const HOOK = { render: [], faceplate: [], panel: [], portName: [], poll: [], role: [] };
+const HOOK = { render: [], faceplate: [], panel: [], portName: [], poll: [], role: [], login: [] };
 const TOOLS = [], X = {}, XV = {}, ADMIN = {};
 function hook(name, ...args) {
   const out = [];
@@ -107,9 +109,18 @@ function toast(msg, { type = 'info', sub = '', id = null, timeout = 4500, action
 }
 function dropToast(id) { const el = TOASTS[id]; if (el) { el.remove(); delete TOASTS[id]; } }
 
+// Bouton désactivé pendant l'action : le navigateur lui retire le focus. Il le retrouve ensuite s'il est encore
+// affiché et que l'action n'a pas placé le focus ailleurs (navigation au clavier, lecteurs d'écran).
 async function busy(btn, fn) {
+  const had = Boolean(btn) && document.activeElement === btn;
   if (btn) { btn.classList.add('loading'); btn.disabled = true; }
-  try { return await fn(); } finally { if (btn) { btn.classList.remove('loading'); btn.disabled = btn.dataset.lock === '1'; } }
+  try { return await fn(); } finally {
+    if (btn) {
+      btn.classList.remove('loading'); btn.disabled = btn.dataset.lock === '1';
+      const lost = !document.activeElement || document.activeElement === document.body;
+      if (had && lost && !btn.disabled && btn.isConnected && btn.getClientRects().length) btn.focus();
+    }
+  }
 }
 
 // ================================================================ thème clair / sombre
@@ -198,7 +209,7 @@ async function poll() {
     const touch = Date.now() - lastTouch > 50000;
     const xv = Object.entries(XV).map(([k, v]) => `${k}:${v}`).join(',');
     const d = await api(`/api/state?lv=${LV}&av=${AV}${xv ? `&xv=${encodeURIComponent(xv)}` : ''}${touch ? '&touch=1' : ''}`);
-    if (d.auth === false) { showLogin(); ($('#loginId').value ? $('#pw') : $('#loginId')).focus(); return; }
+    if (d.auth === false) { SETUP = d.setup || null; showLogin(); hook('login', SETUP); ($('#loginId').value ? $('#pw') : $('#loginId')).focus(); return; }
     if (touch) lastTouch = Date.now();
     ME = d.me || ME;
     if ((d.role || 'admin') !== ROLE || !document.body.dataset.role) { ROLE = d.role || 'admin'; document.body.dataset.role = ROLE; applyRole(); }

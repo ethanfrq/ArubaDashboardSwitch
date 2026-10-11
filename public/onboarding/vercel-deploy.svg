@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" role="img" aria-labelledby="vercel-deploy-t vercel-deploy-d" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<title id="vercel-deploy-t">Déployer My Aruba Manager sur Vercel</title>
+<desc id="vercel-deploy-d">Quatre étapes. 1 : dans le README du dépôt GitHub, clique sur le bouton Deploy. 2 : dans Create Git Repository, garde le nom my-aruba-manager et clique sur Create. 3 : dans Environment Variables, remplis DASHBOARD_PASSWORD, SESSION_SECRET et AGENT_TOKEN (valeurs masquées ici). 4 : clique sur Deploy.</desc>
+<rect x="1" y="1" width="718" height="398" rx="16" fill="#fcfcfb" stroke="#e2e1da" stroke-width="2"/>
+<!-- 1. Bouton Deploy du README -->
+<circle cx="38" cy="40" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="38" y="45" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">1</text>
+<text x="60" y="45" font-size="14" fill="#0b0b0b" font-weight="600">Dans le README</text>
+<rect x="24" y="60" width="252" height="124" rx="10" fill="#ffffff"/>
+<path d="M24 92V70a10 10 0 0 1 10-10H266a10 10 0 0 1 10 10V92Z" fill="#efeee9"/>
+<line x1="24" y1="92" x2="276" y2="92" stroke="#e2e1da" stroke-width="1.5"/>
+<rect x="24" y="60" width="252" height="124" rx="10" fill="none" stroke="#d4d3cb" stroke-width="2"/>
+<circle cx="40" cy="76" r="4" fill="#d4d3cb"/>
+<circle cx="53" cy="76" r="4" fill="#d4d3cb"/>
+<circle cx="66" cy="76" r="4" fill="#d4d3cb"/>
+<rect x="86" y="66" width="176" height="20" rx="10" fill="#ffffff" stroke="#e2e1da" stroke-width="1"/>
+<text x="98" y="81" font-size="13" fill="#52514e">github.com</text>
+<text x="40" y="117" font-size="15" fill="#0b0b0b" font-weight="600">My Aruba Manager</text>
+<rect x="40" y="126" width="196" height="6" rx="3" fill="#efeee9"/>
+<rect x="36" y="138" width="104" height="38" rx="8" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<rect x="40" y="142" width="96" height="30" rx="6" fill="#0b0b0b"/>
+<path d="M57 151.1L64 162.6H50Z" fill="#ffffff"/>
+<text x="72" y="162" font-size="14" fill="#ffffff" font-weight="600">Deploy</text>
+<path d="M230 188L230 214" fill="none" stroke="#ff8300" stroke-width="2" stroke-linejoin="round"/>
+<path d="M230 224L224.5 214L235.5 214Z" fill="#ff8300"/>
+<!-- 2. Create Git Repository -->
+<circle cx="38" cy="212" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="38" y="217" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">2</text>
+<text x="60" y="217" font-size="14" fill="#0b0b0b" font-weight="600">Crée ton dépôt</text>
+<rect x="24" y="232" width="252" height="144" rx="10" fill="#ffffff"/>
+<path d="M24 264V242a10 10 0 0 1 10-10H266a10 10 0 0 1 10 10V264Z" fill="#efeee9"/>
+<line x1="24" y1="264" x2="276" y2="264" stroke="#e2e1da" stroke-width="1.5"/>
+<rect x="24" y="232" width="252" height="144" rx="10" fill="none" stroke="#d4d3cb" stroke-width="2"/>
+<circle cx="40" cy="248" r="4" fill="#d4d3cb"/>
+<circle cx="53" cy="248" r="4" fill="#d4d3cb"/>
+<circle cx="66" cy="248" r="4" fill="#d4d3cb"/>
+<rect x="86" y="238" width="176" height="20" rx="10" fill="#ffffff" stroke="#e2e1da" stroke-width="1"/>
+<text x="98" y="253" font-size="13" fill="#52514e">vercel.com/new/clone</text>
+<text x="40" y="289" font-size="14" fill="#0b0b0b" font-weight="600">Create Git Repository</text>
+<text x="40" y="312" font-size="13" fill="#52514e">Repository Name</text>
+<rect x="40" y="320" width="150" height="30" rx="6" fill="#ffffff" stroke="#d4d3cb" stroke-width="1.5"/>
+<text x="50" y="340" font-size="13" fill="#0b0b0b">my-aruba-manager</text>
+<rect x="194" y="316" width="72" height="38" rx="8" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<rect x="198" y="320" width="64" height="30" rx="6" fill="#0b0b0b"/>
+<text x="230" y="340" font-size="13" fill="#ffffff" font-weight="600" text-anchor="middle">Create</text>
+<path d="M280 304L302 304" fill="none" stroke="#ff8300" stroke-width="2" stroke-linejoin="round"/>
+<path d="M312 304L302 309.5L302 298.5Z" fill="#ff8300"/>
+<!-- 3. Variables d’environnement, 4. Deploy -->
+<circle cx="330" cy="40" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="330" y="45" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">3</text>
+<text x="352" y="45" font-size="14" fill="#0b0b0b" font-weight="600">Remplis les 3 variables</text>
+<rect x="316" y="60" width="380" height="316" rx="10" fill="#ffffff"/>
+<path d="M316 92V70a10 10 0 0 1 10-10H686a10 10 0 0 1 10 10V92Z" fill="#efeee9"/>
+<line x1="316" y1="92" x2="696" y2="92" stroke="#e2e1da" stroke-width="1.5"/>
+<rect x="316" y="60" width="380" height="316" rx="10" fill="none" stroke="#d4d3cb" stroke-width="2"/>
+<circle cx="332" cy="76" r="4" fill="#d4d3cb"/>
+<circle cx="345" cy="76" r="4" fill="#d4d3cb"/>
+<circle cx="358" cy="76" r="4" fill="#d4d3cb"/>
+<rect x="378" y="66" width="304" height="20" rx="10" fill="#ffffff" stroke="#e2e1da" stroke-width="1"/>
+<text x="390" y="81" font-size="13" fill="#52514e">vercel.com/new/clone</text>
+<text x="332" y="118" font-size="15" fill="#0b0b0b" font-weight="600">Configure Project</text>
+<rect x="328" y="128" width="356" height="188" rx="12" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<rect x="332" y="132" width="348" height="180" rx="10" fill="#f4f4f1" stroke="#e2e1da" stroke-width="1.5"/>
+<text x="348" y="157" font-size="14" fill="#0b0b0b" font-weight="600">Environment Variables</text>
+<text x="348" y="178" font-size="13" fill="#52514e">Mot de passe du dashboard, clé de session</text>
+<text x="348" y="196" font-size="13" fill="#52514e">et jeton de l'agent</text>
+<text x="348" y="228" font-size="13" fill="#0b0b0b" font-weight="600" font-family="ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace">DASHBOARD_PASSWORD</text>
+<rect x="508" y="210" width="156" height="26" rx="6" fill="#ffffff" stroke="#d4d3cb" stroke-width="1.5"/>
+<text x="518" y="228" font-size="13" fill="#0b0b0b">••••••••••</text>
+<text x="348" y="260" font-size="13" fill="#0b0b0b" font-weight="600" font-family="ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace">SESSION_SECRET</text>
+<rect x="508" y="242" width="156" height="26" rx="6" fill="#ffffff" stroke="#d4d3cb" stroke-width="1.5"/>
+<text x="518" y="260" font-size="13" fill="#0b0b0b">••••••••••</text>
+<text x="348" y="292" font-size="13" fill="#0b0b0b" font-weight="600" font-family="ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace">AGENT_TOKEN</text>
+<rect x="508" y="274" width="156" height="26" rx="6" fill="#ffffff" stroke="#d4d3cb" stroke-width="1.5"/>
+<text x="518" y="292" font-size="13" fill="#0b0b0b">••••••••••</text>
+<rect x="360" y="324" width="324" height="40" rx="8" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<rect x="364" y="328" width="316" height="32" rx="6" fill="#0b0b0b"/>
+<path d="M495 338.1L502 349.6H488Z" fill="#ffffff"/>
+<text x="509" y="349" font-size="14" fill="#ffffff" font-weight="600">Deploy</text>
+<circle cx="342" cy="344" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="342" y="349" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">4</text>
+</svg>

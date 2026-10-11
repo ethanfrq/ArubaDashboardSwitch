@@ -32,11 +32,11 @@
   }
 
   // ------------------------------------------------------------ navigation
-  const VIEWS = ['dashboard', 'users', 'roles', 'activity', 'profile'];
-  const ADMIN_VIEWS = new Set(['users', 'activity']);
+  const VIEWS = ['dashboard', 'users', 'roles', 'activity', 'profile', 'setup'];
+  const ADMIN_VIEWS = new Set(['users', 'activity', 'setup']);
   const HASH = { 'tableau-de-bord': ['dashboard', 'top'], ports: ['dashboard', 'sec-facade'], alertes: ['dashboard', 'sec-alertes'],
     debit: ['dashboard', 'sec-debit'], journal: ['dashboard', 'sec-logs'], vlan: ['dashboard', 'sec-vlan'], outils: ['dashboard', 'sec-admin'],
-    console: ['dashboard', 'sec-console'], utilisateurs: ['users'], roles: ['roles'], activite: ['activity'], profil: ['profile'] };
+    console: ['dashboard', 'sec-console'], utilisateurs: ['users'], roles: ['roles'], activite: ['activity'], profil: ['profile'], demarrage: ['setup'] };
   let current = 'dashboard';
   const links = () => qsa('#sideNav a[data-view]');
 
@@ -77,6 +77,7 @@
   // Section visible du tableau de bord : l'entrée correspondante du menu est mise en avant.
   const spy = 'IntersectionObserver' in window && new IntersectionObserver((entries) => {
     if (current !== 'dashboard') return;
+    if (scrollY < 60) return mark(links().find((a) => a.dataset.target === 'top')); // haut de page : « Tableau de bord »
     const vis = entries.filter((x) => x.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
     if (!vis) return;
     const a = links().find((l) => l.dataset.target === vis.target.id);
@@ -413,7 +414,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
-  const LOAD = { users: loadUsers, activity: loadAudit, profile: loadProfile };
+  const LOAD = { users: loadUsers, activity: loadAudit, profile: loadProfile, setup: () => ADMIN.setupOpen?.() }; // setup : onboarding.js
   // Les pages ouvertes se rafraîchissent toutes seules (comptes en ligne, nouvelles entrées du journal).
   setInterval(() => { if (!document.hidden && !$('#app').hidden && (current === 'users' || current === 'activity')) LOAD[current](); }, 30000);
 

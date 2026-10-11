@@ -4,26 +4,40 @@
 
 The PC must stay on, be on the same network as the switch, be able to reach it over SSH and have internet access.
 
+Complete illustrated guide, from the Vercel deployment to the connected agent:
+[docs/GUIDE.en.md](https://github.com/ethanfrq/ArubaDashboardSwitch/blob/main/docs/GUIDE.en.md#6-install-the-agent-on-the-windows-pc).
+In the dashboard, the **Démarrage** (getting started) assistant repeats these steps and checks each one live.
+
 ## 1. Prepare
-1. Install Python 3 from https://www.python.org/downloads/ (tick "Add python.exe to PATH").
+1. Install Python 3 from https://www.python.org/downloads/: take the classic installer
+   ("standalone installer" link, file `python-3.x.x-amd64.exe`), tick "Add python.exe to PATH"
+   on the first screen, then "Install Now".
 2. Download the agent from the [latest release](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest)
-   (file `aruba-agent-x.y.z.zip`) and unzip it into a folder, for example `C:\aruba-agent`.
-3. In a command prompt opened in that folder: `pip install -r requirements.txt`
-4. Copy `agent_config.example.json` to `agent_config.json` and fill it in:
+   (file `aruba-agent-x.y.z.zip`). The zip contains an `aruba-agent-x.y.z` folder: right-click, "Extract All…"
+   to `C:\`, then rename `C:\aruba-agent-x.y.z` to `C:\aruba-agent`. The files (`agent.py`,
+   `installer-service.bat`, and so on) must be directly in that folder.
+3. In a command prompt opened in that folder (type `cmd` in the File Explorer address bar):
+   `python -m pip install -r requirements.txt` (or `pip install -r requirements.txt`).
+4. Put the `agent_config.json` file in the agent's folder:
+   - **the simplest way**: in the dashboard, **Démarrage** assistant, "Configurer l’agent" (configure the agent) step:
+     enter the switch IP, then click "Télécharger agent_config.json" (download, administrators only). The file is
+     pre-filled (dashboard address, agent token, pace, automatic update): put it in the agent's folder,
+     with this exact name;
+   - **manual method**: copy `agent_config.example.json` to `agent_config.json` and fill it in:
 
-   | Key | Value |
-   |---|---|
-   | `switch_host` | management IP of the switch |
-   | `switch_user` | SSH account on the switch (often `admin`) |
-   | `dashboard_url` | URL of your Vercel dashboard |
-   | `agent_token` | value of the `AGENT_TOKEN` variable set on Vercel |
-   | `scan_subnet` | network to scan to find device IP addresses, for example `192.168.1.0/24` |
-   | `auto_update` | `true`: automatic update from the versions published on GitHub (see below), `false` to turn it off |
+     | Key | Value |
+     |---|---|
+     | `switch_host` | management IP of the switch |
+     | `switch_user` | SSH account on the switch (often `admin`) |
+     | `dashboard_url` | URL of your Vercel dashboard |
+     | `agent_token` | value of the `AGENT_TOKEN` variable set on Vercel |
+     | `scan_subnet` | network to scan to find device IP addresses, for example `192.168.1.0/24` (1024 addresses at most: /22 to /30) |
+     | `auto_update` | `true`: automatic update from the versions published on GitHub (see below), `false` to turn it off |
 
-   Leave `switch_password` empty: the password is asked during installation and stored encrypted.
+   In both cases, `switch_password` stays empty: the password is asked during installation and stored encrypted.
    Never publish `agent_config.json`: it contains the agent token.
 
-## 2. Test by hand
+## 2. Test by hand (optional)
 Double-click `demarrer-agent.bat`, then type the switch SSH password.
 The dashboard should show "Agent en ligne" (agent online). Then close the window (Ctrl+C): only one agent can run at a time.
 
@@ -35,8 +49,17 @@ Right-click `installer-service.bat`, then "Run as administrator".
 - It creates the "ArubaDashboardMiseAJour" task: the automatic update (see below).
 - Logs: `agent.log` and `mise_a_jour.log` in the agent's folder.
 
+The window should show "Service installé et démarré" (service installed and started). Within a minute, the dashboard
+shows "Agent en ligne" (agent online), and the **Démarrage** assistant shows "Agent connecté" (agent connected).
+
 Uninstall: `desinstaller-service.bat` (as administrator).
-Check: `python installer_service.py status`. Restart: `python installer_service.py restart`.
+
+Restart the agent (for example after replacing `agent_config.json`): run `installer-service.bat` again (right-click,
+"Run as administrator") and press Enter without typing anything when the password is asked: the saved password is
+kept, the service is stopped and started again.
+Check or restart from the command line: in a Command Prompt opened **as administrator** (Start menu, type `cmd`,
+right-click "Command Prompt", "Run as administrator"), type `cd /d C:\aruba-agent`, then
+`python installer_service.py status` or `python installer_service.py restart`.
 
 For round-the-clock operation, set the PC's sleep setting to "Never".
 
@@ -57,8 +80,9 @@ There is nothing else to do.
 To approve each version yourself before it is installed, set `auto_update` to `false` in `agent_config.json`,
 then run `mettre-a-jour.bat` whenever you decide.
 
-For a test PC that should follow the code in development (main branch), add `"update_channel": "main"`
-to `agent_config.json`. Do not do this on the PC connected to the switch in production.
+For a test PC that should follow the code in development (main branch), set `update_channel` to `"main"`
+in `agent_config.json` (the key is already there, with `"releases"`). Do not do this on the PC connected to the switch
+in production.
 
 If you publish your own version of the agent, remember that the PCs automatically install whatever is published as a release:
 protect the GitHub account (two-factor authentication) and only publish tested versions.

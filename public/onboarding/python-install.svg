@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" role="img" aria-labelledby="python-install-t python-install-d" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<title id="python-install-t">Installer Python sur Windows</title>
+<desc id="python-install-d">Installateur de Python 3 pour Windows. 1 : coche d’abord la case Add python.exe to PATH, en bas de la fenêtre. 2 : clique sur Install Now (Includes IDLE, pip and documentation).</desc>
+<rect x="1" y="1" width="718" height="398" rx="16" fill="#fcfcfb" stroke="#e2e1da" stroke-width="2"/>
+<rect x="64" y="24" width="592" height="352" rx="10" fill="#ffffff"/>
+<path d="M64 56V34a10 10 0 0 1 10-10H646a10 10 0 0 1 10 10V56Z" fill="#efeee9"/>
+<line x1="64" y1="56" x2="656" y2="56" stroke="#e2e1da" stroke-width="1.5"/>
+<rect x="64" y="24" width="592" height="352" rx="10" fill="none" stroke="#d4d3cb" stroke-width="2"/>
+<rect x="78" y="33" width="14" height="14" rx="3" fill="#52514e"/>
+<text x="100" y="45" font-size="13" fill="#0b0b0b">Python 3.x (64-bit) Setup</text>
+<line x1="566" y1="40" x2="576" y2="40" stroke="#52514e" stroke-width="1.5"/>
+<rect x="595" y="35" width="10" height="10" fill="none" stroke="#52514e" stroke-width="1.5"/>
+<path d="M625 35l10 10m0-10l-10 10" fill="none" stroke="#52514e" stroke-width="1.5"/>
+<path d="M66 56H222V374H76a10 10 0 0 1-10-10Z" fill="#efeee9"/>
+<rect x="112" y="144" width="64" height="64" rx="16" fill="#52514e"/>
+<text x="144" y="182" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle" font-family="ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace">&gt;&gt;&gt;</text>
+<text x="144" y="236" font-size="16" fill="#52514e" font-weight="600" text-anchor="middle">python</text>
+<text x="240" y="90" font-size="18" fill="#0b0b0b" font-weight="600">Install Python 3.x (64-bit)</text>
+<text x="240" y="114" font-size="13" fill="#52514e">Select Install Now to install Python with</text>
+<text x="240" y="132" font-size="13" fill="#52514e">default settings, or choose Customize to</text>
+<text x="240" y="150" font-size="13" fill="#52514e">enable or disable features.</text>
+<!-- 2. Install Now -->
+<rect x="240" y="162" width="400" height="82" rx="10" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<rect x="244" y="166" width="392" height="74" rx="8" fill="#ffffff"/>
+<path d="M256 189h16m-6-6l6 6l-6 6" fill="none" stroke="#0b0b0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="282" y="192" font-size="16" fill="#0b0b0b" font-weight="600">Install Now</text>
+<text x="282" y="212" font-size="13" fill="#52514e">Includes IDLE, pip and documentation</text>
+<text x="282" y="230" font-size="13" fill="#52514e">Creates shortcuts and file associations</text>
+<circle cx="636" cy="166" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="636" y="171" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">2</text>
+<path d="M256 272h16m-6-6l6 6l-6 6" fill="none" stroke="#52514e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="282" y="276" font-size="15" fill="#52514e" font-weight="600">Customize installation</text>
+<text x="282" y="294" font-size="13" fill="#52514e">Choose location and features</text>
+<!-- 1. Add python.exe to PATH -->
+<rect x="248" y="310" width="14" height="14" rx="3" fill="#ffffff" stroke="#52514e" stroke-width="1.5"/>
+<text x="270" y="322" font-size="13" fill="#52514e">Use admin privileges when installing py.exe</text>
+<rect x="242" y="331" width="222" height="28" rx="6" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<rect x="248" y="338" width="14" height="14" rx="3" fill="#0b0b0b"/>
+<path d="M251.5 345l3.1 3.1l5.3-5.9" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="270" y="350" font-size="13" fill="#0b0b0b" font-weight="600">Add python.exe to PATH</text>
+<circle cx="482" cy="345" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="482" y="350" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">1</text>
+<text x="502" y="350" font-size="13" fill="#b45200" font-weight="600">à cocher d’abord</text>
+</svg>

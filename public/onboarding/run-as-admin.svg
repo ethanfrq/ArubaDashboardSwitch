@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" role="img" aria-labelledby="run-as-admin-t run-as-admin-d" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<title id="run-as-admin-t">Lancer installer-service.bat en administrateur</title>
+<desc id="run-as-admin-d">1 : dans le dossier aruba-agent, clic droit sur installer-service.bat. 2 : dans le menu, choisis Exécuter en tant qu’administrateur. 3 : Windows demande « Voulez-vous autoriser cette application à apporter des modifications à votre appareil ? » pour le Processeur de commandes Windows : clique sur Oui.</desc>
+<rect x="1" y="1" width="718" height="398" rx="16" fill="#fcfcfb" stroke="#e2e1da" stroke-width="2"/>
+<rect x="24" y="24" width="344" height="352" rx="10" fill="#ffffff"/>
+<path d="M24 56V34a10 10 0 0 1 10-10H358a10 10 0 0 1 10 10V56Z" fill="#efeee9"/>
+<line x1="24" y1="56" x2="368" y2="56" stroke="#e2e1da" stroke-width="1.5"/>
+<rect x="24" y="24" width="344" height="352" rx="10" fill="none" stroke="#d4d3cb" stroke-width="2"/>
+<path d="M38 36a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H40a2 2 0 0 1-2-2Z" fill="#d9a441"/>
+<text x="62" y="45" font-size="13" fill="#0b0b0b">aruba-agent</text>
+<line x1="278" y1="40" x2="288" y2="40" stroke="#52514e" stroke-width="1.5"/>
+<rect x="307" y="35" width="10" height="10" fill="none" stroke="#52514e" stroke-width="1.5"/>
+<path d="M337 35l10 10m0-10l-10 10" fill="none" stroke="#52514e" stroke-width="1.5"/>
+<rect x="36" y="64" width="320" height="28" rx="6" fill="#f4f4f1" stroke="#e2e1da" stroke-width="1.5"/>
+<path d="M46 74a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H48a2 2 0 0 1-2-2Z" fill="#d9a441"/>
+<text x="70" y="83" font-size="13" fill="#0b0b0b" xml:space="preserve">Disque local (C:)  ›  aruba-agent</text>
+<text x="64" y="120" font-size="13" fill="#52514e" font-weight="600">Nom</text>
+<line x1="36" y1="128" x2="356" y2="128" stroke="#e2e1da" stroke-width="1.5"/>
+<path d="M42 137h7l4 4v10h-11Z" fill="#ffffff" stroke="#52514e" stroke-width="1.4" stroke-linejoin="round"/>
+<rect x="41" y="144" width="9" height="5" rx="1" fill="#52514e"/>
+<text x="64" y="149" font-size="13" fill="#0b0b0b">demarrer-agent.bat</text>
+<path d="M42 161h7l4 4v10h-11Z" fill="#ffffff" stroke="#52514e" stroke-width="1.4" stroke-linejoin="round"/>
+<rect x="41" y="168" width="9" height="5" rx="1" fill="#52514e"/>
+<text x="64" y="173" font-size="13" fill="#0b0b0b">desinstaller-service.bat</text>
+<rect x="33" y="179" width="326" height="26" rx="5.5" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<path d="M42 185h7l4 4v10h-11Z" fill="#ffffff" stroke="#52514e" stroke-width="1.4" stroke-linejoin="round"/>
+<rect x="41" y="192" width="9" height="5" rx="1" fill="#52514e"/>
+<text x="64" y="197" font-size="13" fill="#0b0b0b" font-weight="600">installer-service.bat</text>
+<path d="M42 209h7l4 4v10h-11Z" fill="#ffffff" stroke="#52514e" stroke-width="1.4" stroke-linejoin="round"/>
+<rect x="41" y="216" width="9" height="5" rx="1" fill="#4f7fd1"/>
+<text x="64" y="221" font-size="13" fill="#0b0b0b">installer_service.py</text>
+<path d="M42 233h7l4 4v10h-11Z" fill="#ffffff" stroke="#52514e" stroke-width="1.4" stroke-linejoin="round"/>
+<rect x="41" y="240" width="9" height="5" rx="1" fill="#52514e"/>
+<text x="64" y="245" font-size="13" fill="#0b0b0b">mettre-a-jour.bat</text>
+<path d="M42 257h7l4 4v10h-11Z" fill="#ffffff" stroke="#52514e" stroke-width="1.4" stroke-linejoin="round"/>
+<rect x="41" y="264" width="9" height="5" rx="1" fill="#4f7fd1"/>
+<text x="64" y="269" font-size="13" fill="#0b0b0b">mise_a_jour.py</text>
+<path d="M42 281h7l4 4v10h-11Z" fill="#ffffff" stroke="#52514e" stroke-width="1.4" stroke-linejoin="round"/>
+<text x="64" y="293" font-size="13" fill="#0b0b0b">requirements.txt</text>
+<path d="M42 305h7l4 4v10h-11Z" fill="#ffffff" stroke="#52514e" stroke-width="1.4" stroke-linejoin="round"/>
+<rect x="41" y="312" width="9" height="5" rx="1" fill="#ff8300"/>
+<text x="64" y="317" font-size="13" fill="#0b0b0b">agent_config.json</text>
+<text x="338" y="197" font-size="13" fill="#b45200" font-weight="600" text-anchor="end">clic droit</text>
+<circle cx="360" cy="192" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="360" y="197" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">1</text>
+<!-- Menu contextuel -->
+<rect x="155" y="213" width="296" height="164" rx="10" fill="#0b0b0b" fill-opacity="0.1"/>
+<rect x="150" y="208" width="296" height="164" rx="10" fill="#ffffff" stroke="#d4d3cb" stroke-width="1.5"/>
+<text x="184" y="234" font-size="13" fill="#0b0b0b">Ouvrir</text>
+<text x="432" y="234" font-size="13" fill="#52514e" text-anchor="end">Entrée</text>
+<rect x="155" y="243" width="286" height="34" rx="7.5" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<path d="M171 253l7 3v4.5c0 4-3 6.6-7 8c-4-1.4-7-4-7-8V256Z" fill="#e8b33c"/>
+<path d="M171 253v15.5c-4-1.4-7-4-7-8V256Z" fill="#4f7fd1"/>
+<text x="186" y="265" font-size="13" fill="#0b0b0b">Exécuter en tant qu'administrateur</text>
+<text x="184" y="296" font-size="13" fill="#0b0b0b">Modifier</text>
+<line x1="158" y1="310" x2="438" y2="310" stroke="#e2e1da" stroke-width="1.5"/>
+<text x="184" y="334" font-size="13" fill="#0b0b0b">Copier en tant que chemin d’accès</text>
+<text x="184" y="360" font-size="13" fill="#0b0b0b">Propriétés</text>
+<text x="432" y="360" font-size="13" fill="#52514e" text-anchor="end">Alt+Entrée</text>
+<circle cx="446" cy="260" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="446" y="265" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">2</text>
+<!-- Contrôle de compte d’utilisateur -->
+<rect x="466" y="40" width="230" height="320" rx="10" fill="#ffffff"/>
+<path d="M466 76V50a10 10 0 0 1 10-10H686a10 10 0 0 1 10 10V76Z" fill="#efeee9"/>
+<rect x="466" y="40" width="230" height="320" rx="10" fill="none" stroke="#d4d3cb" stroke-width="2"/>
+<text x="480" y="63" font-size="13" fill="#52514e">Contrôle de compte d’utilisateur</text>
+<text x="480" y="102" font-size="14" fill="#0b0b0b" font-weight="600">Voulez-vous autoriser</text>
+<text x="480" y="121" font-size="14" fill="#0b0b0b" font-weight="600">cette application à</text>
+<text x="480" y="140" font-size="14" fill="#0b0b0b" font-weight="600">apporter des modifications</text>
+<text x="480" y="159" font-size="14" fill="#0b0b0b" font-weight="600">à votre appareil ?</text>
+<text x="518" y="196" font-size="13" fill="#0b0b0b">Processeur de</text>
+<text x="518" y="213" font-size="13" fill="#0b0b0b">commandes Windows</text>
+<text x="480" y="244" font-size="13" fill="#52514e">Éditeur vérifié :</text>
+<text x="480" y="261" font-size="13" fill="#52514e">Microsoft Windows</text>
+<rect x="480" y="190" width="28" height="22" rx="3" fill="#0b0b0b"/>
+<path d="M485 196l4 4l-4 4" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="492" y1="205" x2="500" y2="205" stroke="#ffffff" stroke-width="1.5"/>
+<rect x="476" y="300" width="106" height="40" rx="8" fill="#fff1e0" stroke="#ff8300" stroke-width="2"/>
+<rect x="480" y="304" width="98" height="32" rx="6" fill="#0b0b0b"/>
+<text x="529" y="325" font-size="14" fill="#ffffff" font-weight="600" text-anchor="middle">Oui</text>
+<rect x="586" y="304" width="96" height="32" rx="6" fill="#efeee9" stroke="#d4d3cb" stroke-width="1.5"/>
+<text x="634" y="325" font-size="14" fill="#0b0b0b" text-anchor="middle">Non</text>
+<circle cx="478" cy="298" r="13" fill="#ff8300" stroke="#ffffff" stroke-width="2"/>
+<text x="478" y="303" font-size="14" fill="#1d0f00" font-weight="700" text-anchor="middle">3</text>
+</svg>

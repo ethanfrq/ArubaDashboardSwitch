@@ -4,14 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>My Aruba Manager</title>
-<script src="/js/theme.js?v=1.8.0"></script>
+<script src="/js/theme.js?v=1.9.0"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='9' width='28' height='14' rx='3' fill='%23ff8300'/%3E%3Crect x='6' y='13' width='4' height='4' fill='%23fff'/%3E%3Crect x='12' y='13' width='4' height='4' fill='%23fff'/%3E%3Crect x='18' y='13' width='4' height='4' fill='%23fff'/%3E%3C/svg%3E">
 <style>
 :root {
   color-scheme: light;
   --bg: #f4f4f1; --surface: #fcfcfb; --surface-2: #efeee9; --border: #e2e1da;
-  --text: #0b0b0b; --text-2: #52514e; --text-3: #85847d;
+  --text: #0b0b0b; --text-2: #52514e; --text-3: #6b6a64; /* texte discret : 4.5:1 au moins sur tous les fonds clairs */
   --accent: #ff8300; --accent-ink: #b45200;
+  --accent-ink-2: #9a4600; --ph: #6b6a64; /* sur fond orangé (pastilles), texte d'exemple des champs : 4.5:1 au moins */
   --rx: #2a78d6; --tx: #eb6834;
   --good: #1f8a3c; --good-soft: #dff2e3; --bad: #c9302c; --bad-soft: #fbe3e2;
   --warn: #a86700; --warn-soft: #fbf0d9; --info: #2a6fc9; --info-soft: #e1ecfa;
@@ -23,7 +24,7 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #111110; --surface: #1a1a19; --surface-2: #232321; --border: #2f2f2c;
-    --text: #ffffff; --text-2: #c3c2b7; --text-3: #8b8a82; --accent-ink: #ffa64d;
+    --text: #ffffff; --text-2: #c3c2b7; --text-3: #8b8a82; --accent-ink: #ffa64d; --accent-ink-2: #ffa64d; --ph: #8b8a82;
     --rx: #3987e5; --tx: #d95926;
     --good: #4cc26b; --good-soft: #17301d; --bad: #ef6a66; --bad-soft: #3a1b1a;
     --warn: #e0a83a; --warn-soft: #36290f; --info: #6aa8f0; --info-soft: #172840;
@@ -33,7 +34,7 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #111110; --surface: #1a1a19; --surface-2: #232321; --border: #2f2f2c;
-  --text: #ffffff; --text-2: #c3c2b7; --text-3: #8b8a82; --accent-ink: #ffa64d;
+  --text: #ffffff; --text-2: #c3c2b7; --text-3: #8b8a82; --accent-ink: #ffa64d; --accent-ink-2: #ffa64d; --ph: #8b8a82;
   --rx: #3987e5; --tx: #d95926;
   --good: #4cc26b; --good-soft: #17301d; --bad: #ef6a66; --bad-soft: #3a1b1a;
   --warn: #e0a83a; --warn-soft: #36290f; --info: #6aa8f0; --info-soft: #172840;
@@ -450,26 +451,270 @@ dialog .sub-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .field .note { margin: 0; }
 .req { color: var(--bad); }
 @media (max-width: 900px) {
-  .side { position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: transform .2s ease; box-shadow: 0 0 40px rgb(0 0 0 / .25); }
-  body.menu-open .side { transform: none; }
+  .side { position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: transform .2s ease; }
+  body.menu-open .side { transform: none; box-shadow: 0 0 40px rgb(0 0 0 / .25); } /* fermé : pas d'ombre qui déborde sur la page */
   .side-head .side-close, .burger { display: inline-flex; }
   .side nav a { min-height: 44px; }
   .app { padding: 14px 16px 24px; }
   header.top .title { flex: 1 1 calc(100% - 60px); }
+  header.top .btn.icon, .side-user .btn.icon { width: 44px; height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { .side { transition: none; } }
 body.notadmin .manage-only { display: none !important; }
 body.readonly .staff-only { display: none !important; }
+
+/* ---------- démarrage : installation à terminer, première connexion, assistant, bienvenue */
+.side nav a .n.prog { background: rgb(255 131 0 / .16); color: var(--accent-ink-2); }
+.side nav a .n.ok { background: var(--good-soft); color: var(--good); }
+.ob-svg { width: 16px; height: 16px; flex: none; }
+.pill .ob-svg { width: 13px; height: 13px; margin-left: -2px; }
+/* statuts : texte au contraste du corps, la couleur passe par le fond et l'icône */
+.pill.ob-pill { color: var(--text); white-space: nowrap; }
+.pill.ob-pill.good .ob-svg { color: var(--good); } .pill.ob-pill.bad .ob-svg { color: var(--bad); }
+.pill.ob-pill.warn .ob-svg { color: var(--warn); } .pill.ob-pill.info .ob-svg { color: var(--info); }
+.ob-step .alert.amber, .ob-welcome .alert.amber, .ob-step .alert.red, #obErr { color: var(--text); }
+.ob-step .alert.amber .ob-svg { color: var(--warn); }
+.ob-step .alert.red .ob-svg, #obErr .ob-svg { color: var(--bad); }
+#obErr { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+/* notes et sous-titres : couleur secondaire lisible (4.5:1), pas la couleur atténuée du reste de l'interface */
+.ob-step .note, .ob-welcome .note, #view-setup .view-head p { color: var(--text-2); }
+#wcRole { color: var(--text); }
+.ob-form input::placeholder { color: var(--ph); opacity: 1; }
+.ob-step code, .setup-card code, .first-box code, .ob-welcome code { font: 12px/1.4 var(--mono); background: var(--surface-2); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+.ob-checks { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.ob-chk { display: flex; align-items: center; gap: 8px 12px; padding: 11px 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.ob-chk:last-child { border-bottom: 0; }
+.ob-chk > div { flex: 1 1 220px; min-width: 0; }
+.ob-chk b { font-weight: 600; }
+.ob-chk p { margin: 2px 0 0; color: var(--text-2); font-size: 12.5px; }
+.ob-chk .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto; }
+.ob-ci { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--surface-2); color: var(--text-2); }
+.ob-ci .ob-svg { width: 15px; height: 15px; }
+.ok > .ob-ci { background: var(--good-soft); color: var(--good); }
+.ko > .ob-ci { background: var(--bad-soft); color: var(--bad); }
+.wait > .ob-ci { background: var(--warn-soft); color: var(--warn); }
+.opt > .ob-ci { background: var(--info-soft); color: var(--info); }
+.ob-cmd { display: flex; align-items: flex-start; gap: 8px; background: #0f0f0e; border-radius: 10px; padding: 9px 9px 9px 14px; margin: 6px 0 0; }
+.ob-cmd pre { flex: 1; min-width: 0; margin: 0; padding: 3px 0; font: 12.5px/1.6 var(--mono); color: #e6e5de; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ob-cmd .btn { background: #232321; border-color: #3a3a37; color: #f4f3ec; flex: none; }
+.ob-cmd .btn:hover { background: #2e2e2b; }
+.ob-cmd .btn .ob-svg { width: 13px; height: 13px; }
+.ob-cmd-label { display: block; font-size: 12px; color: var(--text-2); font-weight: 500; margin-top: 10px; }
+.ob-fig { margin: 0; min-width: 0; max-width: 720px; } /* 720 px : la taille prévue des illustrations, texte lisible */
+.ob-fig a { display: block; border-radius: 12px; text-decoration: none; }
+.ob-fig img { display: block; width: 100%; height: auto; border-radius: 12px; } /* le cadre fait partie de l'illustration */
+.ob-fig figcaption { font-size: 12.5px; color: var(--text-2); margin-top: 4px; }
+.ob-fig.wide { max-width: 760px; }
+/* repère visible : l'illustration s'ouvre en grand (nouvel onglet) */
+.ob-zoom { display: flex; justify-content: flex-end; align-items: center; gap: 5px; margin-top: 5px; font-size: 12px; font-weight: 600; color: var(--accent-ink); }
+.ob-zoom .ob-svg { width: 13px; height: 13px; }
+.ob-fig a:hover .ob-zoom { text-decoration: underline; }
+.ob-ol { margin: 0; padding: 0; list-style: none; counter-reset: obol; display: grid; gap: 8px; }
+.ob-ol > li { counter-increment: obol; position: relative; padding-left: 32px; min-height: 22px; }
+.ob-ol > li::before { content: counter(obol); position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: rgb(255 131 0 / .16); color: var(--accent-ink-2); font: 700 11.5px/1 system-ui, sans-serif; }
+.ob-list { margin: 0; padding-left: 18px; display: grid; gap: 5px; color: var(--text-2); }
+.ob-list li::marker { color: var(--accent); }
+.ob-link { color: var(--accent-ink); font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.ob-link:hover { text-decoration: underline; }
+.ob-link .ob-svg { width: 14px; height: 14px; }
+.ob-video { position: relative; border-radius: 12px; overflow: hidden; background: #0b0b0b; aspect-ratio: 16 / 9; }
+.ob-video video { display: block; width: 100%; height: 100%; object-fit: contain; background: #0b0b0b; }
+.ob-details { border: 1px solid var(--border); border-radius: 10px; padding: 0 14px; background: var(--surface); }
+.ob-details > summary { cursor: pointer; padding: 11px 0; font-weight: 600; list-style-position: outside; margin-left: 14px; }
+.ob-details[open] > summary { border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+.ob-details > :last-child { margin-bottom: 12px; }
+.field-err { color: var(--bad); font-size: 12.5px; font-weight: 500; }
+input[aria-invalid="true"] { border-color: var(--bad); }
+input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px rgb(201 48 44 / .2); }
+
+/* avant connexion */
+.setup-card { width: min(760px, 100%); padding: 28px; border-radius: 14px; counter-reset: inst; }
+.login .setup-card h1 { font-size: 21px; margin: 14px 0 6px; letter-spacing: -.01em; }
+.login .setup-card h1:focus { outline: none; }
+.login .setup-card p { margin: 0 0 10px; }
+.setup-lead { max-width: 62ch; }
+/* la présentation en premier : affiche cliquable qui ouvre la vidéo */
+.inst-video { display: flex; align-items: center; gap: 14px; margin: 4px 0 14px; padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text); text-decoration: none; max-width: 520px; }
+.inst-video:hover { border-color: rgb(255 131 0 / .55); }
+.inst-poster { position: relative; flex: none; width: 128px; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: #0b0b0b; }
+.inst-poster img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.inst-poster .ob-svg { position: absolute; inset: 0; margin: auto; width: 30px; height: 30px; padding: 8px; border-radius: 50%; background: var(--accent); color: #1d0f00; }
+.inst-video b { display: block; color: var(--accent-ink); }
+.inst-video small { display: block; color: var(--text-2); font-size: 12.5px; margin-top: 2px; }
+.setup-card .ob-checks { margin: 16px 0 6px; }
+.inst-step { counter-increment: inst; display: grid; gap: 12px; padding: 18px 0 4px; margin-top: 14px; border-top: 1px solid var(--border); }
+.inst-step h2 { display: flex; align-items: center; gap: 10px; font-size: 15px; margin: 0; }
+.inst-step h2::before { content: counter(inst); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--accent); color: #1d0f00; font-size: 12px; font-weight: 700; }
+.login .inst-step p { margin: 0; color: var(--text); }
+.setup-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.setup-actions .grow { flex: 1; }
+.btn.quiet { border-color: transparent; background: none; color: var(--text-2); }
+.btn.quiet:hover { background: var(--surface-2); color: var(--text); }
+.first-box { border: 1px solid rgb(255 131 0 / .45); background: rgb(255 131 0 / .08); border-radius: 10px; padding: 12px 14px; margin: 0 0 16px; font-size: 13px; }
+.first-box b { display: block; margin-bottom: 3px; }
+.login .first-box p { margin: 0 0 8px; color: var(--text); }
+dialog.video-dlg { width: min(900px, calc(100% - 32px)); padding: 16px; }
+.dlg-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.dlg-head h3 { margin: 0; flex: 1; min-width: 0; }
+.video-dlg .ob-details { margin-top: 12px; }
+
+/* assistant de démarrage */
+.ob-prog { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12.5px; color: var(--text-2); flex-wrap: wrap; }
+.ob-prog .bar { width: 180px; height: 6px; margin: 0; }
+.ob-prog .bar > i { background: var(--accent); transition: width .3s ease; }
+.ob-layout { display: grid; grid-template-columns: 256px minmax(0, 1fr); gap: 14px; align-items: start; }
+.ob-nav { padding: 8px; position: sticky; top: 14px; }
+.ob-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.ob-sbtn { position: relative; width: 100%; display: flex; align-items: center; gap: 11px; padding: 8px 10px; border: 0; border-radius: 9px; background: none; text-align: left; cursor: pointer; color: var(--text-2); }
+.ob-sbtn:hover { background: var(--surface-2); color: var(--text); }
+.ob-sbtn[aria-current="step"] { background: rgb(255 131 0 / .12); color: var(--text); }
+.ob-num { position: relative; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 600 12.5px/1 system-ui, sans-serif; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-2); }
+.ob-num .ob-svg { width: 14px; height: 14px; }
+.ob-sbtn.ok .ob-num { border-color: transparent; background: var(--good-soft); color: var(--good); }
+.ob-sbtn[aria-current="step"] .ob-num { border-color: var(--accent); background: var(--accent); color: #1d0f00; }
+.ob-sl { display: grid; min-width: 0; line-height: 1.3; }
+.ob-sl b { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ob-sbtn[aria-current="step"] .ob-sl b { font-weight: 600; }
+.ob-sl small { font-size: 12px; color: var(--text-2); display: inline-flex; align-items: center; gap: 4px; }
+.ob-sl small .ob-svg { width: 12px; height: 12px; }
+.ob-sbtn.ok small .ob-svg { color: var(--good); } .ob-sbtn.wait small .ob-svg { color: var(--warn); }
+.ob-sbtn.ko small .ob-svg { color: var(--bad); } .ob-sbtn.opt small .ob-svg { color: var(--info); }
+/* stepper compact (téléphone) : le libellé est masqué, le statut passe par une marque sur le numéro */
+.ob-mark { display: none; position: absolute; right: -5px; bottom: -4px; width: 15px; height: 15px; border-radius: 50%; place-items: center; background: var(--surface); }
+.ob-mark .ob-svg { width: 13px; height: 13px; }
+.ob-sbtn.wait .ob-mark { color: var(--warn); } .ob-sbtn.ko .ob-mark { color: var(--bad); } .ob-sbtn.opt .ob-mark { color: var(--info); }
+.ob-step { padding: 22px 24px; }
+.ob-eyebrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 24px; font-size: 12.5px; color: var(--text-2); font-weight: 500; }
+.ob-step h3 { font-size: 20px; margin: 6px 0 6px; letter-spacing: -.01em; }
+.ob-step h3:focus { outline: none; } /* reçoit le focus à chaque changement d'étape : titre, pas un contrôle */
+.ob-lead { margin: 0 0 18px; color: var(--text-2); max-width: 72ch; }
+.ob-auto { display: flex; align-items: center; gap: 6px; margin: -10px 0 18px; font-size: 12.5px; color: var(--text-2); }
+.ob-sec { margin-top: 22px; }
+.ob-sec > h4, .ob-row h4 { font-size: 14px; margin: 0 0 8px; }
+.ob-sec > p, .ob-row p { margin: 0 0 8px; max-width: 72ch; }
+.ob-cols { display: grid; gap: 14px 28px; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); margin-top: 18px; }
+.ob-cols h4 { font-size: 14px; margin: 0 0 8px; }
+/* une seule colonne : l'illustration sous le texte, en pleine largeur (720 px au plus), pour que ses libellés restent lisibles */
+.ob-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; padding: 18px 0; border-top: 1px solid var(--border); }
+.ob-row:first-child { border-top: 0; padding-top: 4px; }
+.ob-row .ob-n { display: flex; align-items: center; gap: 10px; }
+.ob-row .ob-n::before { content: attr(data-n); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--accent); color: #1d0f00; font: 700 12px/1 system-ui, sans-serif; }
+.ob-acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.ob-step .alert { margin: 14px 0 0; display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+.ob-step .alert .ob-svg { margin-top: 1px; }
+.ob-wait { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 14px 16px; border-radius: 12px; background: var(--warn-soft); border: 1px solid rgb(168 103 0 / .25); }
+.ob-wait.ok { background: var(--good-soft); border-color: rgb(31 138 60 / .3); }
+.ob-wait > div { flex: 1 1 220px; min-width: 0; }
+.ob-wait b { display: block; font-size: 14px; }
+.ob-wait p { margin: 2px 0 0; color: var(--text-2); font-size: 12.5px; }
+.ob-wait .ob-ci { background: var(--surface); }
+.ob-wait .spinner { width: 14px; height: 14px; color: var(--warn); }
+.ob-wait.ok .ob-ci { color: var(--good); }
+.ob-form { display: grid; gap: 2px; max-width: 460px; }
+.ob-form .field { margin-bottom: 12px; }
+.ob-form .note { color: var(--text-2); }
+.ob-done { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: var(--good-soft); color: var(--text); margin-top: 12px; }
+.ob-done .ob-svg { color: var(--good); margin-top: 2px; }
+.ob-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--border); margin-top: 24px; padding-top: 16px; }
+.ob-foot .grow { flex: 1; }
+.ob-video.big { max-width: 760px; }
+.view-head h2[tabindex="-1"]:focus, header.top h1[tabindex="-1"]:focus { outline: none; } /* titre qui reçoit le focus au changement de page : pas un contrôle */
+@media (max-width: 900px) {
+  .ob-layout { grid-template-columns: minmax(0, 1fr); }
+  .ob-nav { position: static; padding: 4px; }
+  .ob-steps { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 0; }
+  .ob-sbtn { justify-content: center; padding: 0; min-height: 44px; }
+  .ob-sl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ob-mark { display: grid; }
+  .ob-step { padding: 18px 16px; }
+}
+@media (max-width: 560px) {
+  .setup-card { padding: 20px 16px; }
+  .ob-step .btn, .ob-foot .btn, .setup-actions .btn, .first-box .ob-link, .ob-welcome .actions .btn, .video-dlg .btn.icon,
+  #obLater, .ob-cmd .btn, .ob-form input, .login form input, #loginBtn, #ivBtn { min-height: 44px; }
+  .video-dlg .btn.icon { min-width: 44px; }
+  .ob-details > summary { padding: 13px 0; }
+  .ob-foot .btn { flex: 1 1 auto; }
+  .ob-foot .grow { display: none; }
+  .ob-chk .acts { margin-left: 40px; }
+}
+/* 8 étapes de 44 px ne tiennent pas sur une ligne : deux lignes de quatre */
+@media (max-width: 420px) { .ob-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .ob-prog .bar > i { transition: none; } }
+dialog.ob-welcome { width: min(620px, calc(100% - 32px)); }
+.ob-welcome h3 { font-size: 18px; letter-spacing: -.01em; margin-bottom: 4px; }
+.ob-welcome h3:focus { outline: none; }
+.ob-welcome .ob-video { margin: 12px 0 0; }
+.ob-welcome .ob-details { margin-top: 10px; }
+.ob-role { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.ob-role h4 { margin: 0 0 4px; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ob-role p { margin: 0 0 8px; color: var(--text-2); }
+.ob-welcome .alert { margin: 12px 0 0; }
 </style>
 </head>
 <body>
 
 <!-- ============ CONNEXION ============ -->
 <section class="login" id="login" hidden>
+  <!-- Installation à terminer : remplace la connexion tant que la base ou une variable Vercel manque (onboarding.js) -->
+  <div class="card setup-card" id="installCard" hidden>
+    <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d0f00" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg></span>
+    <h1 id="instTitle" tabindex="-1">Installation à terminer</h1>
+    <a class="inst-video" href="/media/my-aruba-manager.mp4" data-video><span class="inst-poster"><img src="/media/apercu.jpg" width="128" height="72" loading="lazy" decoding="async" alt=""><svg class="ob-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z" fill="currentColor"/></svg></span>
+      <span><b>Voir la présentation (30 s)</b><small>Ce que fait My Aruba Manager, en vidéo sans son, avant de terminer l’installation.</small></span></a>
+    <p class="setup-lead">Le dashboard est en ligne, mais il lui manque encore des réglages sur Vercel. Suis les étapes ci-dessous, puis revérifie. <b id="instCount"></b></p>
+    <ul class="ob-checks" id="instList" aria-label="État de l’installation"></ul>
+    <section class="inst-step" id="instEnv" hidden aria-labelledby="instEnvT">
+      <h2 id="instEnvT">Ajoute les variables manquantes</h2>
+      <ol class="ob-ol">
+        <li>Ouvre ton projet sur vercel.com, puis <b>Settings</b> et <b>Environment Variables</b>.</li>
+        <li>Ajoute <b id="instEnvNames"></b> : le nom exact, une valeur à toi, pour tous les environnements (<b>All Environments</b>, ou au moins <b>Production</b>).</li>
+        <li>Pour <code>SESSION_SECRET</code> et <code>AGENT_TOKEN</code>, colle une longue valeur aléatoire, générée par exemple avec :</li>
+      </ol>
+      <div>
+        <span class="ob-cmd-label">macOS ou Linux (Terminal)</span>
+        <div class="ob-cmd"><pre>openssl rand -base64 32</pre><button type="button" class="btn small" data-copy aria-label="Copier la commande pour macOS ou Linux"><svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copier</span></button></div>
+        <span class="ob-cmd-label">Windows (PowerShell)</span>
+        <div class="ob-cmd"><pre>$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)</pre><button type="button" class="btn small" data-copy aria-label="Copier la commande pour Windows"><svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copier</span></button></div>
+      </div>
+      <figure class="ob-fig"><a href="/onboarding/vercel-env.svg" target="_blank" rel="noopener"><img src="/onboarding/vercel-env.svg" width="720" height="400" loading="lazy" decoding="async" alt="Vercel : Settings, puis Environment Variables, avec DASHBOARD_PASSWORD, SESSION_SECRET et AGENT_TOKEN (valeurs masquées)."><span class="ob-zoom"><svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Agrandir l’image<span class="sr"> (nouvel onglet)</span></span></a>
+        <figcaption>Settings, Environment Variables : une ligne par variable.</figcaption></figure>
+    </section>
+    <section class="inst-step" id="instDb" hidden aria-labelledby="instDbT">
+      <h2 id="instDbT">Relie la base de données Supabase</h2>
+      <ol class="ob-ol" id="instDbAdd">
+        <li>Dans ton projet Vercel, ouvre l’onglet <b>Storage</b>, puis <b>Create Database</b> et choisis <b>Supabase</b>.</li>
+        <li>Garde le plan <b>Free</b>, choisis la région <b>Paris</b> (cdg1, eu-west-3), puis <b>Connect</b> pour ce projet.</li>
+        <li>Vercel crée tout seul la variable <code>POSTGRES_URL</code> : rien à copier.</li>
+      </ol>
+      <ol class="ob-ol" id="instDbDown" hidden>
+        <li>La variable de la base existe, mais la base ne répond pas.</li>
+        <li>Ouvre ton projet sur supabase.com : s’il est en pause, relance-le (<b>Restore project</b>).</li>
+        <li>Sinon, dans l’onglet <b>Storage</b> de Vercel, vérifie que la base Supabase est bien connectée à ce projet.</li>
+      </ol>
+      <figure class="ob-fig"><a href="/onboarding/vercel-supabase.svg" target="_blank" rel="noopener"><img src="/onboarding/vercel-supabase.svg" width="720" height="400" loading="lazy" decoding="async" alt="Vercel : onglet Storage, Supabase, plan Free, région Paris, puis Connect et Redeploy."><span class="ob-zoom"><svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Agrandir l’image<span class="sr"> (nouvel onglet)</span></span></a>
+        <figcaption>Storage, Supabase, plan Free, région Paris, Connect.</figcaption></figure>
+    </section>
+    <section class="inst-step" aria-labelledby="instRedeployT">
+      <h2 id="instRedeployT">Redéploie le projet</h2>
+      <p>Dans Vercel : <b>Deployments</b>, le bouton <b>⋯</b> du dernier déploiement, puis <b>Redeploy</b>. Les changements ne s’appliquent qu’au déploiement suivant (une minute environ).</p>
+    </section>
+    <div class="setup-actions">
+      <button type="button" class="btn primary" id="instRecheck">Revérifier</button>
+      <a class="btn" href="https://github.com/ethanfrq/ArubaDashboardSwitch/blob/main/docs/GUIDE.md" target="_blank" rel="noopener">Guide d’installation complet<svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg><span class="sr"> (GitHub, nouvel onglet)</span></a>
+      <span class="grow"></span>
+      <button type="button" class="btn quiet small" id="instSkip">Afficher quand même la connexion</button>
+    </div>
+  </div>
   <form id="loginForm">
     <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d0f00" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg></span>
     <h1>My Aruba Manager</h1>
     <p>Connecte-toi avec ton compte.</p>
+    <div class="first-box" id="firstBox" hidden>
+      <b>Première connexion</b>
+      <p>Identifiant <code>admin</code> et le mot de passe <code>DASHBOARD_PASSWORD</code> choisi lors du déploiement sur Vercel.</p>
+      <a class="ob-link" href="/media/my-aruba-manager.mp4" id="firstVideo" data-video><svg class="ob-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z" fill="currentColor"/></svg>Voir la présentation (30 s)</a>
+    </div>
     <div class="field"><label for="loginId">Identifiant ou e-mail</label><input id="loginId" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus></div>
     <div class="field"><label for="pw">Mot de passe</label><input id="pw" type="password" autocomplete="current-password" required></div>
     <div class="field" id="codeField" hidden><label for="code">Code de vérification</label>
@@ -502,6 +747,7 @@ body.readonly .staff-only { display: none !important; }
     </div>
     <div class="side-site"><span class="dot" id="sideDot"></span><div><b id="sideHost">Switch</b><span id="sideSite">connexion…</span></div></div>
     <nav id="sideNav">
+      <a href="#demarrage" class="manage-only staff-only" data-view="setup" id="navSetup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>Démarrage<span class="n prog" id="navSetupN" hidden></span></a>
       <div class="group">Supervision</div>
       <a href="#tableau-de-bord" data-view="dashboard" data-target="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Tableau de bord</a>
       <a href="#ports" data-view="dashboard" data-target="sec-facade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 11h2M10 11h2M14 11h2"/></svg>Façade et ports</a>
@@ -534,7 +780,7 @@ body.readonly .staff-only { display: none !important; }
 <main class="app" id="appMain">
   <header class="top" id="top">
     <button class="btn icon burger" id="sideOpen" type="button" aria-label="Ouvrir le menu" aria-controls="side" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-    <div class="title"><h1 id="hostname">Chargement…</h1><div class="sub" id="subtitle"><span class="spinner"></span></div></div>
+    <div class="title"><h1 id="hostname" tabindex="-1">Chargement…</h1><div class="sub" id="subtitle"><span class="spinner"></span></div></div>
     <span class="spacer"></span>
     <button class="pill warn" id="unsavedPill" type="button" hidden title="Des changements ne sont pas encore enregistrés dans la configuration de démarrage">⚠ Config non sauvegardée</button>
     <span class="pill" id="agentPill"><span class="dot"></span><span>…</span></span>
@@ -734,6 +980,18 @@ body.readonly .staff-only { display: none !important; }
       </div>
     </div>
   </section>
+
+  <!-- ============ DÉMARRAGE (assistant de l'administrateur, onboarding.js) ============ -->
+  <section id="view-setup" class="view" hidden aria-labelledby="setupTitle">
+    <div class="view-head"><div><h2 id="setupTitle" tabindex="-1">Démarrage</h2><p>Relie ton switch au dashboard, étape par étape. Chaque étape se vérifie toute seule.</p>
+      <div class="ob-prog"><div class="bar" aria-hidden="true"><i id="obBar"></i></div><span id="obProgText">Vérification de l’installation…</span></div></div>
+      <div class="right"><button class="btn" type="button" id="obLater" title="L’assistant ne s’ouvrira plus tout seul : tu le retrouveras dans le menu, Démarrage.">Plus tard</button></div></div>
+    <div class="alert red" id="obErr" role="alert" hidden><svg class="ob-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg><span id="obErrText"></span> <button type="button" class="btn small" id="obRetry">Réessayer</button></div>
+    <div class="ob-layout">
+      <nav class="card ob-nav" aria-label="Étapes du démarrage"><ol class="ob-steps" id="obSteps"></ol></nav>
+      <div class="card ob-step" id="obStep"><div class="empty"><span class="spinner"></span> Chargement…</div></div>
+    </div>
+  </section>
 </main>
 <footer class="foot" id="foot" hidden>
   <span>My Aruba Manager <span id="appVersion"></span></span><span id="agentVersion"></span>
@@ -861,19 +1119,40 @@ body.readonly .staff-only { display: none !important; }
   <p class="note" id="akText" style="margin:0"></p>
   <div class="actions"><button type="button" class="btn" id="akNo">Annuler</button><button type="button" class="btn primary" id="akYes">Confirmer</button></div>
 </dialog>
-<div class="toasts" id="toasts" aria-live="polite"></div>
+<!-- Présentation en vidéo (Installation à terminer, encadré « Première connexion ») -->
+<dialog id="videoDialog" class="video-dlg keep" aria-labelledby="vidTitle">
+  <div class="dlg-head"><h3 id="vidTitle">My Aruba Manager en 30 secondes</h3>
+    <button type="button" class="btn icon" id="vidClose" aria-label="Fermer la vidéo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="ob-video"><video id="vidPlayer" controls playsinline muted preload="none" poster="/media/apercu.jpg" aria-describedby="vidSum"><source src="/media/my-aruba-manager.mp4" type="video/mp4"><a href="/media/my-aruba-manager.mp4">Télécharger la vidéo</a></video></div>
+  <details class="ob-details"><summary>Ce que montre la vidéo (sans son)</summary><ul class="ob-list" id="vidSum" data-vsum></ul></details>
+</dialog>
 
-<script src="/js/app.js?v=1.8.0"></script>
+<!-- Bienvenue d'un nouveau compte (une seule fois : prefs.welcomed) -->
+<dialog id="welcomeDialog" class="ob-welcome keep" aria-labelledby="wcTitle">
+  <h3 id="wcTitle" tabindex="-1">Bienvenue</h3>
+  <p class="note" style="margin:0">Voici My Aruba Manager en 30 secondes.</p>
+  <div class="ob-video"><video id="wcPlayer" controls playsinline muted preload="none" poster="/media/apercu.jpg" aria-describedby="wcSum"><source src="/media/my-aruba-manager.mp4" type="video/mp4"><a href="/media/my-aruba-manager.mp4">Télécharger la vidéo</a></video></div>
+  <details class="ob-details"><summary>Ce que montre la vidéo (sans son)</summary><ul class="ob-list" id="wcSum" data-vsum></ul></details>
+  <div class="ob-role"><h4>Ton rôle : <span class="pill" id="wcRole"></span></h4><p id="wcRoleText"></p><ul class="ob-list" id="wcRoleList"></ul></div>
+  <div class="alert amber" id="wcSecure" hidden>La double authentification n’est pas encore active sur ton compte : un code de ton téléphone en plus du mot de passe, c’est bien plus sûr.</div>
+  <div class="actions"><button type="button" class="btn" id="wcSecureBtn" hidden>Sécuriser mon compte</button><button type="button" class="btn primary" id="wcGo">C’est parti</button></div>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="sr" id="obSay" aria-live="polite"></div>
+
+<script src="/js/app.js?v=1.9.0"></script>
 <!-- Fonctions d'administration : chacune dans son fichier (public/js), branchées sur les points d'accroche ci-dessus. -->
-<script src="/js/undo.js?v=1.8.0"></script>
-<script src="/js/backup.js?v=1.8.0"></script>
-<script src="/js/profiles.js?v=1.8.0"></script>
-<script src="/js/bulk.js?v=1.8.0"></script>
-<script src="/js/devices.js?v=1.8.0"></script>
-<script src="/js/schedule.js?v=1.8.0"></script>
-<script src="/js/diagnose.js?v=1.8.0"></script>
-<script src="/js/health.js?v=1.8.0"></script>
-<script src="/js/wol.js?v=1.8.0"></script>
-<script src="/js/account.js?v=1.8.0"></script>
+<script src="/js/undo.js?v=1.9.0"></script>
+<script src="/js/backup.js?v=1.9.0"></script>
+<script src="/js/profiles.js?v=1.9.0"></script>
+<script src="/js/bulk.js?v=1.9.0"></script>
+<script src="/js/devices.js?v=1.9.0"></script>
+<script src="/js/schedule.js?v=1.9.0"></script>
+<script src="/js/diagnose.js?v=1.9.0"></script>
+<script src="/js/health.js?v=1.9.0"></script>
+<script src="/js/wol.js?v=1.9.0"></script>
+<script src="/js/account.js?v=1.9.0"></script>
+<script src="/js/onboarding.js?v=1.9.0"></script>
 </body>
 </html>

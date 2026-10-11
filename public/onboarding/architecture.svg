@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" role="img" aria-labelledby="architecture-t architecture-d" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<title id="architecture-t">Comment My Aruba Manager est relié</title>
+<desc id="architecture-d">Schéma d’ensemble. Dans le réseau local, le PC de l’agent (Windows, Python) lit le switch Aruba SWITCH-DEMO (192.168.10.2) en SSH. Il envoie l’état du switch par Internet, en HTTPS sortant seulement, sans aucun port ouvert, au dashboard hébergé sur Vercel, qui enregistre les données dans la base Supabase. Tu ouvres le dashboard depuis un navigateur, partout : PC, tablette ou téléphone.</desc>
+<rect x="1" y="1" width="718" height="398" rx="16" fill="#fcfcfb" stroke="#e2e1da" stroke-width="2"/>
+<text x="32" y="44" font-size="18" fill="#0b0b0b" font-weight="600">Comment tout est relié</text>
+<!-- Réseau local : le switch et le PC de l’agent -->
+<rect x="24" y="60" width="228" height="220" rx="14" fill="#f4f4f1" stroke="#d4d3cb" stroke-width="2" stroke-dasharray="6 5"/>
+<text x="40" y="84" font-size="13" fill="#52514e" font-weight="600" letter-spacing="0.8">RÉSEAU LOCAL</text>
+<rect x="40" y="92" width="196" height="68" rx="12" fill="#ffffff" stroke="#d4d3cb" stroke-width="2"/>
+<rect x="52" y="108" width="36" height="36" rx="9" fill="#efeee9"/>
+<rect x="55" y="118" width="30" height="16" rx="3" fill="none" stroke="#0b0b0b" stroke-width="2"/>
+<rect x="60" y="124" width="4" height="4" fill="#0b0b0b"/>
+<rect x="66" y="124" width="4" height="4" fill="#0b0b0b"/>
+<rect x="72" y="124" width="4" height="4" fill="#0b0b0b"/>
+<circle cx="80" cy="126" r="2" fill="#1f8a3c"/>
+<text x="100" y="117" font-size="15" fill="#0b0b0b" font-weight="600">Switch Aruba</text>
+<text x="100" y="136" font-size="13" fill="#52514e">SWITCH-DEMO</text>
+<text x="100" y="153" font-size="13" fill="#52514e" font-family="ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace">192.168.10.2</text>
+<rect x="40" y="204" width="196" height="68" rx="12" fill="#ffffff" stroke="#d4d3cb" stroke-width="2"/>
+<rect x="52" y="220" width="36" height="36" rx="9" fill="#efeee9"/>
+<rect x="56" y="227" width="28" height="18" rx="3" fill="none" stroke="#0b0b0b" stroke-width="2"/>
+<path d="M70 245v5m-7 0h14" fill="none" stroke="#0b0b0b" stroke-width="2" stroke-linecap="round"/>
+<text x="100" y="229" font-size="15" fill="#0b0b0b" font-weight="600">PC de l’agent</text>
+<text x="100" y="248" font-size="13" fill="#52514e">Windows</text>
+<text x="100" y="265" font-size="13" fill="#52514e">agent Python</text>
+<path d="M138 172L138 192" fill="none" stroke="#ff8300" stroke-width="2" stroke-linejoin="round"/>
+<path d="M138 202L132.5 192L143.5 192Z" fill="#ff8300"/>
+<path d="M138 162L143.5 172L132.5 172Z" fill="#ff8300"/>
+<text x="150" y="187" font-size="13" fill="#0b0b0b" font-weight="600">SSH</text>
+<!-- En ligne : Vercel et Supabase -->
+<rect x="468" y="60" width="228" height="220" rx="14" fill="#f4f4f1" stroke="#d4d3cb" stroke-width="2" stroke-dasharray="6 5"/>
+<text x="484" y="84" font-size="13" fill="#52514e" font-weight="600" letter-spacing="0.8">CLOUD (GRATUIT)</text>
+<rect x="484" y="92" width="196" height="68" rx="12" fill="#ffffff" stroke="#d4d3cb" stroke-width="2"/>
+<rect x="496" y="108" width="36" height="36" rx="9" fill="#efeee9"/>
+<path d="M502 118a12 4.5 0 1 0 24 0a12 4.5 0 1 0-24 0v16a12 4.5 0 0 0 24 0v-16M502 126a12 4.5 0 0 0 24 0" fill="none" stroke="#0b0b0b" stroke-width="2"/>
+<text x="544" y="117" font-size="15" fill="#0b0b0b" font-weight="600">Supabase</text>
+<text x="544" y="136" font-size="13" fill="#52514e">base de données</text>
+<text x="544" y="153" font-size="13" fill="#52514e">Postgres</text>
+<rect x="484" y="204" width="196" height="68" rx="12" fill="#ffffff" stroke="#d4d3cb" stroke-width="2"/>
+<rect x="496" y="220" width="36" height="36" rx="9" fill="#efeee9"/>
+<path d="M514 227.9L527 249.4H501Z" fill="#0b0b0b"/>
+<text x="544" y="229" font-size="15" fill="#0b0b0b" font-weight="600">Vercel</text>
+<text x="544" y="248" font-size="13" fill="#52514e">le dashboard</text>
+<text x="544" y="265" font-size="13" fill="#52514e">et son API</text>
+<path d="M582 172L582 192" fill="none" stroke="#ff8300" stroke-width="2" stroke-linejoin="round"/>
+<path d="M582 202L576.5 192L587.5 192Z" fill="#ff8300"/>
+<path d="M582 162L587.5 172L576.5 172Z" fill="#ff8300"/>
+<text x="594" y="187" font-size="13" fill="#0b0b0b" font-weight="600">données</text>
+<!-- Internet : HTTPS sortant seulement -->
+<path d="M238 238L472 238" fill="none" stroke="#ff8300" stroke-width="2" stroke-linejoin="round"/>
+<path d="M482 238L472 243.5L472 232.5Z" fill="#ff8300"/>
+<circle cx="318" cy="216" r="8" fill="none" stroke="#0b0b0b" stroke-width="1.6"/>
+<path d="M310 216h16M318 208c-4.5 4.5-4.5 11.5 0 16c4.5-4.5 4.5-11.5 0-16" fill="none" stroke="#0b0b0b" stroke-width="1.6"/>
+<text x="334" y="221" font-size="15" fill="#0b0b0b" font-weight="600">Internet</text>
+<text x="360" y="262" font-size="13" fill="#52514e" text-anchor="middle">HTTPS sortant seulement</text>
+<rect x="282" y="272" width="156" height="26" rx="13" fill="#dff2e3"/>
+<rect x="296" y="283" width="11" height="8" rx="2" fill="#1f8a3c"/>
+<path d="M298.5 283v-2a3 3 0 0 1 6 0v2" fill="none" stroke="#1f8a3c" stroke-width="1.6"/>
+<text x="314" y="290" font-size="13" fill="#1f8a3c" font-weight="600">aucun port ouvert</text>
+<!-- Navigateur, partout -->
+<rect x="484" y="304" width="196" height="72" rx="12" fill="#ffffff" stroke="#d4d3cb" stroke-width="2"/>
+<rect x="496" y="320" width="36" height="36" rx="9" fill="#efeee9"/>
+<rect x="500" y="327" width="28" height="22" rx="3" fill="none" stroke="#0b0b0b" stroke-width="2"/>
+<line x1="500" y1="334" x2="528" y2="334" stroke="#0b0b0b" stroke-width="2"/>
+<text x="544" y="329" font-size="15" fill="#0b0b0b" font-weight="600">Navigateur</text>
+<text x="544" y="348" font-size="13" fill="#52514e">partout : PC,</text>
+<text x="544" y="365" font-size="13" fill="#52514e">tablette, téléphone</text>
+<path d="M582 302L582 284" fill="none" stroke="#ff8300" stroke-width="2" stroke-linejoin="round"/>
+<path d="M582 274L587.5 284L576.5 284Z" fill="#ff8300"/>
+<text x="594" y="299" font-size="13" fill="#0b0b0b" font-weight="600">HTTPS</text>
+<text x="40" y="330" font-size="13" fill="#0b0b0b" font-weight="600">Le switch reste chez toi :</text>
+<text x="40" y="349" font-size="13" fill="#52514e">seul le PC de l’agent lui parle.</text>
+</svg>
