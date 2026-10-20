@@ -4,14 +4,14 @@
 
 [![My Aruba Manager in 30 seconds: live front panel, connected devices, cable test, VLANs, console and alerts](public/media/apercu-anime.webp)](public/media/my-aruba-manager.mp4)
 
-The animation above plays the 30-second presentation (no sound). **[Download the MP4 video](public/media/my-aruba-manager.mp4)**
-(7 MB: on the GitHub page that opens, click "View raw"). It also plays inside the dashboard, in the setup assistant.
+The animation above is the 30-second presentation (no sound). [Download the MP4 video](public/media/my-aruba-manager.mp4)
+(7 MB: on the GitHub page that opens, click "View raw"). The video also plays in the dashboard's setup assistant.
 
-A web dashboard for **HPE Aruba Networking CX** switches (AOS-CX): live front panel, throughput and history,
-connected devices with their IP addresses, VLANs, cable tests, command console, alerts and administration tools.
-Built for schools, networking courses (such as the French BTS SIO, BTS CIEL and IUT programs) and small organizations.
-The user interface is in French.
-It runs on the free plans of Vercel and Supabase and relies on a small Python agent installed on a PC of the local network.
+My Aruba Manager is a web dashboard for HPE Aruba Networking CX switches (AOS-CX). It shows a live front panel,
+throughput and history, connected devices with their IP addresses, VLANs, cable tests, a command console, alerts and
+administration tools. It is meant for schools, networking courses (such as the French BTS SIO, BTS CIEL and IUT programs)
+and small organizations, and the interface is in French.
+It runs on the free plans of Vercel and Supabase, with a small Python agent installed on a PC on the local network.
 
 [![Version](https://img.shields.io/github/v/release/ethanfrq/ArubaDashboardSwitch?label=version)](https://github.com/ethanfrq/ArubaDashboardSwitch/releases/latest)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
@@ -26,13 +26,13 @@ It runs on the free plans of Vercel and Supabase and relies on a small Python ag
 
 > **Get started in 20 minutes**
 >
-> 1. Click the **Deploy** button below (deploy with Vercel) and paste the three requested values
->    ([how to create them](docs/GUIDE.en.md#1-deploy-on-vercel)): Vercel copies the project into your account
+> 1. Click the **Deploy** button below and paste the three requested values
+>    ([how to create them](docs/GUIDE.en.md#1-deploy-on-vercel)). Vercel copies the project into your account
 >    and adds the Supabase database to it.
-> 2. Open your dashboard and log in with the identifier `admin`: the **setup assistant** guides you
->    until the switch is connected, checking each step live.
+> 2. Open your dashboard and log in with the identifier `admin`. The **setup assistant** then guides you
+>    until the switch is connected and checks each step live.
 >
-> Everything is explained with pictures in the **[step-by-step installation guide](docs/GUIDE.en.md)**.
+> The **[step-by-step installation guide](docs/GUIDE.en.md)** explains everything with pictures.
 >
 > [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch&env=DASHBOARD_PASSWORD,SESSION_SECRET,AGENT_TOKEN&envDescription=Dashboard%20password%2C%20session%20key%20and%20agent%20token&envLink=https%3A%2F%2Fgithub.com%2Fethanfrq%2FArubaDashboardSwitch%2Fblob%2Fmain%2Fdocs%2FGUIDE.en.md%231-deploy-on-vercel&project-name=my-aruba-manager&repository-name=my-aruba-manager&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22supabase%22%2C%22productSlug%22%3A%22supabase%22%7D%5D)
 
@@ -44,26 +44,26 @@ It runs on the free plans of Vercel and Supabase and relies on a small Python ag
 - **Live front panel**: every port with its state, negotiated speed and throughput. Slow ports (10/100 Mb/s),
   links to other switches and ports that are "connected but without traffic" are highlighted.
 - **Cables detected without a link**: a scan of the free ports shows whether a cable is plugged in, its length and whether it is faulty.
-- **Verified "free" ports**: a port without a link is only shown as free when a recent cable test confirms it.
+- **Verified "free" ports**: a port without a link is shown as free only when a recent cable test confirms it.
   Ports never tested, or plugged and unplugged since the last test, are marked "to be checked" and tested
-  automatically in small batches; the others are checked again every 2 hours (can be turned off in the settings).
+  automatically in small batches. The others are tested again every 2 hours (this can be turned off in the settings).
 - **Throughput and history**: the last hour live, then 24 hours, 7 days and 30 days, in total or port by port.
 - **Ports and devices**: a single table (name, IP, MAC, throughput, errors) with search and sorting.
 - **Switch health**: CPU, memory, temperatures, uptime, IP, MAC, serial number, firmware.
-- **Unsaved configuration** shown in the top bar, with one-click save.
+- **Unsaved configuration**: flagged in the top bar, with a one-click save.
 - **Spanning tree**: root switch, blocked ports (network loop), abnormal broadcast traffic.
 - **History of each port**: since when it has been up or down, number of link drops, unstable ports.
 - **Switch log**: the latest events, translated into plain French (links, logins, spanning tree).
 - **Frequent polling without overloading the switch**: link state and log every 30 s, spanning tree and
-  saved configuration every 2 min; commands whose output rarely changes are spaced out, and everything slows down
+  saved configuration every 2 min. Commands whose output rarely changes run less often, and everything slows down
   when the switch CPU rises.
 
 ### Management
 - Enable, disable or restart a port, change its description.
 - **VLANs**: create, rename, delete, assign ports.
-- **Cable test** (TDR): length and state of each pair, with a plain-language verdict.
-- **Console**: any CLI command; yes/no questions from the switch are shown as buttons. A small console on the
-  dashboard, and a full-height **Console** page in the sidebar (command history, copy an output, automatic readings on
+- **Cable test** (TDR): length and state of each pair, with a verdict in plain language.
+- **Console**: any CLI command, with the switch's yes/no questions shown as buttons. There is a small console on the
+  dashboard and a full-height **Console** page in the sidebar (command history, copy an output, automatic readings on
   request).
 - One-click configuration save.
 
@@ -71,19 +71,19 @@ It runs on the free plans of Vercel and Supabase and relies on a small Python ag
 Everything is set from the **Administration** card and the **Settings** page (**Réglages**):
 - **Undo a change**: before each change, the dashboard creates a restore point on the switch.
   You see what will be undone, then roll back in one click (by typing CONFIRMER). For a sensitive change
-  (management IP, link to another switch, and so on), the switch **rolls back on its own after 5 minutes** unless you confirm
-  that everything still works: you cannot lock yourself out.
-- **Configuration backups**: automatic copy after each change and every 6 hours, history,
-  line-by-line comparison between two versions, download (secrets masked), return to a switch restore point.
+  (management IP, link to another switch, and so on), the switch rolls back on its own after 5 minutes unless you confirm
+  that everything still works, so a mistake cannot lock you out.
+- **Configuration backups**: an automatic copy after each change and every 6 hours, history,
+  line-by-line comparison of two versions, download (secrets masked), return to a switch restore point.
 - **Port profiles** (student PC, printer, Wi-Fi access point, server, unused port; all editable): VLAN, description,
   protections (BPDU guard, admin-edge, loop-protect) and state applied in one click.
-- **Multiple selection**: Shift+click or Ctrl+click on ports (or the selection tool on mobile), then an action bar:
+- **Multiple selection**: Shift+click or Ctrl+click on ports (or the selection tool on mobile) brings up an action bar:
   enable, shut down, restart, VLAN, description with automatic numbering, profile, power on, test cables.
-- **Device directory**: name a PC once and its name follows it on every port; port history,
-  optional "new device" alert. **Patch plan** (wall socket, room, note) for each port,
-  **CSV export** and **printing** of the plan.
-- **Scheduled actions**: shut down, re-enable or restart ports, power on PCs at a set time, carried out
-  even when the dashboard is closed (never while the agent is offline; 8 ports or more must be confirmed with CONFIRMER).
+- **Device directory**: name a PC once and its name follows it on every port, with port history and an
+  optional "new device" alert. A **patch plan** records the wall socket, room and a note for each port,
+  and can be exported to CSV or printed.
+- **Scheduled actions**: shut down, re-enable or restart ports, or power on PCs at a set time. They run even when
+  the dashboard is closed, never while the agent is offline, and an action on 8 ports or more must be confirmed with CONFIRMER.
 - **Power on PCs remotely** (Wake-on-LAN) and **ping** from the agent's PC.
 - **Port diagnosis** (clear steps and a one-sentence conclusion) and a **"device not working?"** troubleshooting guide.
 - **Health check**: unsaved configuration, protections on user ports, NTP, default SNMP community,
@@ -93,12 +93,13 @@ Everything is set from the **Administration** card and the **Settings** page (**
 - **Sidebar** to move between the dashboard, the tools and the account pages, on a computer or a phone.
 
 ### User accounts and roles
-One account per person, each with their own password, and every action signed in the **activity log**.
+One account per person, each with their own password, and every action is signed in the **activity log**.
 - **Administrator**: everything, including accounts.
 - **Technician**: works on access ports (enable, shut down, restart, description, VLAN, cable test, Wake-on-LAN,
-  ping, device names, patch plan). No console, no settings, no accounts, and never a link to another switch.
-  The server checks every command line by line.
-- **Read-only**: sees everything on display, changes nothing. Ideal for a wall screen (30-day session, refresh every 30 s).
+  ping, device names, patch plan). A technician has no access to the console, the settings or the accounts, and can
+  never act on a link to another switch. The server checks every command line by line.
+- **Read-only**: sees everything on display and changes nothing. The session lasts 30 days and the page refreshes
+  every 30 s, which suits a wall screen.
 - **Users** page: create an account with an **invitation link** (valid 48 h, the person chooses their password;
   sent by e-mail when Resend is set up) or with a password you choose; change the role, require two-factor
   authentication, send a new-password link, close sessions, disable or delete.
@@ -111,11 +112,11 @@ One account per person, each with their own password, and every action signed in
 - Monitored port going down or coming back, temperature too high, agent stopped, slow link, link without traffic,
   new device (optional), failed scheduled action.
 
-### Comfort
+### Ease of use
 - Light and dark mode, loading indicators and notifications for every action.
-- Mandatory confirmation, showing the exact lines sent to the switch, before any change.
-- **Check after each change**: the dashboard verifies in the next switch reading that the change
-  was actually applied (port enabled or shut down, VLAN, description, VLAN created or deleted, configuration saved) and warns you otherwise.
+- Before any change, a confirmation window shows the exact lines that will be sent to the switch.
+- **Check after each change**: the dashboard reads the next switch state to confirm that the change
+  was applied (port enabled or shut down, VLAN, description, VLAN created or deleted, configuration saved) and warns you if it was not.
 
 ### Getting started
 - **Installation to finish**: as long as the database or a Vercel variable is missing, the login page says so
@@ -123,8 +124,8 @@ One account per person, each with their own password, and every action signed in
 - **Setup assistant**: on first launch, the administrator is guided step by step (video, installation,
   account security, switch, Windows PC, agent, team and alerts). Each step is checked live, and
   the agent shows up as soon as it connects for the first time.
-- **Pre-filled `agent_config.json` file**: downloaded from the assistant (dashboard address and agent token
-  already filled in), it only needs the switch IP.
+- **Pre-filled `agent_config.json` file**: downloaded from the assistant with the dashboard address and agent token
+  already filled in, it only needs the switch IP.
 - **Welcome window** for each new account: the video, what their role allows, and a shortcut to
   enable two-factor authentication.
 
@@ -162,7 +163,7 @@ cable state to be checked (amber outline).
 
 ![VLAN card and management console](docs/captures/vlan-console.png)
 
-**Settings**: a page of cards for e-mail and/or webhook alerts (with a test message), the events to report and the
+**Settings**: cards for e-mail and/or webhook alerts (with a test message), the events to report and the
 temperature threshold, the monitored ports (automatic, or picked on a front panel layout), the site, the agent pace and
 the automatic cable checks.
 
@@ -197,31 +198,31 @@ the automatic cable checks.
 
 </details>
 
-The switch has a private address, so Vercel cannot reach it. An **agent** installed on a PC of the local network
+The switch has a private address, so Vercel cannot reach it. An **agent** installed on a PC on the local network
 reads the switch over SSH, sends its state to the dashboard and runs the requested commands.
-**The agent always contacts Vercel, never the other way around**: no port to open on your network.
+The agent opens every connection to Vercel itself, so there is no port to open on your network.
 
 Vercel hosts the page and the API. The data (switch state, history, settings, command log,
 configuration backups, device directory) is stored in a **Supabase** database (Postgres)
-attached to the Vercel project. The tables are created automatically on first launch, and the check that runs
-every 5 minutes (agent offline, scheduled actions, backups) is scheduled automatically
-in Supabase with pg_cron. E-mail alerts go through Resend (optional).
+attached to the Vercel project. On first launch, the dashboard creates its tables and schedules a check every
+5 minutes in Supabase with pg_cron (agent offline, scheduled actions, backups).
+E-mail alerts go through Resend, which is optional.
 
-To stay within the free plans, the agent sends the state every **60 s** when nobody is watching,
-every **30 s** for a read-only screen and every **10 s** while the administrator dashboard is open. It then fetches
-commands every **5 s** (**1.5 s** right after a command). The page reloads the state right after each upload from
-the agent, and only reloads the command log, the alerts and the detailed reading when they have changed.
+To stay within the free plans, the agent sends the state every 60 s when nobody is watching,
+every 30 s for a read-only screen and every 10 s while the administrator dashboard is open. It checks for
+commands every 5 s (1.5 s right after a command). The page reloads the state right after each upload from
+the agent, and reloads the command log, the alerts and the detailed reading only when they have changed.
 
-The agent **updates itself, only from published versions** (the
-[Releases](https://github.com/ethanfrq/ArubaDashboardSwitch/releases) page of this repository): code that is still
-in development is never installed. If an update fails, the previous version is restored automatically.
+The agent updates itself, but only from the versions published on the
+[Releases](https://github.com/ethanfrq/ArubaDashboardSwitch/releases) page of this repository.
+If an update fails, the previous version is restored automatically.
 
 ---
 
 ## Installation
 
-Everything is explained step by step, with pictures, in the **[installation guide](docs/GUIDE.en.md)** (about 20 minutes).
-In the dashboard, the **setup assistant** repeats the same steps and checks each one live.
+The **[installation guide](docs/GUIDE.en.md)** explains every step with pictures (about 20 minutes).
+In the dashboard, the **setup assistant** goes through the same steps and checks each one live.
 
 ### What you need
 - An **HPE Aruba Networking CX** switch with a management IP, SSH enabled and its SSH account (often `admin`).
@@ -229,7 +230,7 @@ In the dashboard, the **setup assistant** repeats the same steps and checks each
   Windows is recommended: the agent installs there as a service, and the step-by-step guide is written for it.
   The agent also runs on macOS and Linux.
 - A **GitHub** account and a **Vercel** account (free Hobby plan). The **Supabase** database (free plan)
-  is added from Vercel. Nothing else to sign up for.
+  is added from Vercel, so there is nothing else to sign up for.
 
 ### In short
 1. **Deploy on Vercel** with the button at the top of this page. Vercel asks for three variables:
@@ -244,7 +245,7 @@ In the dashboard, the **setup assistant** repeats the same steps and checks each
 2. **Add Supabase**: the button offers to add it during the deployment (Free plan, Paris region).
    Otherwise: **Storage** tab of the Vercel project, **Create Database**, **Supabase**, then **redeploy** (**Deployments** tab,
    three-dot menu of the latest deployment, **Redeploy**). On first launch, the dashboard creates its tables and schedules
-   the 5-minute check in Supabase: there is no script to run.
+   the 5-minute check in Supabase, so there is no script to run.
 3. **Log in** with the identifier **`admin`** and `DASHBOARD_PASSWORD`: the setup assistant opens.
 4. **Secure the account** in **Mon profil** (my profile): your own password and **two-factor authentication**.
 5. **Prepare the switch**: SSH enabled (`ssh server vrf default`, or `ssh server vrf mgmt` if the agent goes through
@@ -257,14 +258,14 @@ In the dashboard, the **setup assistant** repeats the same steps and checks each
 7. **Invite your team and set up alerts** from **Utilisateurs** (users) and **Réglages** (settings).
 
 **E-mail alerts (optional)**: add **Resend** from the Vercel Marketplace, then redeploy.
-Without a verified domain, Resend only writes to the address of your own Resend account: to write to other addresses,
+Without a verified domain, Resend only sends to the address of your own Resend account. To send to other addresses,
 verify your domain in Resend, then set `ALERT_FROM` (e-mail sender, for example `Switch <alerts@my-domain.com>`)
-to that domain. Other optional variable: `DASHBOARD_URL` (link included in the alerts).
+to an address on that domain. Another optional variable is `DASHBOARD_URL` (the link included in the alerts).
 Webhook alerts need no additional service.
 
-`DASHBOARD_PASSWORD` stays valid for the `admin` account as a **backup password**: keep it long and secret.
+`DASHBOARD_PASSWORD` remains a backup password for the `admin` account, so keep it long and secret.
 
-Problem during installation, updating the dashboard: see the [Troubleshooting](docs/GUIDE.en.md#troubleshooting)
+If something goes wrong during installation, or to update the dashboard, see the [Troubleshooting](docs/GUIDE.en.md#troubleshooting)
 and [Updating](docs/GUIDE.en.md#updating) sections of the guide.
 
 ---
@@ -272,32 +273,32 @@ and [Updating](docs/GUIDE.en.md#updating) sections of the guide.
 ## Security
 
 ### What is in place
-- One account per person, passwords stored hashed (scrypt, 10 characters minimum); signed session (`HttpOnly`,
-  `Secure`, `SameSite=Strict` cookie); 15-minute lockout after 8 failed attempts.
+- One account per person. Passwords are stored hashed (scrypt, 10 characters minimum), sessions are signed (`HttpOnly`,
+  `Secure`, `SameSite=Strict` cookie), and 8 failed attempts trigger a 15-minute lockout.
 - Disabling an account, changing its password or closing its sessions logs it out everywhere immediately.
-- **Two-factor authentication** (TOTP) per account, with single-use recovery codes; an administrator can require it.
-- **Activity log**: logins (and refused attempts), account changes, commands and settings, with who and when.
-- The agent authenticates with `AGENT_TOKEN`. The switch SSH password **never leaves the agent's PC**:
-  it is encrypted there by Windows (DPAPI).
-- Roles are checked by the server on every request. Read-only: no command except automatic readings (checked line
-  by line), no command history, no configuration diff details. Technician: only the port commands listed above,
-  checked line by line, never on a link to another switch and never a sensitive command.
+- Two-factor authentication (TOTP) for each account, with single-use recovery codes. An administrator can require it.
+- The activity log records logins (and refused attempts), account changes, commands and settings, with who and when.
+- The agent authenticates with `AGENT_TOKEN`. The switch SSH password never leaves the agent's PC,
+  where Windows encrypts it (DPAPI).
+- The server checks the role on every request. A read-only account runs no command except automatic readings (checked
+  line by line) and sees neither the command history nor the details of configuration differences. A technician can only
+  run the port commands listed above, checked line by line, never on a link to another switch and never a sensitive command.
 - Every change goes through a window that shows the exact lines sent to the switch.
-- AOS-CX abbreviations ("int 1/1/24", "shu", and so on) are recognized: they cannot bypass the second confirmation.
-  Tabs and control characters are refused; typed text (description, name) cannot add a command line.
+- AOS-CX abbreviations ("int 1/1/24", "shu", and so on) are recognized, so they cannot bypass the second confirmation.
+  Tabs and control characters are refused, and typed text (description, name) cannot add a command line.
 - Automatic actions (schedules, cleanup, backups) never run a command considered sensitive.
 - Dangerous commands (reboot, erase, accounts, management IP, links to other switches,
-  port of the agent's PC, and so on) require a **second confirmation enforced by the server**:
-  a single-use token valid for 2 minutes and typing the word CONFIRMER.
-- **Hardened web page**: strict Content-Security-Policy (no inline scripts) and systematic escaping of data
-  coming from the network (device names announced over LLDP or DNS, descriptions, switch log), so that crafted text
+  port of the agent's PC, and so on) require a second confirmation enforced by the server:
+  a single-use token valid for 2 minutes, and typing the word CONFIRMER.
+- The web page has a strict Content-Security-Policy (no inline scripts) and escapes all data
+  coming from the network (device names announced over LLDP or DNS, descriptions, switch log), so crafted text
   cannot run in the page. The page cannot be displayed inside a frame on another site.
-- The agent only updates from **published versions** (GitHub releases), never from work in progress.
+- The agent only installs published versions (GitHub releases).
 - No secret is committed (`.env*`, `agent_config.json` and `agent_secret.bin` are excluded).
-- Before login, the page only shows the **names** of missing variables, never their values.
-- The pre-filled `agent_config.json` file contains the agent token: only an administrator can download it
-  (required two-factor authentication is enforced), the response is never cached and the download is recorded
-  in the activity log, without the token. The switch SSH password is never in it.
+- Before login, the page shows only the names of missing variables, never their values.
+- The pre-filled `agent_config.json` file contains the agent token. Only an administrator can download it
+  (one who is required to use two-factor authentication must have enabled it first), the response is never cached, and
+  the download is recorded in the activity log, without the token. The switch SSH password is never in it.
 - Your data stays in your own Vercel and Supabase accounts: the author of the project has no access to it.
 
 ### Lost phone (two-factor authentication)
@@ -311,20 +312,20 @@ An administrator sends a new-password link from **Utilisateurs**. For the `admin
 `DASHBOARD_PASSWORD` (Vercel settings) always works as a backup password.
 
 ### Recommendations
-- Choose a **strong, unique** administrator password, different from the switch password.
-- **Enable two-factor authentication** at the first login.
-- Ideally, the management interface of network equipment should only be reachable **through a VPN**
-  (WireGuard, Tailscale) rather than exposed publicly. In Vercel mode the page is, by design, reachable
-  from the internet: the password and two-factor authentication are therefore essential. The local mode planned
-  in the [roadmap](#roadmap) will allow access restricted to the local network or a VPN.
-- Do not share the URL needlessly; give each person the smallest role that is enough, and a read-only account to a display screen.
+- Choose a strong, unique administrator password, different from the switch password.
+- Enable two-factor authentication at the first login.
+- Ideally, the management interface of network equipment should only be reachable through a VPN
+  (WireGuard, Tailscale). In Vercel mode the page is reachable from the internet by design, so the password
+  and two-factor authentication are essential. The local mode planned in the [roadmap](#roadmap) will allow
+  access restricted to the local network or a VPN.
+- Do not share the URL needlessly. Give each person the smallest role that does the job, and give a display screen a read-only account.
 - Download the important configuration backups regularly: the Supabase free plan
   does not back up the database automatically.
 
 ### Limits of the Vercel mode
 - **Vercel's Hobby plan is limited to personal, non-commercial use.** A company or a paid service
-  needs a paid Vercel plan (or can wait for the local mode planned in the roadmap).
-- The free plans of Vercel and Supabase **do not come with a GDPR data processing agreement**.
+  needs a paid Vercel plan, or can wait for the local mode planned in the roadmap.
+- The free plans of Vercel and Supabase do not come with a GDPR data processing agreement.
   The dashboard stores IP and MAC addresses, device names and the action log, which may be
   personal data. **For a school or an organization, have this choice approved by the person in charge**
   (head of the school, IT manager, data protection officer) before going live.
@@ -334,7 +335,7 @@ An administrator sends a new-password link from **Utilisateurs**. For the `admin
 ## Compatibility and limits
 - Tested on an **HPE Aruba Networking CX 6000 24G 4SFP** (AOS-CX 10.15). The front panel is designed for
   24-port + 4 SFP models. Other CX models may work but have not been tested.
-- The switch is read through the CLI over SSH: parsing the output may depend on the firmware version.
+- The switch is read through the CLI over SSH, so parsing the output may depend on the firmware version.
 - One switch per dashboard, one agent per switch.
 - User interface in French only.
 - Vercel free plan: at most 12 functions per deployment; the project is designed to stay within this limit.
